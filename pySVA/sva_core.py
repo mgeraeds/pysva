@@ -23,8 +23,16 @@ class constructorSVA:
 
         self._setup(data=data_description)
         self.transport = None
+        self.kzz = None
+        self.velx = None
+        self.vely = None
+        self.velz = None
         self.tracer = None
         self.tracer_variance = None
+
+        # hidden
+        self._mean_tracer = None
+        self._tracer_perturbation = None
 
     def _read(self, filename, **kwargs):
         self.ds = xr.open_dataset(filename, use_cftime=True, **kwargs)
