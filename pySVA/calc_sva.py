@@ -2,7 +2,7 @@
 # Imports
 import numpy as np
 import xarray as xr
-import metpy.calc as mpcalc
+# import metpy.calc as mpcalc
 
 # tef.tracer = tef.ds.salt
 # data_description = {
@@ -76,7 +76,7 @@ def compute_advection(constructorSVA):
         else:
 
             # First compute the horizontal velocity vector times the vertical salinity variance sv2 (scalar)
-            uhx = constructorSVA.velz
+            uhx = constructorSVA.velx
             uhy = constructorSVA.vely
             uh_mag = np.sqrt(uhx**2+uhy**2)
 
@@ -86,7 +86,7 @@ def compute_advection(constructorSVA):
             uh_mag_sv2 = uh_mag * sv2
 
             integral = uh_mag_sv2.integrate('depth')
-            grad = mpcalc.gradient(integral)  # x and y gradient of the velocity magnitude times sv2
+            # grad = mpcalc.gradient(integral)  # x and y gradient of the velocity magnitude times sv2
 
             # x_int = uhx_sv2.mean('depth')
             # y_int = uhy_sv2.mean('depth')
