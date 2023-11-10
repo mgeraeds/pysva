@@ -27,7 +27,7 @@ class constructorSVA:
         elif isinstance(input_file, xr.DataArray):
             self.ds = input_file
         else:
-            raise IOError("Please provide xr.Dataset, xr.DataArray, or a file path to a netCDF.")
+            raise IOError("Please provide xr.Dataset, xu.core.wrap.UgridDataset, xr.DataArray, or a file path to a netCDF.")
 
         self._setup(data=data_description)
 
@@ -36,6 +36,9 @@ class constructorSVA:
         self.velx = None
         self.vely = None
         self.velz = None
+        self.velu0 = None
+        self.velu1 = None
+        self.veluc = None
         self.au = None
         self.vol = None
 
@@ -46,6 +49,7 @@ class constructorSVA:
         self._mean_tracer = None
         self._mean_velx = None
         self._mean_vely = None
+        self._mean_velu1 = None
         self._tracer_perturbation = None
 
     def _read(self, file_name, **kwargs):
