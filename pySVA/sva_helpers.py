@@ -156,52 +156,56 @@ def calculate_unit_normal_vectors(constructorSVA, **kwargs):
         varname_unvs = f'{gridname}_unvs'
 
         # > See if flow area is already in the variables
-        if varname_unvs in uds.variables:
-            print(f'Unit normal vectors on edges already present Dataset in variable {varname_unvs}.')
-            return uds[varname_unvs]
+        try:
+            unvs = constructorSVA._unvs
+            print(f'Unit normal vectors on edges already present Dataset in variable {unvs.name}.')
 
-        else:
-            # > Get edge coordinate names
-            coord_edge_x, coord_edge_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node',
-                                                                                                        'edge').split()
-
-            # > Get kwargs
-            edge_node_coords = kwargs.get('edge_node_coords')
-            # face_edges = kwargs.get('face_edges')
-
-            # > See if node-edge connectivity is given as a kwarg. If not, reconstruct it
-            if 'edge_node_coords' in kwargs:
-                pass
+        except:
+            if varname_unvs in uds.variables:
+                print(f'Unit normal vectors on edges already present Dataset in variable {varname_unvs}.')
+                return uds[varname_unvs]
             else:
-                # > Get the node-edge connectivity
-                edge_nodes = build_edge_node_connectivity(uds)
+                # > Get edge coordinate names
+                coord_edge_x, coord_edge_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'edge').split()
 
-                # > Build the node_coords
-                _, _, node_coords = get_all_coordinates(uds)  # just get the node_coords
+                # > Get kwargs
+                edge_node_coords = kwargs.get('edge_node_coords')
+                # face_edges = kwargs.get('face_edges')
 
-                # > Get the coordinates of all nodes belonging to an edge
-                edge_node_coords = xr.where(edge_nodes != fill_value, node_coords.isel({dimn_nodes: edge_nodes}), np.nan)
+                # > See if node-edge connectivity is given as a kwarg. If not, reconstruct it
+                if 'edge_node_coords' in kwargs:
+                    pass
+                else:
+                    # > Get the node-edge connectivity
+                    edge_nodes = build_edge_node_connectivity(uds)
 
-            x1 = edge_node_coords[:, 0, 0]
-            x2 = edge_node_coords[:, 1, 0]
-            y1 = edge_node_coords[:, 0, 1]
-            y2 = edge_node_coords[:, 1, 1]
-            x = x2 - x1
-            y = y2 - y1
+                    # > Build the node_coords
+                    _, _, node_coords = get_all_coordinates(uds)  # just get the node_coords
 
-            nf = np.dstack([-y, x])
+                    # > Get the coordinates of all nodes belonging to an edge
+                    edge_node_coords = xr.where(edge_nodes != fill_value, node_coords.isel({dimn_nodes: edge_nodes}), np.nan)
 
-            # > Calculate the norm and divide by the norm
-            unv = nf / np.linalg.norm(nf)
-            edge_unvs = unv[0]
+                x1 = edge_node_coords[:, 0, 0]
+                x2 = edge_node_coords[:, 1, 0]
+                y1 = edge_node_coords[:, 0, 1]
+                y2 = edge_node_coords[:, 1, 1]
+                x = x2 - x1
+                y = y2 - y1
 
-            # > Put it in xr.DataArray format
-            edge_unvs = xr.DataArray(data=edge_unvs, dims=[dimn_edges, f'{gridname}_nCartesian_coords'],
-                                     coords={f'{coord_edge_x}': ([dimn_edges], uds[f'{coord_edge_x}']),
-                                             f'{coord_edge_y}': ([dimn_edges], uds[f'{coord_edge_y}'])})
-            uds[f'{varname_unvs}'] = edge_unvs
+                nf = np.dstack([-y, x])
 
-        return edge_unvs
+                # > Calculate the norm and divide by the norm
+                unv = nf / np.linalg.norm(nf)
+                edge_unvs = unv[0]
+
+                # > Put it in xr.DataArray format
+                edge_unvs = xr.DataArray(data=edge_unvs, dims=[dimn_edges, f'{gridname}_nCartesian_coords'],
+                                         coords={f'{coord_edge_x}': ([dimn_edges], uds[f'{coord_edge_x}']),
+                                                 f'{coord_edge_y}': ([dimn_edges], uds[f'{coord_edge_y}'])})
+
+                uds[f'{varname_unvs}'] = constructorSVA._unvs = edge_unvs
+
+        return
 
 def reconstruct_vector_form_magnitude(constructorSVA, varname, **kwargs):
     '''Function to reconstruct the vector form of a magnitude variable on an unstructured grid that is defined on the edges
