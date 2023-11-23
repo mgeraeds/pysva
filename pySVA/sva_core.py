@@ -51,6 +51,7 @@ class constructorSVA:
         self._mean_vely = None
         self._mean_velu1 = None
         self._tracer_perturbation = None
+        self._unvs = None
 
     def _read(self, file_name, **kwargs):
         # self.ds = xr.open_dataset(file_name, use_cftime=True, **kwargs)
