@@ -3,28 +3,48 @@
 import numpy as np
 import xarray as xr
 import dfmproc as dfmp
-from pySVA.sva_helpers import reconstruct_vector_form
+from pySVA.sva_helpers import reconstruct_vector_form, calculate_unit_normal_vectors
 
 # import metpy.calc as mpcalc
 
 def compute_velocity_perturbation(constructorSVA):
-    if constructorSVA.velx or constructorSVA.vely is None:
-        raise ValueError('Please make sure that the x and y velocities are defined.')
+    # > First check if there's a velocity vector defined in the direction of the normal vector. This is the preferred
+    # > option, because it involves less data.
+    if constructorSVA.velu1 is None:
+        if constructorSVA.velx or constructorSVA.vely is None:
+            raise ValueError('Please make sure that the x and y velocities are defined, or give a velocity magnitude '
+                             'in the direction of the normal vector .')
     
     else:
-        # compute mean value of the x-velocity
-        constructorSVA.ds['mean_velx'] = mean_velx = constructorSVA._mean_velx = constructorSVA.ds[f'{constructorSVA.velx.name}'].mean(dim=("depth"))
+        # > Compute the mean value of the magnitude in the direction of the normal vector on the edges of the
+        # > unstructured grid cell.
+        if constructorSVA.velu is None:
+            # > Compute the mean value of the x-velocity
+            # constructorSVA.ds['mean_velx'] = \
+                mean_velx = constructorSVA._mean_velx = constructorSVA.ds[f'{constructorSVA.velx.name}'].mean(dim=("depth"))
 
-        # x-velocity vertical perturbation
-        constructorSVA.ds['velx_perturbation'] = velx_perturbation = constructorSVA._velx_perturbation = constructorSVA.ds[f'{constructorSVA.velx.name}'] - mean_velx
+            # Calculate the vertical perturbation of the x-velocity
+            # constructorSVA.ds['velx_perturbation'] = \
+                velx_perturbation = constructorSVA._velx_perturbation = constructorSVA.ds[f'{constructorSVA.velx.name}'] - mean_velx
 
-        # compute mean value of the y-velocity
-        constructorSVA.ds['mean_vely'] = mean_vely = constructorSVA._mean_vely = constructorSVA.ds[f'{constructorSVA.vely.name}'].mean(dim=("depth"))
+            # Compute the mean value of the y-velocity
+            # constructorSVA.ds['mean_vely'] = \
+                mean_vely = constructorSVA._mean_vely = constructorSVA.ds[f'{constructorSVA.vely.name}'].mean(dim=("depth"))
 
-        # x-velocity vertical perturbation
-        constructorSVA.ds['vely_perturbation'] = vely_perturbation = constructorSVA._vely_perturbation = constructorSVA.ds[f'{constructorSVA.vely.name}'] - mean_vely
+            # Calculate the vertical perturbation of the y-velocity
+            # constructorSVA.ds['vely_perturbation'] = \
+                vely_perturbation = constructorSVA._vely_perturbation = constructorSVA.ds[f'{constructorSVA.vely.name}'] - mean_vely
 
-        return velx_perturbation, vely_perturbation
+                return velx_perturbation, vely_perturbation
+
+        else:
+            # > Compute the mean value of the u1-velocity
+            # constructorSVA.ds['mean_velu1'] = \
+                mean_velu1 = constructorSVA._mean_velu1 = constructorSVA.ds[f'{constructorSVA.velu1.name}'].mean(dim=("depth"))
+                velu1_perturbation = constructorSVA._velu1_perturbation = constructorSVA.ds[f'{constructorSVA.velu1.name}'] - mean_velu1
+
+                return velu1_perturbation
+
 
 def compute_tracer_variance(constructorSVA):
     if constructorSVA.tracer is None:
@@ -83,22 +103,27 @@ def compute_advection(constructorSVA, grad_func=dfmp.compute_gradient_node_based
         else:
             compute_tracer_variance(constructorSVA)
     else:
-
-        if constructorSVA.velx is None:
-            if constructorSVA.vely is None:
-                raise ValueError('Please define a horizontal velocity in x and y direction by defining constructorSVA.velx and constructorSVA.vely.')
-            else:
-                raise ValueError('Please define a horizontal velocity in x direction by defining constructorSVA.velx.')
-        elif constructorSVA.vely is None:
-            raise ValueError('Please define a horizontal velocity in y direction by defining constructorSVA.vely.')
-        else:
-
-            # >> 2. Put the velocity vector in vector notation
+        # >> 2. First see if there's a velocity component defined in the direction of the normal vector
+        if constructorSVA.velu1 is None:
+            if constructorSVA.velx is None:
+                if constructorSVA.vely is None:
+                    raise ValueError('Please define a horizontal velocity in x- and y-direction by either defining '
+                                     'constructorSVA.velx and constructorSVA.vely or constructorSVA.velu1.')
+                else:
+                    raise ValueError('Please define a horizontal velocity in x-direction by defining '
+                                     'constructorSVA.velx.')
+            elif constructorSVA.vely is None:
+                raise ValueError('Please define a horizontal velocity in y-direction by defining constructorSVA.vely.')
+            # >> 3. Put the velocity vector in vector notation
             # > Define the velocities
             uhx = constructorSVA.velx
             uhy = constructorSVA.vely
 
             uh = reconstruct_vector_form(constructorSVA, [uhx, uhy], vector_name=f'{constructorSVA.ds.grid.name}_uc')
+
+        else:
+            unvs = calculate_unit_normal_vectors()
+            uh = constructorSVA.velu1
 
             # >> 3. Calculate the dot product of the velocity vector times the salinity variance (scalar)
             sv2 = constructorSVA.tracer_variance
