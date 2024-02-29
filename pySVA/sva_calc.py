@@ -3,100 +3,50 @@
 import numpy as np
 import xarray as xr
 import dfmproc as dfmp
-from pySVA.sva_helpers import reconstruct_vector_form, calculate_unit_normal_vectors
-
-# import metpy.calc as mpcalc
-
-def compute_velocity_perturbation(constructorSVA):
-    # > First check if there's a velocity vector defined in the direction of the normal vector. This is the preferred
-    # > option, because it involves less data.
-    if constructorSVA.velu1 is None:
-        if constructorSVA.velx or constructorSVA.vely is None:
-            raise ValueError('Please make sure that the x and y velocities are defined, or give a velocity magnitude '
-                             'in the direction of the normal vector .')
-    
-    else:
-        # > Compute the mean value of the magnitude in the direction of the normal vector on the edges of the
-        # > unstructured grid cell.
-        if constructorSVA.velu is None:
-            # > Compute the mean value of the x-velocity
-            # constructorSVA.ds['mean_velx'] = \
-                mean_velx = constructorSVA._mean_velx = constructorSVA.ds[f'{constructorSVA.velx.name}'].mean(dim=("depth"))
-
-            # Calculate the vertical perturbation of the x-velocity
-            # constructorSVA.ds['velx_perturbation'] = \
-                velx_perturbation = constructorSVA._velx_perturbation = constructorSVA.ds[f'{constructorSVA.velx.name}'] - mean_velx
-
-            # Compute the mean value of the y-velocity
-            # constructorSVA.ds['mean_vely'] = \
-                mean_vely = constructorSVA._mean_vely = constructorSVA.ds[f'{constructorSVA.vely.name}'].mean(dim=("depth"))
-
-            # Calculate the vertical perturbation of the y-velocity
-            # constructorSVA.ds['vely_perturbation'] = \
-                vely_perturbation = constructorSVA._vely_perturbation = constructorSVA.ds[f'{constructorSVA.vely.name}'] - mean_vely
-
-                return velx_perturbation, vely_perturbation
-
-        else:
-            # > Compute the mean value of the u1-velocity
-            # constructorSVA.ds['mean_velu1'] = \
-                mean_velu1 = constructorSVA._mean_velu1 = constructorSVA.ds[f'{constructorSVA.velu1.name}'].mean(dim=("depth"))
-                velu1_perturbation = constructorSVA._velu1_perturbation = constructorSVA.ds[f'{constructorSVA.velu1.name}'] - mean_velu1
-
-                return velu1_perturbation
-
+from dfm_tools.xugrid_helpers import get_vertical_dimensions
+from pySVA.sva_helpers import reconstruct_vector_form, calculate_unit_normal_vectors, compute_gradient_on_face, uda_to_edges
 
 def compute_tracer_variance(constructorSVA):
+
+    # > Get dataset
+    uds = constructorSVA.ds
+    # > Derive dimension names from dataset
+    grid = uds.grid
+    dimn_faces = grid.face_dimension
+    dimn_edges = grid.edge_dimension
+    dimn_layer, dimn_interfaces = get_vertical_dimensions(uds)
+
     if constructorSVA.tracer is None:
         raise ValueError('Please define a variable to calculate the variance of.')
 
     else:
 
-        # compute mean value of tracer over depth
-        constructorSVA.ds['mean_tracer'] = mean_tracer = constructorSVA._mean_tracer = constructorSVA.ds[f'{constructorSVA.tracer.name}'].mean(dim=("depth"))
+        # > Compute mean value of tracer over depth
+        constructorSVA.ds['mean_tracer'] = mean_tracer = constructorSVA._mean_tracer = constructorSVA.ds[f'{constructorSVA.tracer.name}'].mean(dim=(dimn_layer))
 
-        # tracer vertical perturbation
+        # > Tracer vertical perturbation
         constructorSVA.ds['tracer_perturbation'] = constructorSVA._tracer_perturbation = constructorSVA.ds[f'{constructorSVA.tracer.name}'] - mean_tracer
 
-        # tracer variance (S'v) = (S - S_mean)
+        # > Tracer variance (S'v) = (S - S_mean)
         constructorSVA.ds['tracer_variance'] = constructorSVA.tracer_variance = tracer_variance = (constructorSVA.ds[f'{constructorSVA.tracer.name}'] - mean_tracer) ** 2
 
         return tracer_variance
 
-def integrate(constructorSVA):
-    #todo
-    return
-# def compute_time_mean_variance(constructorSVA, averaging_interval):
-#     """
+def compute_advection(constructorSVA, gradient_function=None):
 
-#     :param constructorSVA:
-#     :param averaging_interval: in (str, str) format #todo check
-#     :return:
-#     """
-#     if isinstance(averaging_interval, tuple):
-#         interval_start = averaging_interval[0]
-#         interval_end = averaging_interval[1]
-#     elif isinstance(averaging_interval, list) and len(averaging_interval) == 2:
-#         interval_start = averaging_interval[0]
-#         interval_end = averaging_interval[1]
-#     else:
-#         raise IOError('Please provide an averaging interval list or tuple format.')
+    # > Get dataset
+    uds = constructorSVA.ds
+    # > Derive dimension names from dataset
+    grid = uds.grid
+    dimn_faces = grid.face_dimension
+    dimn_edges = grid.edge_dimension
+    dimn_layer, dimn_interfaces = get_vertical_dimensions(uds)
 
-#     if not 'tracer_variance' in constructorSVA.ds:
-#         compute_tracer_variance(constructorSVA)
-#     else:
-#         pass
+    # >> 0. Determine the gradient function to be used
+    if gradient_function == None:
+        gradient_function = compute_gradient_on_face
 
-#     depth_mean = constructorSVA.ds[f'tracer_variance'].mean('depth') # calculate depth mean
-#     time_mean = depth_mean.sel(
-#         time=slice(interval_start, interval_end)).mean('time') # calculate time mean
-
-#     # constructorSVA.ds.where((file_dataset.time.dt.hour % 4 == 1) & (file_dataset.time.dt.minute <= 20), drop=True)
-#     return time_mean
-
-def compute_advection(constructorSVA, grad_func=dfmp.compute_gradient_node_based):
-
-    # >> 1. Calculate the salinity variance 
+    # >> 1. Calculate the salinity/tracer variance 
     if constructorSVA.tracer_variance is None:
         if constructorSVA.tracer is None:
             raise ValueError('Please define a variable to calculate the variance of.')
@@ -120,57 +70,62 @@ def compute_advection(constructorSVA, grad_func=dfmp.compute_gradient_node_based
             uhy = constructorSVA.vely
 
             uh = reconstruct_vector_form(constructorSVA, [uhx, uhy], vector_name=f'{constructorSVA.ds.grid.name}_uc')
+            # todo calculate u1 OR completely different gradient calculation
 
         else:
-            unvs = calculate_unit_normal_vectors()
+            # > Get data in direction of the normal vector on the edges
             uh = constructorSVA.velu1
+            # > Get the tracer variance
+            sv2 = constructorSVA.tracer_variance
+            # > If the tracer variance is not located on the edges, move from face to edge
+            if dimn_edges not in sv2:
+                sv2 = uda_to_edges(sv2)
+
+            else:
+                pass
 
             # >> 3. Calculate the dot product of the velocity vector times the salinity variance (scalar)
-            sv2 = constructorSVA.tracer_variance
+            uhsv2 = uh.dot(sv2)
+
+            # >> 4. Integrate the entire thing
+            uhsv2_int = uhsv2.integrate(dimn_layer)
             
-            # todo
-            uh.dot()
+            # >> 5. Get the advection term after gradient calculation
+            advection = gradient_function(uhsv2_int)
 
-            
-            # uhx_sv2 = uhx * sv2
-            # uhy_sv2 = uhy * sv2
-            # uh_mag_sv2 = uh_mag * sv2
+            return advection
 
-            # integral = uh_mag_sv2.integrate('depth')
-            # grad = mpcalc.gradient(integral)  # x and y gradient of the velocity magnitude times sv2
+def compute_straining(constructorSVA, gradient_function=None):
 
-            # x_int = uhx_sv2.mean('depth')
-            # y_int = uhy_sv2.mean('depth')
+    # > Get dataset
+    uds = constructorSVA.ds
+    # > Derive dimension names from dataset
+    grid = uds.grid
+    dimn_faces = grid.face_dimension
+    dimn_edges = grid.edge_dimension
+    dimn_layer, dimn_interfaces = get_vertical_dimensions(uds)
 
-            # Calculate the gradient
-            # gradx = mpcalc.gradient(x_int) # x and y gradient of the velocity in x-direction times sv2
-            # grady = mpcalc.gradient(y_int) # x and y gradient of the velocity in y-direction times sv2
-
-            # grad_mag = np.sqrt(grad[0]**2+grad[1]**2)
-
-            return grad_mag
-
-def compute_straining(constructorSVA):
-    if constructorSVA.ds.tracer_variance is None:
+    if constructorSVA.tracer_variance is None:
         if constructorSVA.tracer is None:
             raise ValueError('Please define a variable to calculate the variance of.')
         else:
             compute_tracer_variance(constructorSVA)
-    else:
-        if constructorSVA.ds.velz is None:
-            raise ValueError('Please define a horizontal velocity in z direction by defining constructorSVA.velz.')
+    if constructorSVA.velz is None:
+        raise ValueError('Please define a horizontal velocity in z direction by defining constructorSVA.velz.')
 
     uv = constructorSVA.velz
-    uv_mean = constructorSVA.velz.mean("depth")
+    uv_mean = constructorSVA.velz.mean(dimn_layer)
     uv_prime = uv - uv_mean
 
     sv = constructorSVA._tracer_perturbation
     s_mean = constructorSVA._mean_tracer
 
-    grad_s_mean = mpcalc.gradient(s_mean)
+    if dimn_edges not in s_mean:
+        s_mean = uda_to_edges(s_mean)
+    grad_s_mean = gradient_function(s_mean)
 
     straining = -2 * uv_prime * sv * grad_s_mean
-    straining_int = straining.integrate('depth')
+    straining_int = straining.integrate(dimn_layer)
 
     return straining_int
 
@@ -180,7 +135,7 @@ def compute_dissipation(constructorSVA):
         if constructorSVA.tracer is None:
             raise ValueError('Please define a variable to calculate the variance of.')
         else:
-            compute_variance(constructorSVA)
+            compute_tracer_variance(constructorSVA)
         if constructorSVA.kzz is None:
             raise ValueError('Please define the vertical diffusion.')
 
