@@ -1,4 +1,3 @@
-
 # Imports
 import numpy as np
 import xarray as xr
@@ -78,7 +77,7 @@ def compute_advection(constructorSVA, gradient_function=None):
             # > Get the tracer variance
             sv2 = constructorSVA.tracer_variance
             # > If the tracer variance is not located on the edges, move from face to edge
-            if dimn_edges not in sv2:
+            if dimn_edges not in sv2.dims:
                 sv2 = uda_to_edges(sv2)
 
             else:
@@ -96,7 +95,6 @@ def compute_advection(constructorSVA, gradient_function=None):
             return advection
 
 def compute_straining(constructorSVA, gradient_function=None):
-
     # > Get dataset
     uds = constructorSVA.ds
     # > Derive dimension names from dataset
@@ -124,13 +122,22 @@ def compute_straining(constructorSVA, gradient_function=None):
         s_mean = uda_to_edges(s_mean)
     grad_s_mean = gradient_function(s_mean)
 
-    straining = -2 * uv_prime * sv * grad_s_mean
+    straining_pt1 = -2 * uv_prime * sv
+    straining = straining_pt1.dot(grad_s_mean)
     straining_int = straining.integrate(dimn_layer)
 
     return straining_int
 
-
 def compute_dissipation(constructorSVA):
+    # > Get dataset
+    uds = constructorSVA.ds
+    # > Derive dimension names from dataset
+    grid = uds.grid
+    dimn_faces = grid.face_dimension
+    dimn_edges = grid.edge_dimension
+    dimn_layer, dimn_interfaces = get_vertical_dimensions(uds)
+
+    # > See if all required variables are given/available
     if constructorSVA.ds.tracer_variance is None:
         if constructorSVA.tracer is None:
             raise ValueError('Please define a variable to calculate the variance of.')
@@ -139,11 +146,15 @@ def compute_dissipation(constructorSVA):
         if constructorSVA.kzz is None:
             raise ValueError('Please define the vertical diffusion.')
 
-    # in D-FLOW: kzz = uda.mesh2d_vicwwu/0.7 + 5e-5 + (1/700)*1e-6
+    # > In D-FLOW: kzz = uda.mesh2d_vicwwu/0.7 + 5e-5 + (1/700)*1e-6
+    # > Get the vertical diffusion
     kzz = constructorSVA.kzz
-    ds_dz = constructorSVA.tracer.differentiate(coord='depth')
+    # > Differentiate the tracer over the depth (dimn_interface --> dimn_layer)
+    ds_dz = constructorSVA.tracer.differentiate(coord=dimn_layer)
+    # > The tracer will have a different amount of depth-layers, so to match
+    # > We'll have
     dissipation = 2 * kzz * ds_dz**2
 
-    dissipation_int = dissipation.integrate(coord='depth')
+    dissipation_int = dissipation.integrate(coord=dimn_layer)
 
     return dissipation_int
