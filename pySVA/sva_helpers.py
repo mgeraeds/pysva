@@ -60,9 +60,7 @@ def build_face_edge_connectivity(constructorSVA):
     return face_edge_connectivity
 
 
-def get_all_coordinates(constructorSVA):
-    # First check if the provided dataset is a xu.core.wrap.UgridDataset
-    uds = constructorSVA.ds
+def get_all_coordinates(uds):
 
     if isinstance(uds, xu.core.wrap.UgridDataset):
         # > Get coordinate names
@@ -80,6 +78,32 @@ def get_all_coordinates(constructorSVA):
 
         # > Get face coordinates
         face_array = np.c_[uds.mesh2d_face_x, uds.mesh2d_face_y] # is NOT equal to uds.grid.face_coordinates
+        face_coords = xr.DataArray(data=face_array, dims=[dimn_faces,f'{gridname}_nCartesian_coords'], coords={f'{coord_face_x}':([dimn_faces], uds[f'{coord_face_x}']), f'{coord_face_y}':([dimn_faces], uds[f'{coord_face_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh face', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})
+
+        # > Get edge coordaintes
+        edge_array = uds.grid.edge_coordinates # np.c_[uds.mesh2d_edge_x, uds.mesh2d_edge_y]
+        edge_coords = xr.DataArray(data=edge_array, dims=[dimn_edges,f'{gridname}_nCartesian_coords'], coords={f'{coord_edge_x}':([dimn_edges], uds[f'{coord_edge_x}']), f'{coord_edge_y}':([dimn_edges], uds[f'{coord_edge_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh face', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})
+
+        # > Get node coordinates
+        node_array =  uds.grid.node_coordinates # np.c_[uds.mesh2d_node_x, uds.mesh2d_node_y]
+        node_coords = xr.DataArray(data=node_array, dims=[dimn_nodes,f'{gridname}_nCartesian_coords'], coords={f'{coord_node_x}':([dimn_nodes], uds[f'{coord_node_x}']), f'{coord_node_y}':([dimn_nodes], uds[f'{coord_node_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh node', 'bounds': 'mesh2d_node_x_bnd, mesh_node_y_bnd'})
+    
+    elif isinstance(uds, xu.core.wrap.UgridDataArray):
+        # > Get coordinate names
+        coord_face_x, coord_face_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'face').split()
+        coord_edge_x, coord_edge_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'edge').split()
+        coord_node_x, coord_node_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].split()
+
+        # > Get dimension names
+        dimn_faces = uds.grid.face_dimension
+        dimn_nodes = uds.grid.node_dimension
+        dimn_edges = uds.grid.edge_dimension
+
+        # > Get grid name
+        gridname = uds.grid.name
+        
+        # > Get face coordinates
+        face_array = uds.grid.face_coordinates
         face_coords = xr.DataArray(data=face_array, dims=[dimn_faces,f'{gridname}_nCartesian_coords'], coords={f'{coord_face_x}':([dimn_faces], uds[f'{coord_face_x}']), f'{coord_face_y}':([dimn_faces], uds[f'{coord_face_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh face', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})
 
         # > Get edge coordaintes
@@ -309,6 +333,7 @@ def reconstruct_vector_form_magnitude(constructorSVA, varname, **kwargs):
 
 
 def reconstruct_vector_form(constructorSVA, vectors_list, **kwargs):
+
     # 1. >> Get the basics
     uds = constructorSVA.ds
     gridname = uds.grid.name
@@ -365,3 +390,257 @@ def reconstruct_vector_form(constructorSVA, vectors_list, **kwargs):
         return
 
     return vector_data
+
+def build_edge_face_weights(uds, **kwargs):
+
+	# Get dimension names
+    dimn_maxfn = uds.ugrid.grid.to_dataset().mesh2d.attrs['max_face_nodes_dimension']
+    dimn_faces = uds.ugrid.grid.face_dimension
+    dimn_edges = uds.ugrid.grid.edge_dimension
+    fill_value = uds.ugrid.grid.fill_value
+    gridname = uds.ugrid.grid.name
+    dimn_maxef = f'{gridname}_nMax_edge_faces'
+	
+    # > Get the edge-face connectivity
+    edge_faces = xr.DataArray(uds.ugrid.grid.edge_face_connectivity, dims=(dimn_edges, dimn_maxef))
+    
+    if 'coords' in kwargs:
+        face_coords, edge_coords, _ = kwargs['coords']
+    else:
+        # > Get all relevant coordinates
+        face_coords, edge_coords, _ = get_all_coordinates(uds)
+
+	# > Fill edge-face-connectivity matrix with face coordinates
+    edge_face_coords = xr.where(edge_faces!=fill_value, face_coords.isel({dimn_faces:edge_faces}), np.nan)
+
+	# > Get variables for d1 (distance between neighbouring cell faces through edge)
+	# > Obtain these from the edge_face_coords dataset
+    x0 = edge_face_coords.isel({f'{gridname}_nMax_edge_faces':0, f'{gridname}_nCartesian_coords':0})
+    x1 = edge_face_coords.isel({f'{gridname}_nMax_edge_faces':1, f'{gridname}_nCartesian_coords':0})
+    y0 = edge_face_coords.isel({f'{gridname}_nMax_edge_faces':0, f'{gridname}_nCartesian_coords':1})
+    y1 = edge_face_coords.isel({f'{gridname}_nMax_edge_faces':1, f'{gridname}_nCartesian_coords':1})
+    
+    d1 = calculate_distance_pythagoras(x0, y0, x1, y1)
+    
+    # > Then get variables for d2 (distance from cell face in the first column to edge)
+    x2 = edge_coords.isel({f'{gridname}_nCartesian_coords':0})
+    y2 = edge_coords.isel({f'{gridname}_nCartesian_coords':1})
+    d2 = calculate_distance_pythagoras(x0, y0, x2, y2)
+    
+    # > Calculate the weights per edge:
+    w = d2 / d1
+    
+    return w
+
+def calculate_distance_haversine(lat, lon, lat_or, lon_or):
+    '''Function to calculate the shortest distance between two sets of coordinates.
+       The coordinates of Hoek van Holland have been previously filled in as a starting point
+       for all distance calculations.
+
+       Args:
+       - lon_or: Reference Longitude
+       - lat_or: Reference Latitude
+       - lon: Longitude
+       - lat: Latitude
+
+       Returns:
+       - distance: Distance [meters]
+
+       '''
+    import pandas as pd
+    import pyproj
+
+    geodesic = pyproj.Geod(ellps='WGS84')
+
+    if type(lat) and type(lon) == pd.core.series.Series:
+        lat_or_list = [lat_or for n in range(len(lat))]
+        lon_or_list = [lon_or for n in range(len(lon))]
+
+        fwd_azimuth, back_azimuth, distance = geodesic.inv(lat.tolist(), lon.tolist(), lat_or_list, lon_or_list)
+
+    else:
+        fwd_azimuth, back_azimuth, distance = geodesic.inv(lat, lon, lat_or, lon_or)
+
+    #     x = haversine(row.ix[0],row.ix[1],lat_or,lon_or) #starting point; approx. Botlek harbour
+    return distance  # pd.Series(distance)#(x)
+
+def calculate_distance_pythagoras(x1, y1, x2, y2):
+    '''Function to calculate the shortest distance between two sets of coordinates in a cartesian coordinate system.
+
+       :param x1: starting coordinate (x-direction)
+       :param y1: starting coordinate (y-direction)
+       :param x2: ending coordinate (x-direction)
+       :param y2: ending coordinate (y-direction)
+
+       :returns distance: Distance [meters]
+       :rtpye: np.float 
+
+    '''
+
+    distance = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+    return distance
+
+def compute_gradient_on_face(constructorSVA, varname, **kwargs):
+
+    from dfm_tools.xugrid_helpers import get_vertical_dimensions
+
+    # > Obtain uds from constructorSVA object
+    uds = constructorSVA.ds
+
+    # > Get grid
+    grid = uds.grid
+
+    # > Get dimension and grid names
+    dimn_maxfn = grid.to_dataset().mesh2d.attrs['max_face_nodes_dimension']
+    dimn_faces = grid.face_dimension
+    dimn_edges = grid.edge_dimension
+    fill_value = grid.fill_value
+    gridname = grid.name
+    dimn_maxef = f'{gridname}_nMax_edge_faces'
+    dimn_layer, dimn_interfaces = get_vertical_dimensions(uds)
+
+    # > Check kwargs
+    if 'varname_unvs' in kwargs:
+        varname_unvs = kwargs['varname_unvs'] 
+    else:
+        varname_unvs = f'{gridname}_unvs'
+
+    # > Calculate the unit normal vectors if not in the dataset already
+    try:
+        unvs = uds[varname_unvs]
+    except:
+        # > And if not in the kwargs
+        try:
+            unvs = kwargs['unvs']
+        except:
+            unvs = calculate_unit_normal_vectors(uds)
+        
+    # > Get the edge-face connectivity and replace fill values with -1
+    edge_faces = xr.DataArray(uds.ugrid.grid.edge_face_connectivity, dims=(dimn_edges, dimn_maxef))
+    edge_faces_validbool = edge_faces!=fill_value
+    edge_faces = edge_faces.where(edge_faces_validbool, -1)
+
+    # > Get the face-edge connectivity and replace fill values with -1
+    face_edges = build_face_edge_connectivity(uds)
+    face_edges_validbool = face_edges!=fill_value
+    face_edges = face_edges.where(face_edges_validbool, -1)
+
+    # > Get the unit normal vectors (nf) also in the face-edges matrix
+    fe_nfs = xr.where(face_edges!=fill_value, unvs.isel({dimn_edges:face_edges}), np.nan)
+
+    # > Select only data-array of the to-be-used variable
+    uda = uds[f'{varname}']
+
+	# > Determine if we're looking at a velocity value u1 or u0
+    # > Because these are vector quantities in the direction of the normal vector,
+    # > to get to the final vector, we have to multiply u1/u0 by the normal vector
+    # > first. Also, we need to check their sign for every edge.
+    if dimn_edges in uda.dims:
+
+        # > Make sure the edge dimension is not chunked, otherwise we will 
+        # > get "PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks."
+        chunks = {dimn_edges:-1}
+        uda = uda.chunk(chunks)
+
+        # > Fill the face-edges matrix with the varname
+        # > Do this via stack and unstack since 2D indexing does not
+        # > properly work in dask yet: https://github.com/dask/dask/pull/10237
+        face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
+        edge_var_stacked = uda.isel({dimn_edges: face_edges_stacked})
+        edge_var = edge_var_stacked.unstack("__tmp_dim__")
+        # > Convert data-array back to an xu.UgridDataArray
+        edge_var = xu.UgridDataArray(edge_var, grid=grid)
+
+		# >> We have to determine the sign of the velocity 
+		# >> Determine whether the u1 value is positive or negative
+		# > Get the mesh2d_nFaces numbering of the 0th column in edge_faces (from
+        # >  0 -> 1 is positive)
+        pos_fe = xr.where(face_edges!=fill_value, edge_faces.isel({dimn_maxef:0}).isel({dimn_edges:face_edges}), fill_value)
+
+		# > If the number of the 0th column in edge_faces == mesh2d_nFaces, then the 
+        # > direction is already positive in the right direction.
+		# > Otherwise, the direction needs to be flipped
+        fe_multiplier = xr.where(pos_fe==uds[dimn_faces], 1, -1)
+        edge_var = edge_var * fe_multiplier
+
+        # > Multiply by the unit normal vector to get to a vector quantity 
+        # > With the multiplication we intend to calculate the dot product
+        edge_var = edge_var * fe_nfs
+    
+    else: 
+        raise ValueError('This function only supports the calculation of gradients at face location, \
+                         based on data on edges. Please supply a variable that is located on the edges.')
+
+	# > Fill face_edge matrix with flow area data
+    edge_au = uds[f'{gridname}_au'].isel({dimn_edges:face_edges})
+	
+	# > Multiply the variable with the edge area (flow area), multiply by the 
+    # > "flipped boolean" and the unit normal vector, and sum (dimension: faces)
+    face_vars = (edge_var * edge_au * fe_nfs).sum(dim=dimn_maxfn, keep_attrs=True)
+	
+	# > Multiply the total result with (1/cell volume) (dimension: faces)
+    gradient = (1/uds[f'{gridname}_vol1']) * face_vars
+    uds[f'{varname}_div'] = gradient
+    
+    return gradient
+
+def uda_to_edges(uda, **kwargs):
+
+    # > Get grid
+    grid = uda.grid
+
+    # > Get dimension and grid names
+    dimn_maxfn = grid.to_dataset().mesh2d.attrs['max_face_nodes_dimension']
+    dimn_faces = grid.face_dimension
+    dimn_edges = grid.edge_dimension
+    fill_value = grid.fill_value
+    gridname = grid.name
+    dimn_maxef = f'{gridname}_nMax_edge_faces'
+
+    # > Get the edge-face connectivity and replace fill values with -1
+    edge_faces = xr.DataArray(uda.ugrid.grid.edge_face_connectivity, dims=(dimn_edges, dimn_maxef))
+    edge_faces_validbool = edge_faces!=fill_value
+    edge_faces = edge_faces.where(edge_faces_validbool, -1)
+
+    # > Get the face-edge connectivity and replace fill values with -1
+    face_edges = xr.DataArray(uda.ugrid.grid.face_edge_connectivity, dims=(dimn_faces, dimn_maxfn))
+    face_edges_validbool = face_edges!=fill_value
+    face_edges = face_edges.where(face_edges_validbool, -1)
+
+    # > Calculate the weights for the scalar interpolation 
+    # > first, if not given in the kwargs.
+    try: 
+        face_weights = kwargs['face_weights']
+    except:
+        face_weights = build_edge_face_weights(uda)
+    
+    # > Make sure the face dimension is not chunked, otherwise we will 
+    # > get "PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks."
+    chunks = {dimn_faces:-1}
+    uda = uda.chunk(chunks)
+
+    # > Select the varname on faces in the edge-face connectivity matrix
+    edge_faces_stacked = edge_faces.stack(__tmp_dim__=(dimn_edges, dimn_maxef))
+    edge_var_stacked = uda.isel({dimn_faces: edge_faces_stacked})
+    edge_var = edge_var_stacked.unstack("__tmp_dim__")
+    # > Convert data-array back to an xu.UgridDataArray
+    edge_var = xu.UgridDataArray(edge_var, grid=grid)
+
+    # > Set fill values to nan-values
+    edge_var = edge_var.where(edge_faces_validbool, np.nan)
+
+    # > Make sure the edge dimension is not chunked, otherwise we will 
+    # > get "PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks."
+    if 'chunks' in kwargs:
+        chunks = kwargs['chunks']
+        edge_var = edge_var.chunk(chunks)
+        face_weights = face_weights.chunk(chunks)
+    else:
+        pass        
+
+    # > Calculate the variable on the edges, based on the face_weights
+    edge_var = face_weights * edge_var.isel({f'{dimn_maxef}': 0}) + (1 - face_weights) * edge_var.isel({f'{dimn_maxef}': 1})
+
+    return edge_var
+    
