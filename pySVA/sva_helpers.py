@@ -2,7 +2,7 @@ import xugrid as xu
 import xarray as xr
 import warnings
 import numpy as np
-from xarray_einstats import einsum
+import xarray_einstats
 
 def dot_product(vector1, vector2, dim=None):
     return (vector1 * vector2).sum(dim=dim)
@@ -183,6 +183,8 @@ def calculate_unit_normal_vectors(constructorSVA, **kwargs):
         dimn_nodes = uds.grid.node_dimension
         fill_value = uds.grid.fill_value
         gridname = uds.grid.name
+        dimn_maxen = f'{gridname}_nMax_edge_nodes'
+        dimn_cart = f'{gridname}_nCartesian_coords'
 
         varname_unvs = f'{gridname}_unvs'
 
@@ -223,17 +225,16 @@ def calculate_unit_normal_vectors(constructorSVA, **kwargs):
                 x = x2 - x1
                 y = y2 - y1
 
-                nf = np.dstack([-y, x])
-                vm_nf = vector_magnitude(nf)
+                nf = nf = xr.concat([-y, x], dimn_cart).T #np.dstack([-y, x])
+                vm_nf = nf.linalg.norm(dims=dimn_cart)
 
                 # > Calculate the norm and divide by the norm
-                unv = nf / vm_nf #np.linalg.norm(nf)
-                edge_unvs = unv[0]
+                edge_unv = nf / vm_nf 
 
-                # > Put it in xr.DataArray format
-                edge_unvs = xr.DataArray(data=edge_unvs, dims=[dimn_edges, f'{gridname}_nCartesian_coords'],
-                                         coords={f'{coord_edge_x}': ([dimn_edges], uds[f'{coord_edge_x}']),
-                                                 f'{coord_edge_y}': ([dimn_edges], uds[f'{coord_edge_y}'])})
+                # # > Put it in xr.DataArray format
+                # edge_unvs = xr.DataArray(data=edge_unvs, dims=[dimn_edges, f'{gridname}_nCartesian_coords'],
+                #                          coords={f'{coord_edge_x}': ([dimn_edges], uds[f'{coord_edge_x}']),
+                #                                  f'{coord_edge_y}': ([dimn_edges], uds[f'{coord_edge_y}'])})
 
                 uds[f'{varname_unvs}'] = constructorSVA._unvs = edge_unvs
 
