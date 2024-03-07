@@ -7,9 +7,6 @@ import xarray_einstats
 def dot_product(vector1, vector2, dim=None):
     return (vector1 * vector2).sum(dim=dim)
 
-def vector_magnitude(vector):
-    return np.sqrt(np.sum(np.square(vector)))
-
 def build_edge_node_connectivity(constructorSVA):
 
     # First check if the provided dataset is a xu.core.wrap.UgridDataset
@@ -238,7 +235,7 @@ def calculate_unit_normal_vectors(constructorSVA, **kwargs):
 
                 uds[f'{varname_unvs}'] = constructorSVA._unvs = edge_unvs
 
-        return
+        return edge_unvs
 
 def reconstruct_vector_form_magnitude(constructorSVA, varname, **kwargs):
     '''Function to reconstruct the vector form of a magnitude variable on an unstructured grid that is defined on the edges
