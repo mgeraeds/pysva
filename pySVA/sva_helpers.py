@@ -2,6 +2,13 @@ import xugrid as xu
 import xarray as xr
 import warnings
 import numpy as np
+from xarray_einstats import einsum
+
+def dot_product(vector1, vector2, dim=None):
+    return (vector1 * vector2).sum(dim=dim)
+
+def vector_magnitude(vector):
+    return np.sqrt(np.sum(np.square(vector)))
 
 def build_edge_node_connectivity(constructorSVA):
 
@@ -128,7 +135,7 @@ def build_edge_face_weights(constructorSVA):
         # 1. >> Get the basics
         gridname = uds.grid.name
         dimn_faces = uds.grid.face_dimension
-        dimn_edges = uds.grid.grid_dimension
+        dimn_edges = uds.grid.edge_dimension
         dimn_maxfn = uds.grid.to_dataset().mesh2d.attrs['max_face_nodes_dimension']
         dimn_maxef = f'{gridname}_nMax_edge_faces'
 
@@ -217,9 +224,10 @@ def calculate_unit_normal_vectors(constructorSVA, **kwargs):
                 y = y2 - y1
 
                 nf = np.dstack([-y, x])
+                vm_nf = vector_magnitude(nf)
 
                 # > Calculate the norm and divide by the norm
-                unv = nf / np.linalg.norm(nf)
+                unv = nf / vm_nf #np.linalg.norm(nf)
                 edge_unvs = unv[0]
 
                 # > Put it in xr.DataArray format
@@ -248,7 +256,7 @@ def reconstruct_vector_form_magnitude(constructorSVA, varname, **kwargs):
         # 1. >> Get the basics
         gridname = uds.grid.name
         dimn_faces = uds.grid.face_dimension
-        dimn_edges = uds.grid.grid_dimension
+        dimn_edges = uds.grid.edge_dimension
         dimn_maxef = f'{gridname}_nMax_edge_faces'
 
         # 1. >> Get the fill value
@@ -481,10 +489,10 @@ def calculate_distance_pythagoras(x1, y1, x2, y2):
 
     return distance
 
-def compute_gradient_on_face(constructorSVA, varname, **kwargs):
+def compute_gradient_on_face(constructorSVA, uda, **kwargs):
 
     from dfm_tools.xugrid_helpers import get_vertical_dimensions
-
+    
     # > Obtain uds from constructorSVA object
     uds = constructorSVA.ds
 
@@ -500,44 +508,54 @@ def compute_gradient_on_face(constructorSVA, varname, **kwargs):
     dimn_maxef = f'{gridname}_nMax_edge_faces'
     dimn_layer, dimn_interfaces = get_vertical_dimensions(uds)
 
-    # > Check kwargs
-    if 'varname_unvs' in kwargs:
-        varname_unvs = kwargs['varname_unvs'] 
-    else:
-        varname_unvs = f'{gridname}_unvs'
+    # > Determine varname from the provided array\
+    varname = uda.name
 
     # > Calculate the unit normal vectors if not in the dataset already
     try:
-        unvs = uds[varname_unvs]
+        unvs = kwargs['unvs']
     except:
-        # > And if not in the kwargs
+        unvs = calculate_unit_normal_vectors(uds)
+    
+    # > Get the volume and flow area variables: check if they're in the 
+    # > constructor first, then check the dataset, else throw error
+    try:
+        flow_area = constructorSVA.flow_area
+    except:
         try:
-            unvs = kwargs['unvs']
+            flow_area = uds[f'{gridname}_au'] # todo: extend to more arbitrary names in later stage
+        except: 
+            raise NameError('Could not retrieve the flow area, which is necessary for the gradient \
+                             calculation. Please provide volume variable in the constructor or in the underlying dataset.')
+    
+    try:
+        volume = constructorSVA.volume
+    except:
+        try:
+            volume = uds[f'{gridname}_vol1']# todo: extend to more arbitrary names in later stage
         except:
-            unvs = calculate_unit_normal_vectors(uds)
-        
+            raise NameError('Could not retrieve the volume of the cells, which is necessary for the gradient \
+                             calculation. Please provide volume variable in the constructor or in the underlying dataset.')
+
     # > Get the edge-face connectivity and replace fill values with -1
     edge_faces = xr.DataArray(uds.ugrid.grid.edge_face_connectivity, dims=(dimn_edges, dimn_maxef))
     edge_faces_validbool = edge_faces!=fill_value
     edge_faces = edge_faces.where(edge_faces_validbool, -1)
-
+        
     # > Get the face-edge connectivity and replace fill values with -1
     face_edges = build_face_edge_connectivity(uds)
     face_edges_validbool = face_edges!=fill_value
     face_edges = face_edges.where(face_edges_validbool, -1)
+    face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
 
     # > Get the unit normal vectors (nf) also in the face-edges matrix
     fe_nfs = xr.where(face_edges!=fill_value, unvs.isel({dimn_edges:face_edges}), np.nan)
-
-    # > Select only data-array of the to-be-used variable
-    uda = uds[f'{varname}']
 
 	# > Determine if we're looking at a velocity value u1 or u0
     # > Because these are vector quantities in the direction of the normal vector,
     # > to get to the final vector, we have to multiply u1/u0 by the normal vector
     # > first. Also, we need to check their sign for every edge.
     if dimn_edges in uda.dims:
-
         # > Make sure the edge dimension is not chunked, otherwise we will 
         # > get "PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks."
         chunks = {dimn_edges:-1}
@@ -546,7 +564,108 @@ def compute_gradient_on_face(constructorSVA, varname, **kwargs):
         # > Fill the face-edges matrix with the varname
         # > Do this via stack and unstack since 2D indexing does not
         # > properly work in dask yet: https://github.com/dask/dask/pull/10237
-        face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
+        edge_var_stacked = uda.isel({dimn_edges: face_edges_stacked})
+        edge_var = edge_var_stacked.unstack("__tmp_dim__")
+        # > Convert data-array back to an xu.UgridDataArray
+        edge_var = xu.UgridDataArray(edge_var, grid=grid)
+
+        # > Fill face_edge matrix with flow area data
+        flow_area = flow_area.chunk(chunks)
+        edge_au_stacked = flow_area.isel({dimn_edges:face_edges_stacked})
+        edge_au = edge_au_stacked.unstack("__tmp_dim__")
+
+        # > Multiply the variable with the edge area (flow area), multiply by the 
+        # > "flipped boolean" and the unit normal vector, and sum (dimension: faces)
+        face_vars = (edge_var * edge_au * fe_nfs).sum(dim=dimn_maxfn, keep_attrs=True)
+        
+        # > Multiply the total result with (1/cell volume) (dimension: faces)
+        gradient = (1/volume) * face_vars
+        uds[f'{varname}_gradient'] = gradient
+        
+        return gradient
+
+    else: 
+        raise ValueError('This function only supports the calculation of gradients at face location, \
+                         based on data on edges. Please supply a variable that is located on the edges.')
+
+	
+
+def compute_divergence_on_face(constructorSVA, uda, **kwargs):
+
+    from dfm_tools.xugrid_helpers import get_vertical_dimensions
+    
+    # > Obtain uds from constructorSVA object
+    uds = constructorSVA.ds
+
+    # > Get grid
+    grid = uds.grid
+
+    # > Get dimension and grid names
+    dimn_maxfn = grid.to_dataset().mesh2d.attrs['max_face_nodes_dimension']
+    dimn_faces = grid.face_dimension
+    dimn_edges = grid.edge_dimension
+    fill_value = grid.fill_value
+    gridname = grid.name
+    dimn_maxef = f'{gridname}_nMax_edge_faces'
+    dimn_layer, dimn_interfaces = get_vertical_dimensions(uds)
+    dimn_cart = f'{gridname}_nCartesian_coords'
+
+    # > Determine varname from the provided array
+    varname = uda.name
+
+    # > Calculate the unit normal vectors if not in the dataset already
+    try:
+        unvs = kwargs['unvs']
+    except:
+        unvs = calculate_unit_normal_vectors(uds)
+    
+    # > Get the volume and flow area variables: check if they're in the 
+    # > constructor first, then check the dataset, else throw error
+    try:
+        flow_area = constructorSVA.flow_area
+    except:
+        try:
+            flow_area = uds[f'{gridname}_au'] # todo: extend to more arbitrary names in later stage
+        except: 
+            raise NameError('Could not retrieve the flow area, which is necessary for the gradient \
+                             calculation. Please provide volume variable in the constructor or in the underlying dataset.')
+    
+    try:
+        volume = constructorSVA.volume
+    except:
+        try:
+            volume = uds[f'{gridname}_vol1']# todo: extend to more arbitrary names in later stage
+        except:
+            raise NameError('Could not retrieve the volume of the cells, which is necessary for the gradient \
+                             calculation. Please provide volume variable in the constructor or in the underlying dataset.')
+
+    # > Get the edge-face connectivity and replace fill values with -1
+    edge_faces = xr.DataArray(uds.ugrid.grid.edge_face_connectivity, dims=(dimn_edges, dimn_maxef))
+    edge_faces_validbool = edge_faces!=fill_value
+    edge_faces = edge_faces.where(edge_faces_validbool, -1)
+        
+    # > Get the face-edge connectivity and replace fill values with -1
+    face_edges = build_face_edge_connectivity(uds)
+    face_edges_validbool = face_edges!=fill_value
+    face_edges = face_edges.where(face_edges_validbool, -1)
+    face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
+
+    # > Get the unit normal vectors (nf) also in the face-edges matrix
+    fe_nfs = xr.where(face_edges!=fill_value, unvs.isel({dimn_edges:face_edges}), np.nan)
+
+	# > Determine if we're looking at a velocity value u1 or u0
+    # > Because these are vector quantities in the direction of the normal vector,
+    # > to get to the final vector, we have to multiply u1/u0 by the normal vector
+    # > first. Also, we need to check their sign for every edge.
+    if dimn_edges in uda.dims:
+        # > Make sure the edge dimension is not chunked, otherwise we will 
+        # > get "PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks."
+        chunks = {dimn_edges:-1}
+        uda = uda.chunk(chunks)
+
+        # > Fill the face-edges matrix with the varname
+        # > Do this via stack and unstack since 2D indexing does not
+        # > properly work in dask yet: https://github.com/dask/dask/pull/10237
         edge_var_stacked = uda.isel({dimn_edges: face_edges_stacked})
         edge_var = edge_var_stacked.unstack("__tmp_dim__")
         # > Convert data-array back to an xu.UgridDataArray
@@ -557,6 +676,7 @@ def compute_gradient_on_face(constructorSVA, varname, **kwargs):
 		# > Get the mesh2d_nFaces numbering of the 0th column in edge_faces (from
         # >  0 -> 1 is positive)
         pos_fe = xr.where(face_edges!=fill_value, edge_faces.isel({dimn_maxef:0}).isel({dimn_edges:face_edges}), fill_value)
+        pos_fe = pos_fe.where(face_edges_validbool, -1)
 
 		# > If the number of the 0th column in edge_faces == mesh2d_nFaces, then the 
         # > direction is already positive in the right direction.
@@ -564,28 +684,135 @@ def compute_gradient_on_face(constructorSVA, varname, **kwargs):
         fe_multiplier = xr.where(pos_fe==uds[dimn_faces], 1, -1)
         edge_var = edge_var * fe_multiplier
 
-        # > Multiply by the unit normal vector to get to a vector quantity 
-        # > With the multiplication we intend to calculate the dot product
-        edge_var = edge_var * fe_nfs
-    
+        # > Calculate the dot product of the vector quantity with the unit normal vectors
+        edge_var = dot_product(edge_var, fe_nfs, dim=dimn_cart) 
+
+        # > Fill face_edge matrix with flow area data
+        flow_area = flow_area.chunk(chunks)
+        edge_au_stacked = flow_area.isel({dimn_edges:face_edges_stacked})
+        edge_au = edge_au_stacked.unstack("__tmp_dim__")
+        
+        # > Multiply the variable with the edge area (flow area), multiply by the 
+        # > "flipped boolean" and the unit normal vector, and sum (dimension: faces)
+        face_vars = (edge_var * edge_au).sum(dim=dimn_maxfn, keep_attrs=True)
+        
+        # > Multiply the total result with (1/cell volume) (dimension: faces)
+        divergence = (1/volume) * face_vars
+        
+        return divergence
+
     else: 
-        raise ValueError('This function only supports the calculation of gradients at face location, \
+        raise ValueError('This function only supports the calculation of the divergence at face location, \
                          based on data on edges. Please supply a variable that is located on the edges.')
 
-	# > Fill face_edge matrix with flow area data
-    edge_au = uds[f'{gridname}_au'].isel({dimn_edges:face_edges})
-	
-	# > Multiply the variable with the edge area (flow area), multiply by the 
-    # > "flipped boolean" and the unit normal vector, and sum (dimension: faces)
-    face_vars = (edge_var * edge_au * fe_nfs).sum(dim=dimn_maxfn, keep_attrs=True)
-	
-	# > Multiply the total result with (1/cell volume) (dimension: faces)
-    gradient = (1/uds[f'{gridname}_vol1']) * face_vars
-    uds[f'{varname}_div'] = gradient
-    
-    return gradient
 
-def uda_to_edges(uda, **kwargs):
+
+# old version
+# def compute_gradient_on_face(constructorSVA, varname, **kwargs):
+
+#     from dfm_tools.xugrid_helpers import get_vertical_dimensions
+
+#     # > Obtain uds from constructorSVA object
+#     uds = constructorSVA.ds
+
+#     # > Get grid
+#     grid = uds.grid
+
+#     # > Get dimension and grid names
+#     dimn_maxfn = grid.to_dataset().mesh2d.attrs['max_face_nodes_dimension']
+#     dimn_faces = grid.face_dimension
+#     dimn_edges = grid.edge_dimension
+#     fill_value = grid.fill_value
+#     gridname = grid.name
+#     dimn_maxef = f'{gridname}_nMax_edge_faces'
+#     dimn_layer, dimn_interfaces = get_vertical_dimensions(uds)
+
+#     # > Check kwargs
+#     if 'varname_unvs' in kwargs:
+#         varname_unvs = kwargs['varname_unvs'] 
+#     else:
+#         varname_unvs = f'{gridname}_unvs'
+
+#     # > Calculate the unit normal vectors if not in the dataset already
+#     try:
+#         unvs = uds[varname_unvs]
+#     except:
+#         # > And if not in the kwargs
+#         try:
+#             unvs = kwargs['unvs']
+#         except:
+#             unvs = calculate_unit_normal_vectors(uds)
+        
+#     # > Get the edge-face connectivity and replace fill values with -1
+#     edge_faces = xr.DataArray(uds.ugrid.grid.edge_face_connectivity, dims=(dimn_edges, dimn_maxef))
+#     edge_faces_validbool = edge_faces!=fill_value
+#     edge_faces = edge_faces.where(edge_faces_validbool, -1)
+
+#     # > Get the face-edge connectivity and replace fill values with -1
+#     face_edges = build_face_edge_connectivity(uds)
+#     face_edges_validbool = face_edges!=fill_value
+#     face_edges = face_edges.where(face_edges_validbool, -1)
+
+#     # > Get the unit normal vectors (nf) also in the face-edges matrix
+#     fe_nfs = xr.where(face_edges!=fill_value, unvs.isel({dimn_edges:face_edges}), np.nan)
+
+#     # > Select only data-array of the to-be-used variable
+#     uda = uds[f'{varname}']
+
+# 	# > Determine if we're looking at a velocity value u1 or u0
+#     # > Because these are vector quantities in the direction of the normal vector,
+#     # > to get to the final vector, we have to multiply u1/u0 by the normal vector
+#     # > first. Also, we need to check their sign for every edge.
+#     if dimn_edges in uda.dims:
+
+#         # > Make sure the edge dimension is not chunked, otherwise we will 
+#         # > get "PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks."
+#         chunks = {dimn_edges:-1}
+#         uda = uda.chunk(chunks)
+
+#         # > Fill the face-edges matrix with the varname
+#         # > Do this via stack and unstack since 2D indexing does not
+#         # > properly work in dask yet: https://github.com/dask/dask/pull/10237
+#         face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
+#         edge_var_stacked = uda.isel({dimn_edges: face_edges_stacked})
+#         edge_var = edge_var_stacked.unstack("__tmp_dim__")
+#         # > Convert data-array back to an xu.UgridDataArray
+#         edge_var = xu.UgridDataArray(edge_var, grid=grid)
+
+# 		# >> We have to determine the sign of the velocity 
+# 		# >> Determine whether the u1 value is positive or negative
+# 		# > Get the mesh2d_nFaces numbering of the 0th column in edge_faces (from
+#         # >  0 -> 1 is positive)
+#         pos_fe = xr.where(face_edges!=fill_value, edge_faces.isel({dimn_maxef:0}).isel({dimn_edges:face_edges}), fill_value)
+
+# 		# > If the number of the 0th column in edge_faces == mesh2d_nFaces, then the 
+#         # > direction is already positive in the right direction.
+# 		# > Otherwise, the direction needs to be flipped
+#         fe_multiplier = xr.where(pos_fe==uds[dimn_faces], 1, -1)
+#         edge_var = edge_var * fe_multiplier
+
+#         # > Multiply by the unit normal vector to get to a vector quantity 
+#         # > With the multiplication we intend to calculate the dot product
+#         edge_var = edge_var * fe_nfs
+    
+#     else: 
+#         raise ValueError('This function only supports the calculation of gradients at face location, \
+#                          based on data on edges. Please supply a variable that is located on the edges.')
+
+# 	# > Fill face_edge matrix with flow area data
+#     edge_au = uds[f'{gridname}_au'].isel({dimn_edges:face_edges})
+	
+# 	# > Multiply the variable with the edge area (flow area), multiply by the 
+#     # > "flipped boolean" and the unit normal vector, and sum (dimension: faces)
+#     face_vars = (edge_var * edge_au * fe_nfs).sum(dim=dimn_maxfn, keep_attrs=True)
+	
+# 	# > Multiply the total result with (1/cell volume) (dimension: faces)
+#     gradient = (1/uds[f'{gridname}_vol1']) * face_vars
+#     uds[f'{varname}_div'] = gradient
+    
+#     return gradient
+
+def uda_to_edges(uda):
 
     # > Get grid
     grid = uda.grid
@@ -603,24 +830,12 @@ def uda_to_edges(uda, **kwargs):
     edge_faces_validbool = edge_faces!=fill_value
     edge_faces = edge_faces.where(edge_faces_validbool, -1)
 
-    # > Get the face-edge connectivity and replace fill values with -1
-    face_edges = xr.DataArray(uda.ugrid.grid.face_edge_connectivity, dims=(dimn_faces, dimn_maxfn))
-    face_edges_validbool = face_edges!=fill_value
-    face_edges = face_edges.where(face_edges_validbool, -1)
-
-    # > Calculate the weights for the scalar interpolation 
-    # > first, if not given in the kwargs.
-    try: 
-        face_weights = kwargs['face_weights']
-    except:
-        face_weights = build_edge_face_weights(uda)
-    
     # > Make sure the face dimension is not chunked, otherwise we will 
     # > get "PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks."
     chunks = {dimn_faces:-1}
     uda = uda.chunk(chunks)
 
-    # > Select the varname on faces in the edge-face connectivity matrix
+    # > Select the varname on faces in the edge-face connetivity matrix
     edge_faces_stacked = edge_faces.stack(__tmp_dim__=(dimn_edges, dimn_maxef))
     edge_var_stacked = uda.isel({dimn_faces: edge_faces_stacked})
     edge_var = edge_var_stacked.unstack("__tmp_dim__")
@@ -630,17 +845,7 @@ def uda_to_edges(uda, **kwargs):
     # > Set fill values to nan-values
     edge_var = edge_var.where(edge_faces_validbool, np.nan)
 
-    # > Make sure the edge dimension is not chunked, otherwise we will 
-    # > get "PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks."
-    if 'chunks' in kwargs:
-        chunks = kwargs['chunks']
-        edge_var = edge_var.chunk(chunks)
-        face_weights = face_weights.chunk(chunks)
-    else:
-        pass        
-
     # > Calculate the variable on the edges, based on the face_weights
-    edge_var = face_weights * edge_var.isel({f'{dimn_maxef}': 0}) + (1 - face_weights) * edge_var.isel({f'{dimn_maxef}': 1})
-
-    return edge_var
+    edge_var = edge_var.mean(dim=dimn_maxef)
     
+    return edge_var
