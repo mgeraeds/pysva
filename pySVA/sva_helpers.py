@@ -229,7 +229,7 @@ def calculate_unit_normal_vectors(constructorSVA, **kwargs):
                 vm_nf = nf.linalg.norm(dims=dimn_cart)
 
                 # > Calculate the norm and divide by the norm
-                edge_unv = nf / vm_nf 
+                edge_unvs = nf / vm_nf 
 
                 # # > Put it in xr.DataArray format
                 # edge_unvs = xr.DataArray(data=edge_unvs, dims=[dimn_edges, f'{gridname}_nCartesian_coords'],
