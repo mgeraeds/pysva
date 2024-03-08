@@ -171,6 +171,7 @@ def build_edge_face_weights(constructorSVA):
 
 
 def calculate_unit_normal_vectors(constructorSVA, **kwargs):
+    
     # First check if the provided dataset is a xu.core.wrap.UgridDataset
     uds = constructorSVA.ds
 
@@ -226,16 +227,18 @@ def calculate_unit_normal_vectors(constructorSVA, **kwargs):
                 vm_nf = nf.linalg.norm(dims=dimn_cart)
 
                 # > Calculate the norm and divide by the norm
-                edge_unvs = nf / vm_nf 
+                unvs = nf / vm_nf 
 
                 # # > Put it in xr.DataArray format
                 # edge_unvs = xr.DataArray(data=edge_unvs, dims=[dimn_edges, f'{gridname}_nCartesian_coords'],
                 #                          coords={f'{coord_edge_x}': ([dimn_edges], uds[f'{coord_edge_x}']),
                 #                                  f'{coord_edge_y}': ([dimn_edges], uds[f'{coord_edge_y}'])})
 
-                uds[f'{varname_unvs}'] = constructorSVA._unvs = edge_unvs
-
-        return edge_unvs
+                uds[f'{varname_unvs}'] = constructorSVA._unvs = unvs.rename(varname_unvs)
+    else:
+        unvs = None
+        
+    return unvs
 
 def reconstruct_vector_form_magnitude(constructorSVA, varname, **kwargs):
     '''Function to reconstruct the vector form of a magnitude variable on an unstructured grid that is defined on the edges
@@ -292,7 +295,7 @@ def reconstruct_vector_form_magnitude(constructorSVA, varname, **kwargs):
                 unvs = kwargs['unvs']
             # > If not in the kwargs, then calculate it anew
             except:
-                unvs = calculate_unit_normal_vectors(uds)
+                unvs = calculate_unit_normal_vectors(constructorSVA)
 
         # > Fill the face-edges matrix with the varname
         magn_var = uds[f'{varname}'].isel({dimn_edges: face_edges})
@@ -505,6 +508,7 @@ def compute_gradient_on_face(constructorSVA, uda, **kwargs):
     gridname = grid.name
     dimn_maxef = f'{gridname}_nMax_edge_faces'
     dimn_layer, dimn_interfaces = get_vertical_dimensions(uds)
+    dimn_cart = f'{gridname}_nCartesian_coords'
 
     # > Determine varname from the provided array\
     varname = uda.name
@@ -513,7 +517,7 @@ def compute_gradient_on_face(constructorSVA, uda, **kwargs):
     try:
         unvs = kwargs['unvs']
     except:
-        unvs = calculate_unit_normal_vectors(uds)
+        unvs = calculate_unit_normal_vectors(constructorSVA)
     
     # > Get the volume and flow area variables: check if they're in the 
     # > constructor first, then check the dataset, else throw error
@@ -548,6 +552,14 @@ def compute_gradient_on_face(constructorSVA, uda, **kwargs):
 
     # > Get the unit normal vectors (nf) also in the face-edges matrix
     fe_nfs = xr.where(face_edges!=fill_value, unvs.isel({dimn_edges:face_edges}), np.nan)
+
+    # // 2. See if the normal vectors are pointing out of the cell. If not, flip them.
+    # > Calculate distance vectors
+    dv = calculate_distance_vectors(uds)
+    # > Calculate the dot product between the calculated normal vectors and the distance vector for each face
+    i_nfs = xr.dot(fe_nfs, dv, dims=[dimn_cart])
+    # > if the product < 1, multiply by -1 to get an outwards facing normal vector, and update the variable
+    fe_nfs = xr.where(i_nfs > 0, fe_nfs, fe_nfs * -1)
 
 	# > Determine if we're looking at a velocity value u1 or u0
     # > Because these are vector quantities in the direction of the normal vector,
@@ -589,7 +601,8 @@ def compute_gradient_on_face(constructorSVA, uda, **kwargs):
 	
 
 def compute_divergence_on_face(constructorSVA, uda, **kwargs):
-
+    # For this function, the vector on the edge needs to be in the direction of the normal vector!!
+    
     from dfm_tools.xugrid_helpers import get_vertical_dimensions
     
     # > Obtain uds from constructorSVA object
@@ -615,7 +628,7 @@ def compute_divergence_on_face(constructorSVA, uda, **kwargs):
     try:
         unvs = kwargs['unvs']
     except:
-        unvs = calculate_unit_normal_vectors(uds)
+        unvs = calculate_unit_normal_vectors(constructorSVA)
     
     # > Get the volume and flow area variables: check if they're in the 
     # > constructor first, then check the dataset, else throw error
@@ -651,6 +664,14 @@ def compute_divergence_on_face(constructorSVA, uda, **kwargs):
     # > Get the unit normal vectors (nf) also in the face-edges matrix
     fe_nfs = xr.where(face_edges!=fill_value, unvs.isel({dimn_edges:face_edges}), np.nan)
 
+    # // 2. See if the normal vectors are pointing out of the cell. If not, flip them.
+    # > Calculate distance vectors
+    dv = calculate_distance_vectors(uds)
+    # > Calculate the dot product between the calculated normal vectors and the distance vector for each face
+    i_nfs = xr.dot(fe_nfs, dv, dims=[dimn_cart])
+    # > if the product < 1, multiply by -1 to get an outwards facing normal vector, and update the variable
+    fe_nfs = xr.where(i_nfs > 0, fe_nfs, fe_nfs * -1)
+
 	# > Determine if we're looking at a velocity value u1 or u0
     # > Because these are vector quantities in the direction of the normal vector,
     # > to get to the final vector, we have to multiply u1/u0 by the normal vector
@@ -683,7 +704,7 @@ def compute_divergence_on_face(constructorSVA, uda, **kwargs):
         edge_var = edge_var * fe_multiplier
 
         # > Calculate the dot product of the vector quantity with the unit normal vectors
-        edge_var = dot_product(edge_var, fe_nfs, dim=dimn_cart) 
+        edge_var = edge_var * fe_nfs 
 
         # > Fill face_edge matrix with flow area data
         flow_area = flow_area.chunk(chunks)
@@ -695,7 +716,7 @@ def compute_divergence_on_face(constructorSVA, uda, **kwargs):
         face_vars = (edge_var * edge_au).sum(dim=dimn_maxfn, keep_attrs=True)
         
         # > Multiply the total result with (1/cell volume) (dimension: faces)
-        divergence = (1/volume) * face_vars
+        uds[f'{varname}_divergence'] = divergence = ((1/volume) * face_vars).sum(dim=dimn_cart)
         
         return divergence
 
@@ -847,3 +868,46 @@ def uda_to_edges(uda):
     edge_var = edge_var.mean(dim=dimn_maxef)
     
     return edge_var
+
+def calculate_distance_vectors(constructorSVA, **kwargs):
+
+    uds = constructorSVA.ds
+
+    # > Get dimensions, fill_value, and varname
+    gridname = uds.grid.name
+    fill_value = uds.grid.fill_value
+    dimn_edges = uds.grid.edge_dimension
+
+    # Get  coordinate names
+    coord_edge_x, coord_edge_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'edge').split()
+    # coord_node_x, coord_node_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].split()
+    coord_face_x, coord_face_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'face').split()
+
+    # > Get kwargs
+    face_edges = kwargs.get('face_edges')
+
+    # > Check if face-edge-connectivity is given
+    if 'face_edges' in kwargs:
+        pass
+    else:
+        face_edges = build_face_edge_connectivity(uds)
+
+    # > Get dimension names
+    dimn_faces = uds.grid.face_dimension
+
+    # > Get the cell centroid coordinates
+    centroid_array = uds.grid.face_coordinates
+    centroid_coords = xr.DataArray(data=centroid_array, dims=[dimn_faces, f'{gridname}_nCartesian_coords'], coords={f'{coord_face_x}':([dimn_faces], uds[f'{coord_face_x}']), f'{coord_face_y}':([dimn_faces], uds[f'{coord_face_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh centroids', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})   
+
+    # >> 1. Get the distance vector
+    # > Get the edge coordinates
+    edge_array = uds.grid.edge_coordinates # np.c_[uds.mesh2d_edge_x, uds.mesh2d_edge_y]
+    edge_coords = xr.DataArray(data=edge_array, dims=[dimn_edges,f'{gridname}_nCartesian_coords'], coords={f'{coord_edge_x}':([dimn_edges], uds[f'{coord_edge_x}']), f'{coord_edge_y}':([dimn_edges], uds[f'{coord_edge_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh face', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})   
+
+    # > Put edge coordinates into face-edge connectivity matrix
+    face_edge_coords = xr.where(face_edges!=fill_value, edge_coords.isel({dimn_edges:face_edges}), np.nan)
+
+    # > Subtract the face coordinates from each of the edge coordinates in the connectivity matrix
+    distance_vectors = face_edge_coords - centroid_coords
+
+    return distance_vectors
