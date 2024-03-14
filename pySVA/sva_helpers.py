@@ -989,7 +989,8 @@ def uda_to_edges(constructorSVA, uda):
 
     # > Calculate the variable on the edges, based on the face_weights
     face_weights = build_edge_face_weights(constructorSVA)
-    edge_var = edge_var.weighted(face_weights).sum(dim=dimn_maxef)
+    edge_var = (edge_var * face_weights).sum(dim=dimn_maxef)
+    # edge_var = edge_var.mean(dim=dimn_maxef)
     
     return edge_var
 
