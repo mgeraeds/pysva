@@ -189,7 +189,7 @@ def calculate_unit_normal_vectors(constructorSVA, **kwargs):
                     pass
                 else:
                     # > Get the node-edge connectivity
-                    edge_nodes = build_edge_node_connectivity(uds)
+                    edge_nodes = build_edge_node_connectivity(constructorSVA)
 
                     # > Build the node_coords
                     _, _, node_coords = get_all_coordinates(uds)  # just get the node_coords
@@ -243,7 +243,7 @@ def reconstruct_vector_form_magnitude(constructorSVA, varname, **kwargs):
         if 'face_edges' in kwargs:
             face_edges = kwargs['face_edges']
         else:
-            face_edges = build_face_edge_connectivity(uds)
+            face_edges = build_face_edge_connectivity(constructorSVA)
 
         # > 2.2 Get the edge-face connectivity
         if 'edge_faces' in kwargs:
@@ -555,13 +555,13 @@ def compute_gradient_on_face(constructorSVA, uda, **kwargs):
     edge_faces = edge_faces.where(edge_faces_validbool, -1)
         
     # > Get the face-edge connectivity and replace fill values with -1
-    face_edges = build_face_edge_connectivity(uds)
+    face_edges = build_face_edge_connectivity(constructorSVA)
     face_edges_validbool = face_edges!=fill_value
     face_edges = face_edges.where(face_edges_validbool, -1)
     face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
 
     # > Get the unit normal vectors (nf) also in the face-edges matrix
-    fe_nfs = xr.where(face_edges!=fill_value, unvs.isel({dimn_edges:face_edges}), np.nan)
+    fe_nfs = xr.where(face_edges_validbool, unvs.isel({dimn_edges:face_edges}), np.nan)
 
     # // 2. See if the normal vectors are pointing out of the cell. If not, flip them.
     # > Calculate distance vectors
@@ -588,6 +588,8 @@ def compute_gradient_on_face(constructorSVA, uda, **kwargs):
         edge_var = edge_var_stacked.unstack("__tmp_dim__")
         # > Convert data-array back to an xu.UgridDataArray
         edge_var = xu.UgridDataArray(edge_var, grid=grid)
+        # > Replace locations of the validbools with NaN's
+        edge_var = xr.where(face_edges_validbool, edge_var, np.nan)
 
         # > Fill face_edge matrix with flow area data
         flow_area = flow_area.chunk(chunks)
@@ -665,7 +667,7 @@ def compute_divergence_on_face(constructorSVA, uda, **kwargs):
     edge_faces = edge_faces.where(edge_faces_validbool, -1)
         
     # > Get the face-edge connectivity and replace fill values with -1
-    face_edges = build_face_edge_connectivity(uds)
+    face_edges = build_face_edge_connectivity(constructorSVA)
     face_edges_validbool = face_edges!=fill_value
     face_edges = face_edges.where(face_edges_validbool, -1)
     face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
@@ -788,7 +790,7 @@ def compute_derivatives_on_face(constructorSVA, uda, **kwargs):
     edge_faces = edge_faces.where(edge_faces_validbool, -1)
         
     # > Get the face-edge connectivity and replace fill values with -1
-    face_edges = build_face_edge_connectivity(uds)
+    face_edges = build_face_edge_connectivity(constructorSVA)
     face_edges_validbool = face_edges!=fill_value
     face_edges = face_edges.where(face_edges_validbool, -1)
     face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
@@ -1015,7 +1017,7 @@ def calculate_distance_vectors(constructorSVA, **kwargs):
     if 'face_edges' in kwargs:
         pass
     else:
-        face_edges = build_face_edge_connectivity(uds)
+        face_edges = build_face_edge_connectivity(constructorSVA)
 
     # > Get dimension names
     dimn_faces = uds.grid.face_dimension
