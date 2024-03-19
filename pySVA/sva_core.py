@@ -39,8 +39,8 @@ class constructorSVA:
         self.velu0 = None
         self.velu1 = None
         self.veluc = None
-        self.au = None
-        self.vol = None
+        self.flow_area = None
+        self.volume = None
 
         self.tracer = None
         self.tracer_variance = None
