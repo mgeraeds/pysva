@@ -384,7 +384,7 @@ class constructorSVA:
         # > to get to the final vector, we have to multiply u1/u0 by the normal vector
         # > first. Also, we need to check their sign for every edge.
         if not dimn_edges in uda.dims:
-            uda = self.uda_to_edges(uda)
+            uda = self.uda_to_edges(varname)
         else:
             pass
 
