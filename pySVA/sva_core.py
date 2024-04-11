@@ -349,7 +349,6 @@ class constructorSVA:
         dimn_edges = self.dimn_edges
         fill_value = self.fill_value
         gridname = self.gridname
-        dimn_maxef = self.dimn_maxef
         dimn_cart = self.dimn_cart
 
         # > Determine varname from the provided array\
@@ -369,7 +368,7 @@ class constructorSVA:
         face_edges_validbool = face_edges!=fill_value
 
         # > Get the unit normal vectors (nf) also in the face-edges matrix
-        fe_nfs = xr.where(face_edges_validbool, unvs.isel({dimn_edges:face_edges}), np.nan)
+        fe_nfs = xr.where(face_edges_validbool, unvs.isel({dimn_edges: face_edges}), np.nan)
 
         # // 2. See if the normal vectors are pointing out of the cell. If not, flip them.
         # > Calculate distance vectors
@@ -429,6 +428,7 @@ class constructorSVA:
         fill_value = self.fill_value
         dimn_edges = self.dimn_edges
         dimn_faces = self.dimn_faces
+        dimn_cart = self.dimn_cart
 
         # Get  coordinate names
         coord_face_x, coord_face_y = self.ds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'face').split()
@@ -439,7 +439,7 @@ class constructorSVA:
         # > Get the cell centroid coordinates
         # > NOTE: this is different from the face_coords!
         centroid_array = self.ds.grid.face_coordinates
-        centroid_coords = xr.DataArray(data=centroid_array, dims=[dimn_faces, f'{gridname}_nCartesian_coords'], coords={f'{coord_face_x}':([dimn_faces], self.ds[f'{coord_face_x}']), f'{coord_face_y}':([dimn_faces], self.ds[f'{coord_face_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh centroids', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})   
+        centroid_coords = xr.DataArray(data=centroid_array, dims=[dimn_faces, dimn_cart], coords={f'{coord_face_x}':([dimn_faces], self.ds[f'{coord_face_x}']), f'{coord_face_y}':([dimn_faces], self.ds[f'{coord_face_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh centroids', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})   
 
         # >> 1. Get the distance vector
         # > Get the edge coordinates
