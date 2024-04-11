@@ -431,8 +431,6 @@ class constructorSVA:
         dimn_faces = self.dimn_faces
 
         # Get  coordinate names
-        coord_edge_x, coord_edge_y = self.ds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'edge').split()
-        # coord_node_x, coord_node_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].split()
         coord_face_x, coord_face_y = self.ds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'face').split()
 
         # > Get face-edge-connectivity
