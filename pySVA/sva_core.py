@@ -12,6 +12,7 @@ import xarray as xr
 import xugrid as xu
 import dfm_tools as dfmt
 import numpy as np
+from pySVA.sva_helpers import build_inverse_distance_weights
 
 class constructorSVA:
     def __init__(self, input_file, data_description, **kwargs): # removed data description data_description,
@@ -44,6 +45,8 @@ class constructorSVA:
         self.dimn_faces = self.ds.grid.face_dimension
         self.fill_value = self.ds.grid.fill_value
 
+        self.face_coords, self.edge_coords, self.node_coords = self.get_all_coordinates()
+
         # Attributes
         self.velx = self.ds[f'{data_description["velx"]}']
         self.vely = self.ds[f'{data_description["vely"]}']
@@ -65,11 +68,33 @@ class constructorSVA:
         # self.ds = xr.open_dataset(file_name, use_cftime=True, **kwargs)
         self.ds = dfmt.open_partitioned_dataset(file_name, **kwargs)
 
+    @property
+    def edge_face_weights(self):
+
+        # > Get dimension names
+        dimn_faces = self.dimn_faces
+        fill_value = self.fill_value
+        
+        # > Get the edge-face connectivity
+        edge_faces = self.edge_faces
+        
+        face_coords = self.face_coords
+        edge_coords = self.edge_coords
+
+        # > Fill edge-face-connectivity matrix with face coordinates
+        edge_face_coords = xr.where(edge_faces!=fill_value, face_coords.isel({dimn_faces:edge_faces}), np.nan)
+        
+        # > Build the weights
+        edge_face_weights = build_inverse_distance_weights(edge_coords, edge_face_coords)
+        
+        return edge_face_weights
+
+
     def get_all_coordinates(self):
 
         uds = self.ds
 
-        if isinstance(uds, xu.core.wrap.UgridDataset):
+        if not hasattr(self, 'face_coords'):
             # > Get coordinate names
             coord_face_x, coord_face_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'face').split()
             coord_edge_x, coord_edge_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'edge').split()
@@ -95,34 +120,6 @@ class constructorSVA:
             node_array =  uds.grid.node_coordinates # np.c_[uds.mesh2d_node_x, uds.mesh2d_node_y]
             node_coords = xr.DataArray(data=node_array, dims=[dimn_nodes,f'{gridname}_nCartesian_coords'], coords={f'{coord_node_x}':([dimn_nodes], uds[f'{coord_node_x}']), f'{coord_node_y}':([dimn_nodes], uds[f'{coord_node_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh node', 'bounds': 'mesh2d_node_x_bnd, mesh_node_y_bnd'})
         
-        elif isinstance(uds, xu.core.wrap.UgridDataArray):
-            # > Get coordinate names
-            coord_face_x, coord_face_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'face').split()
-            coord_edge_x, coord_edge_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'edge').split()
-            coord_node_x, coord_node_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].split()
-
-            # > Get dimension names
-            dimn_faces = uds.grid.face_dimension
-            dimn_nodes = uds.grid.node_dimension
-            dimn_edges = uds.grid.edge_dimension
-
-            # > Get grid name
-            gridname = uds.grid.name
-            
-            # > Get face coordinates
-            face_array = uds.grid.face_coordinates
-            face_coords = xr.DataArray(data=face_array, dims=[dimn_faces,f'{gridname}_nCartesian_coords'], coords={f'{coord_face_x}':([dimn_faces], uds[f'{coord_face_x}']), f'{coord_face_y}':([dimn_faces], uds[f'{coord_face_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh face', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})
-
-            # > Get edge coordaintes
-            edge_array = uds.grid.edge_coordinates # np.c_[uds.mesh2d_edge_x, uds.mesh2d_edge_y]
-            edge_coords = xr.DataArray(data=edge_array, dims=[dimn_edges,f'{gridname}_nCartesian_coords'], coords={f'{coord_edge_x}':([dimn_edges], uds[f'{coord_edge_x}']), f'{coord_edge_y}':([dimn_edges], uds[f'{coord_edge_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh face', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})
-
-            # > Get node coordinates
-            node_array =  uds.grid.node_coordinates # np.c_[uds.mesh2d_node_x, uds.mesh2d_node_y]
-            node_coords = xr.DataArray(data=node_array, dims=[dimn_nodes,f'{gridname}_nCartesian_coords'], coords={f'{coord_node_x}':([dimn_nodes], uds[f'{coord_node_x}']), f'{coord_node_y}':([dimn_nodes], uds[f'{coord_node_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh node', 'bounds': 'mesh2d_node_x_bnd, mesh_node_y_bnd'})
-        else:
-            raise IOError("Please provide xu.core.wrap.UgridDataset to be able to automatically derive connectivities of the unstructured grid.")
-
         return face_coords, edge_coords, node_coords
 
     @property
@@ -136,7 +133,8 @@ class constructorSVA:
             edge_nodes = self.edge_nodes
 
             # > Build the node_coords
-            _, _, node_coords = self.get_all_coordinates()  # just get the node_coords
+            # _, _, node_coords = self.get_all_coordinates()  # just get the node_coords
+            node_coords = self.node_coords
 
             # > Get the coordinates of all nodes belonging to an edge
             edge_node_coords = xr.where(edge_nodes != fill_value, node_coords.isel({dimn_nodes: edge_nodes}), np.nan)
