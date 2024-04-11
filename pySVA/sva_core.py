@@ -218,7 +218,7 @@ class constructorSVA:
         coord_face_x, coord_face_y = self.ds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'face').split()
 
         # > Get connectivity
-        face_edges = self.face_edges
+        face_edges = self.ds.grid.face_edge_connectivity
 
         # > Make into xr.DataArray with correct sizes, dimensions, and coordinates
         face_edges = xr.DataArray(face_edges, dims=[dimn_faces, dimn_maxfn],
