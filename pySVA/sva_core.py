@@ -11,9 +11,10 @@ __all__ = ['constructorSVA']
 import xarray as xr
 import xugrid as xu
 import dfm_tools as dfmt
+import numpy as np
 
 class constructorSVA:
-    def __init__(self, input_file,  **kwargs): # removed data description data_description,
+    def __init__(self, input_file, data_description, **kwargs): # removed data description data_description,
 
         if isinstance(input_file, str):
             try:
@@ -31,32 +32,218 @@ class constructorSVA:
 
         # self._setup(data=data_description)
 
-        self.transport = None
-        self.kzz = None
-        self.velx = None
-        self.vely = None
-        self.velz = None
-        self.velu0 = None
-        self.velu1 = None
-        self.veluc = None
-        self.au = None
-        self.vol = None
+        self.kzz = self.ds[f'{data_description["kzz"]}']
+        self.velx = self.ds[f'{data_description["velx"]}']
+        self.vely = self.ds[f'{data_description["vely"]}']
+        self.velz = self.ds[f'{data_description["velz"]}']
+        self.flow_area = self.ds[f'{data_description["flow_area"]}']
+        self.volume = self.ds[f'{data_description["volume"]}']
+        self.viscosity = self.ds[f'{data_description["viscosity"]}']
 
-        self.tracer = None
+        self.tracer = self.ds[f'{data_description["tracer"]}']
         self.tracer_variance = None
 
-        # hidden
-        self._mean_tracer = None
-        self._mean_velx = None
-        self._mean_vely = None
-        self._mean_velocity = None
+        # Hidden/calculated values
+        self.edge_nodes = self.edge_nodes
+        self.face_nodes = self.face_nodes
+        self.kzz = self.kzz
+
         self._tracer_perturbation = None
         self._velocity_perturbation = None
-        self._unvs = None
 
     def _read(self, file_name, **kwargs):
         # self.ds = xr.open_dataset(file_name, use_cftime=True, **kwargs)
         self.ds = dfmt.open_partitioned_dataset(file_name, **kwargs)
+
+    def get_all_coordinates(self):
+
+        uds = self.ds
+
+        if isinstance(uds, xu.core.wrap.UgridDataset):
+            # > Get coordinate names
+            coord_face_x, coord_face_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'face').split()
+            coord_edge_x, coord_edge_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'edge').split()
+            coord_node_x, coord_node_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].split()
+
+            # > Get dimension names
+            dimn_faces = uds.grid.face_dimension
+            dimn_nodes = uds.grid.node_dimension
+            dimn_edges = uds.grid.edge_dimension
+
+            # > Get grid name
+            gridname = uds.grid.name
+
+            # > Get face coordinates
+            face_array = np.c_[uds.mesh2d_face_x, uds.mesh2d_face_y] # is NOT equal to uds.grid.face_coordinates
+            face_coords = xr.DataArray(data=face_array, dims=[dimn_faces,f'{gridname}_nCartesian_coords'], coords={f'{coord_face_x}':([dimn_faces], uds[f'{coord_face_x}']), f'{coord_face_y}':([dimn_faces], uds[f'{coord_face_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh face', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})
+
+            # > Get edge coordaintes
+            edge_array = uds.grid.edge_coordinates # np.c_[uds.mesh2d_edge_x, uds.mesh2d_edge_y]
+            edge_coords = xr.DataArray(data=edge_array, dims=[dimn_edges,f'{gridname}_nCartesian_coords'], coords={f'{coord_edge_x}':([dimn_edges], uds[f'{coord_edge_x}']), f'{coord_edge_y}':([dimn_edges], uds[f'{coord_edge_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh face', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})
+
+            # > Get node coordinates
+            node_array =  uds.grid.node_coordinates # np.c_[uds.mesh2d_node_x, uds.mesh2d_node_y]
+            node_coords = xr.DataArray(data=node_array, dims=[dimn_nodes,f'{gridname}_nCartesian_coords'], coords={f'{coord_node_x}':([dimn_nodes], uds[f'{coord_node_x}']), f'{coord_node_y}':([dimn_nodes], uds[f'{coord_node_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh node', 'bounds': 'mesh2d_node_x_bnd, mesh_node_y_bnd'})
+        
+        elif isinstance(uds, xu.core.wrap.UgridDataArray):
+            # > Get coordinate names
+            coord_face_x, coord_face_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'face').split()
+            coord_edge_x, coord_edge_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'edge').split()
+            coord_node_x, coord_node_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].split()
+
+            # > Get dimension names
+            dimn_faces = uds.grid.face_dimension
+            dimn_nodes = uds.grid.node_dimension
+            dimn_edges = uds.grid.edge_dimension
+
+            # > Get grid name
+            gridname = uds.grid.name
+            
+            # > Get face coordinates
+            face_array = uds.grid.face_coordinates
+            face_coords = xr.DataArray(data=face_array, dims=[dimn_faces,f'{gridname}_nCartesian_coords'], coords={f'{coord_face_x}':([dimn_faces], uds[f'{coord_face_x}']), f'{coord_face_y}':([dimn_faces], uds[f'{coord_face_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh face', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})
+
+            # > Get edge coordaintes
+            edge_array = uds.grid.edge_coordinates # np.c_[uds.mesh2d_edge_x, uds.mesh2d_edge_y]
+            edge_coords = xr.DataArray(data=edge_array, dims=[dimn_edges,f'{gridname}_nCartesian_coords'], coords={f'{coord_edge_x}':([dimn_edges], uds[f'{coord_edge_x}']), f'{coord_edge_y}':([dimn_edges], uds[f'{coord_edge_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh face', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})
+
+            # > Get node coordinates
+            node_array =  uds.grid.node_coordinates # np.c_[uds.mesh2d_node_x, uds.mesh2d_node_y]
+            node_coords = xr.DataArray(data=node_array, dims=[dimn_nodes,f'{gridname}_nCartesian_coords'], coords={f'{coord_node_x}':([dimn_nodes], uds[f'{coord_node_x}']), f'{coord_node_y}':([dimn_nodes], uds[f'{coord_node_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh node', 'bounds': 'mesh2d_node_x_bnd, mesh_node_y_bnd'})
+        else:
+            raise IOError("Please provide xu.core.wrap.UgridDataset to be able to automatically derive connectivities of the unstructured grid.")
+
+        return face_coords, edge_coords, node_coords
+
+    def build_edge_node_coordinates(self):
+        # > Get dimension names
+        fill_value = self.ds.grid.fill_value
+        dimn_nodes = self.ds.grid.node_dimension
+
+        # > Get/buid edge-node connectivity
+        edge_nodes = self.edge_nodes
+
+        # > Build the node_coords
+        _, _, node_coords = self.get_all_coordinates()  # just get the node_coords
+
+        # > Get the coordinates of all nodes belonging to an edge
+        edge_node_coords = xr.where(edge_nodes != fill_value, node_coords.isel({dimn_nodes: edge_nodes}), np.nan)
+
+        return edge_node_coords 
+    
+    @property
+    def kzz(self, dicoww=5e-5, prandtl_schmidt=0.7):
+
+        tracer = self.tracer
+        uds = self.ds
+        gridname = uds.grid.name
+        dimn_edges = uds.grid.edge_dimension
+        gridname = uds.grid.name
+
+        vicwwu = uds[f'{gridname}_vicwwu']
+        dicwwu = vicwwu / prandtl_schmidt
+        
+        if tracer == f'{gridname}_sa1':
+            k_l = (1/700) * 10e-6
+        elif tracer == f'{gridname}_tem1': 
+            k_l = (1/6.7) * 10e-6
+
+        # > Calculate kzz
+        kzz = dicwwu + dicoww + k_l
+        # > Assign attributes and rename 
+        kzz = kzz.assign_attrs({'mesh': f'{gridname}'}, 
+                               'location': 'edge',
+                               'cell_methods': f'{dimn_edges}: mean',
+                               'standard_name': 'eddy_diffusivity',
+                               'long_name': 'turbulent vertical eddy diffusivity', 
+                               'units': 'm2 s-1', 
+                               'grid_mapping': 'projected_coordinate_system').rename(f'{gridname}_dicwwu')
+        
+        # > Add calculated diffusivity to dataset
+        uds[f'{gridname}_dicwwu'] = (kzz.dims, kzz.data)
+
+        return kzz
+    
+    @property
+    def edge_nodes(self):
+
+        # First check if the provided dataset is a xu.core.wrap.UgridDataset
+        uds = constructorSVA.ds
+
+        if isinstance(uds, xu.core.wrap.UgridDataset):
+            # > Get fill value, grid name and dimensions
+            fill_value = uds.grid.fill_value
+            gridname = uds.grid.name
+            dimn_edges = uds.grid.edge_dimension
+
+            # > Get coordinate names
+            coord_edge_x, coord_edge_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'edge').split()
+
+            # > Determine dimension name
+            dimn_maxen = f'{gridname}_nMax_edge_nodes'
+
+            # > Get connectivity
+            edge_nodes = uds.grid.edge_node_connectivity
+
+            # > Make into xr.DataArray with correct sizes, dimensions, and coordinates
+            edge_nodes = xr.DataArray(data=edge_nodes, dims=[dimn_edges, dimn_maxen], coords={f'{coord_edge_x}':([dimn_edges], uds[f'{coord_edge_x}']), f'{coord_edge_y}':([dimn_edges], uds[f'{coord_edge_y}'])}, attrs={'cf_role': 'edge_node_connectivity', 'start_index':0, '_FillValue':fill_value}, name=uds.grid.to_dataset().mesh2d.attrs['edge_node_connectivity'])
+
+        else:
+            raise IOError("Please provide xu.core.wrap.UgridDataset to be able to automatically derive connectivities of the unstructured grid.")
+
+        return edge_nodes
+    
+    @property
+    def unvs(self):
+        import pyproj
+
+        # First check if the provided dataset is a xu.core.wrap.UgridDataset
+        uds = constructorSVA.ds
+
+        if isinstance(uds, xu.core.wrap.UgridDataset):
+            # > Get dimensions, gridname, and coordinates
+            gridname = uds.grid.name
+            dimn_maxen = f'{gridname}_nMax_edge_nodes'
+            dimn_cart = f'{gridname}_nCartesian_coords'
+
+            varname_unvs = f'{gridname}_unvs'
+
+            # > Get edge coordinate names
+            edge_node_coords = build_edge_node_coordinates()
+
+            # > Check if the coordinate reference system is WGS84 (latitude, longitude)
+            x1 = edge_node_coords[:, 0, 0]
+            x2 = edge_node_coords[:, 1, 0]
+            y1 = edge_node_coords[:, 0, 1]
+            y2 = edge_node_coords[:, 1, 1]
+
+            if uds.ugrid.crs[f'{gridname}'].name == 'WGS 84':
+                geodesic = pyproj.Geod(ellps='WGS84')
+                lat1 = y1
+                lat2 = y2
+                lon1 = x1
+                lon2 = x2
+                fwd_azimuth, back_azimuth, distance = geodesic.inv(lat2, lon2, lat1, lon1)
+                az_rad = np.deg2rad(fwd_azimuth)
+                x = np.sin(az_rad) * distance
+                y = np.cos(az_rad) * distance
+
+            else:
+                x = x2 - x1
+                y = y2 - y1
+
+            nf = nf = xr.concat([-y, x], dimn_cart).T #np.dstack([-y, x])
+            vm_nf = nf.linalg.norm(dims=dimn_cart)
+
+            # > Calculate the norm and divide by the norm
+            unvs = nf / vm_nf 
+            unvs = unvs.rename(varname_unvs)
+            uds[f'{varname_unvs}'] = (unvs.dims, unvs.data)
+
+        else:
+            unvs = None
+            
+        return unvs
 
     # def _setup(self, data):
     #     """Iterates over keys in dictionary. Handles 4d-data, if one argument is left empty, dummy dimension will be created.
