@@ -139,7 +139,7 @@ class constructorSVA:
             # > Get the coordinates of all nodes belonging to an edge
             edge_node_coords = xr.where(edge_nodes != fill_value, node_coords.isel({dimn_nodes: edge_nodes}), np.nan)
 
-            return edge_node_coords 
+        return edge_node_coords 
     
     @property
     def kzz(self, dicoww=5e-5, prandtl_schmidt=0.7):
@@ -170,7 +170,7 @@ class constructorSVA:
             # > Add calculated diffusivity to dataset
             uds[f'{gridname}_dicwwu'] = (kzz.dims, kzz.data)
 
-            return kzz
+        return kzz
     
     @property
     def edge_faces(self):
@@ -184,7 +184,7 @@ class constructorSVA:
             edge_faces_validbool = edge_faces!=fill_value
             edge_faces = edge_faces.where(edge_faces_validbool, -1)
 
-            return edge_faces
+        return edge_faces
 
     @property
     def edge_nodes(self):
@@ -205,7 +205,7 @@ class constructorSVA:
             # > Make into xr.DataArray with correct sizes, dimensions, and coordinates
             edge_nodes = xr.DataArray(data=edge_nodes, dims=[dimn_edges, dimn_maxen], coords={f'{coord_edge_x}':([dimn_edges], self.ds[f'{coord_edge_x}']), f'{coord_edge_y}':([dimn_edges], self.ds[f'{coord_edge_y}'])}, attrs={'cf_role': 'edge_node_connectivity', 'start_index':0, '_FillValue':fill_value}, name=self.ds.grid.to_dataset().mesh2d.attrs['edge_node_connectivity'])
 
-            return edge_nodes
+        return edge_nodes
         
     @property
     def face_edges(self):
@@ -238,54 +238,50 @@ class constructorSVA:
             # First check if the provided dataset is a xu.core.wrap.UgridDataset
             uds = constructorSVA.ds
 
-            if isinstance(uds, xu.core.wrap.UgridDataset):
-                # > Get dimensions, gridname, and coordinates
-                gridname = uds.grid.name
-                dimn_cart = self.dimn_cart
+            # > Get dimensions, gridname, and coordinates
+            gridname = uds.grid.name
+            dimn_cart = self.dimn_cart
 
-                varname_unvs = f'{gridname}_unvs'
+            varname_unvs = f'{gridname}_unvs'
 
-                # > Get edge coordinate names
-                edge_node_coords = self.edge_node_coords
+            # > Get edge coordinate names
+            edge_node_coords = self.edge_node_coords
 
-                # > Check if the coordinate reference system is WGS84 (latitude, longitude)
-                x1 = edge_node_coords[:, 0, 0]
-                x2 = edge_node_coords[:, 1, 0]
-                y1 = edge_node_coords[:, 0, 1]
-                y2 = edge_node_coords[:, 1, 1]
+            # > Check if the coordinate reference system is WGS84 (latitude, longitude)
+            x1 = edge_node_coords[:, 0, 0]
+            x2 = edge_node_coords[:, 1, 0]
+            y1 = edge_node_coords[:, 0, 1]
+            y2 = edge_node_coords[:, 1, 1]
 
-                if uds.ugrid.crs[f'{gridname}'].name == 'WGS 84':
+            if uds.ugrid.crs[f'{gridname}'].name == 'WGS 84':
 
-                    # > Define coordinate reference system
-                    geodesic = pyproj.Geod(ellps='WGS84')
+                # > Define coordinate reference system
+                geodesic = pyproj.Geod(ellps='WGS84')
 
-                    # > Infer latitudes and longitudes from the edge-node-coordinates
-                    lat1 = y1
-                    lat2 = y2
-                    lon1 = x1
-                    lon2 = x2
-                    # > Calculate distance vector
-                    fwd_azimuth, _, distance = geodesic.inv(lat2, lon2, lat1, lon1)
-                    az_rad = np.deg2rad(fwd_azimuth)
-                    x = np.sin(az_rad) * distance
-                    y = np.cos(az_rad) * distance
-
-                else:
-                    x = x2 - x1
-                    y = y2 - y1
-
-                nf = nf = xr.concat([-y, x], dimn_cart).T #np.dstack([-y, x])
-                vm_nf = nf.linalg.norm(dims=dimn_cart)
-
-                # > Calculate the norm and divide by the norm
-                unvs = nf / vm_nf 
-                unvs = unvs.rename(varname_unvs)
-                uds[f'{varname_unvs}'] = (unvs.dims, unvs.data)
+                # > Infer latitudes and longitudes from the edge-node-coordinates
+                lat1 = y1
+                lat2 = y2
+                lon1 = x1
+                lon2 = x2
+                # > Calculate distance vector
+                fwd_azimuth, _, distance = geodesic.inv(lat2, lon2, lat1, lon1)
+                az_rad = np.deg2rad(fwd_azimuth)
+                x = np.sin(az_rad) * distance
+                y = np.cos(az_rad) * distance
 
             else:
-                unvs = None
+                x = x2 - x1
+                y = y2 - y1
+
+            nf = nf = xr.concat([-y, x], dimn_cart).T #np.dstack([-y, x])
+            vm_nf = nf.linalg.norm(dims=dimn_cart)
+
+            # > Calculate the norm and divide by the norm
+            unvs = nf / vm_nf 
+            unvs = unvs.rename(varname_unvs)
+            uds[f'{varname_unvs}'] = (unvs.dims, unvs.data)
                 
-            return unvs
+        return unvs
 
     # def _setup(self, data):
     #     """Iterates over keys in dictionary. Handles 4d-data, if one argument is left empty, dummy dimension will be created.
