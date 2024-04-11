@@ -206,7 +206,30 @@ class constructorSVA:
             edge_nodes = xr.DataArray(data=edge_nodes, dims=[dimn_edges, dimn_maxen], coords={f'{coord_edge_x}':([dimn_edges], self.ds[f'{coord_edge_x}']), f'{coord_edge_y}':([dimn_edges], self.ds[f'{coord_edge_y}'])}, attrs={'cf_role': 'edge_node_connectivity', 'start_index':0, '_FillValue':fill_value}, name=self.ds.grid.to_dataset().mesh2d.attrs['edge_node_connectivity'])
 
             return edge_nodes
-    
+        
+    @property
+    def face_edges(self):
+        if not hasattr(self, 'face_edges'):
+            # > Get fill value, grid name, and dimensions
+            fill_value = self.fill_value
+            gridname = self.gridname
+            dimn_faces = self.dimn_faces
+            dimn_maxfn = self.dimn_maxfn
+
+            # > Get voordinate names
+            coord_face_x, coord_face_y = self.ds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'face').split()
+
+            # > Get connectivity
+            face_edges = self.face_edges
+
+            # > Make into xr.DataArray with correct sizes, dimensions, and coordinates
+            face_edge_connectivity = xr.DataArray(face_edges, dims=[dimn_faces, dimn_maxfn],
+                                                coords={f'{coord_face_x}': ([dimn_faces], self.ds[f'{coord_face_x}']),
+                                                        f'{coord_face_y}': ([dimn_faces], self.ds[f'{coord_face_y}'])},
+                                                attrs={'cf_role': 'face_edge_connectivity', 'start_index': 0,
+                                                        '_FillValue': fill_value}, name=f'{gridname}_face_edges')
+        return face_edge_connectivity
+        
     @property
     def unvs(self):
         if not hasattr(self, 'unvs'):
