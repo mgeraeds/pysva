@@ -223,12 +223,16 @@ class constructorSVA:
             face_edges = self.face_edges
 
             # > Make into xr.DataArray with correct sizes, dimensions, and coordinates
-            face_edge_connectivity = xr.DataArray(face_edges, dims=[dimn_faces, dimn_maxfn],
+            face_edges = xr.DataArray(face_edges, dims=[dimn_faces, dimn_maxfn],
                                                 coords={f'{coord_face_x}': ([dimn_faces], self.ds[f'{coord_face_x}']),
                                                         f'{coord_face_y}': ([dimn_faces], self.ds[f'{coord_face_y}'])},
                                                 attrs={'cf_role': 'face_edge_connectivity', 'start_index': 0,
                                                         '_FillValue': fill_value}, name=f'{gridname}_face_edges')
-        return face_edge_connectivity
+            # > Mask any numbers where there are no more edges in the face-edge-connectivity
+            face_edges_validbool = face_edges!=fill_value
+            face_edges = face_edges.where(face_edges_validbool, -1)
+
+        return face_edges
         
     @property
     def unvs(self):
@@ -282,6 +286,92 @@ class constructorSVA:
             uds[f'{varname_unvs}'] = (unvs.dims, unvs.data)
                 
         return unvs
+    
+    def compute_gradient_on_face(self, varname):
+
+        # > Obtain uds and grid from constructorSVA object
+        uds = self.ds
+        grid = uds.grid
+
+        # > Get dimension and grid names
+        dimn_maxfn = self.dimn_maxfn
+        dimn_faces = self.dimn_faces
+        dimn_edges = self.dimn_edges
+        fill_value = self.fill_value
+        gridname = self.gridname
+        dimn_maxef = self.dimn_maxef
+        dimn_cart = self.dimn_cart
+
+        # > Determine varname from the provided array\
+        uda = uds[varname]
+
+        # > Get unit normal vectors
+        unvs = self.unvs
+        
+        # > Get the volume and flow area variables: check if they're in the 
+        # > constructor first, then check the dataset, else throw error
+        flow_area = self.flow_area
+        volume = self.volume
+            
+        # > Get the face-edge connectivity and replace fill values with -1
+        face_edges = self.face_edges
+        # > Get boolean to mask other arrays too
+        face_edges_validbool = face_edges!=fill_value
+
+        # > Get the unit normal vectors (nf) also in the face-edges matrix
+        fe_nfs = xr.where(face_edges_validbool, unvs.isel({dimn_edges:face_edges}), np.nan)
+
+        # // 2. See if the normal vectors are pointing out of the cell. If not, flip them.
+        # > Calculate distance vectors
+        dv = calculate_distance_vectors(constructorSVA)
+        # > Calculate the dot product between the calculated normal vectors and the distance vector for each face
+        i_nfs = xr.dot(fe_nfs, dv, dims=[dimn_cart])
+        # > if the product < 1, multiply by -1 to get an outwards facing normal vector, and update the variable
+        fe_nfs = xr.where(i_nfs > 0, fe_nfs, fe_nfs * -1)
+
+        # > Determine if we're looking at a velocity value u1 or u0
+        # > Because these are vector quantities in the direction of the normal vector,
+        # > to get to the final vector, we have to multiply u1/u0 by the normal vector
+        # > first. Also, we need to check their sign for every edge.
+        if not dimn_edges in uda.dims:
+            uda = self.uda_to_edges(uda)
+        else:
+            pass
+
+        # > Stack face_edges for later use
+        face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
+
+        # > Make sure the edge dimension is not chunked, otherwise we will 
+        # > get "PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks."
+        chunks = {dimn_edges:-1}
+        uda = uda.chunk(chunks)
+
+        # > Fill the face-edges matrix with the varname
+        # > Do this via stack and unstack since 2D indexing does not
+        # > properly work in dask yet: https://github.com/dask/dask/pull/10237
+        edge_var_stacked = uda.isel({dimn_edges: face_edges_stacked})
+        edge_var = edge_var_stacked.unstack("__tmp_dim__")
+        # > Convert data-array back to an xu.UgridDataArray
+        edge_var = xu.UgridDataArray(edge_var, grid=grid)
+        # > Replace locations of the validbools with NaN's
+        edge_var = xr.where(face_edges_validbool, edge_var, np.nan)
+
+        # > Fill face_edge matrix with flow area data
+        flow_area = flow_area.chunk(chunks)
+        edge_au_stacked = flow_area.isel({dimn_edges:face_edges_stacked})
+        edge_au = edge_au_stacked.unstack("__tmp_dim__")
+
+        # > Multiply the variable with the edge area (flow area), multiply by the 
+        # > "flipped boolean" and the unit normal vector, and sum (dimension: faces)
+        face_vars = (edge_var * edge_au * fe_nfs).sum(dim=dimn_maxfn, keep_attrs=True)
+        
+        # > Multiply the total result with (1/cell volume) (dimension: faces, cartesian_coordinates)
+        gradient = (1/volume) * face_vars
+        uds[f'{gridname}_{varname}_gradient'] = (gradient.dims, gradient.data)
+            
+        return gradient
+
+
 
     # def _setup(self, data):
     #     """Iterates over keys in dictionary. Handles 4d-data, if one argument is left empty, dummy dimension will be created.
