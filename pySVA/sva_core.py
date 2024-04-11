@@ -101,24 +101,25 @@ class constructorSVA:
             coord_node_x, coord_node_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].split()
 
             # > Get dimension names
-            dimn_faces = uds.grid.face_dimension
-            dimn_nodes = uds.grid.node_dimension
-            dimn_edges = uds.grid.edge_dimension
+            dimn_faces = self.dimn_faces
+            dimn_nodes = self.dimn_nodes
+            dimn_edges = self.dimn_edges
+            dimn_cart = self.dimn_cart
 
             # > Get grid name
             gridname = uds.grid.name
 
             # > Get face coordinates
             face_array = np.c_[uds.mesh2d_face_x, uds.mesh2d_face_y] # is NOT equal to uds.grid.face_coordinates
-            face_coords = xr.DataArray(data=face_array, dims=[dimn_faces,f'{gridname}_nCartesian_coords'], coords={f'{coord_face_x}':([dimn_faces], uds[f'{coord_face_x}']), f'{coord_face_y}':([dimn_faces], uds[f'{coord_face_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh face', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})
+            face_coords = xr.DataArray(data=face_array, dims=[dimn_faces, dimn_cart], coords={f'{coord_face_x}':([dimn_faces], uds[f'{coord_face_x}']), f'{coord_face_y}':([dimn_faces], uds[f'{coord_face_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh face', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})
 
             # > Get edge coordaintes
             edge_array = uds.grid.edge_coordinates # np.c_[uds.mesh2d_edge_x, uds.mesh2d_edge_y]
-            edge_coords = xr.DataArray(data=edge_array, dims=[dimn_edges,f'{gridname}_nCartesian_coords'], coords={f'{coord_edge_x}':([dimn_edges], uds[f'{coord_edge_x}']), f'{coord_edge_y}':([dimn_edges], uds[f'{coord_edge_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh face', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})
+            edge_coords = xr.DataArray(data=edge_array, dims=[dimn_edges, dimn_cart], coords={f'{coord_edge_x}':([dimn_edges], uds[f'{coord_edge_x}']), f'{coord_edge_y}':([dimn_edges], uds[f'{coord_edge_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh face', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})
 
             # > Get node coordinates
             node_array =  uds.grid.node_coordinates # np.c_[uds.mesh2d_node_x, uds.mesh2d_node_y]
-            node_coords = xr.DataArray(data=node_array, dims=[dimn_nodes,f'{gridname}_nCartesian_coords'], coords={f'{coord_node_x}':([dimn_nodes], uds[f'{coord_node_x}']), f'{coord_node_y}':([dimn_nodes], uds[f'{coord_node_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh node', 'bounds': 'mesh2d_node_x_bnd, mesh_node_y_bnd'})
+            node_coords = xr.DataArray(data=node_array, dims=[dimn_nodes, dimn_cart], coords={f'{coord_node_x}':([dimn_nodes], uds[f'{coord_node_x}']), f'{coord_node_y}':([dimn_nodes], uds[f'{coord_node_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh node', 'bounds': 'mesh2d_node_x_bnd, mesh_node_y_bnd'})
         
         return face_coords, edge_coords, node_coords
 
@@ -372,7 +373,7 @@ class constructorSVA:
 
         # // 2. See if the normal vectors are pointing out of the cell. If not, flip them.
         # > Calculate distance vectors
-        dv = calculate_distance_vectors(constructorSVA)
+        dv = self.distance_vectors
         # > Calculate the dot product between the calculated normal vectors and the distance vector for each face
         i_nfs = xr.dot(fe_nfs, dv, dims=[dimn_cart])
         # > if the product < 1, multiply by -1 to get an outwards facing normal vector, and update the variable
@@ -420,7 +421,39 @@ class constructorSVA:
             
         return gradient
 
+    @property
+    def distance_vectors(self):
 
+        # > Get dimensions, fill_value, and varname
+        gridname = self.gridname
+        fill_value = self.fill_value
+        dimn_edges = self.dimn_edges
+        dimn_faces = self.dimn_faces
+
+        # Get  coordinate names
+        coord_edge_x, coord_edge_y = self.ds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'edge').split()
+        # coord_node_x, coord_node_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].split()
+        coord_face_x, coord_face_y = self.ds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'face').split()
+
+        # > Get face-edge-connectivity
+        face_edges = self.face_edges
+
+        # > Get the cell centroid coordinates
+        # > NOTE: this is different from the face_coords!
+        centroid_array = self.ds.grid.face_coordinates
+        centroid_coords = xr.DataArray(data=centroid_array, dims=[dimn_faces, f'{gridname}_nCartesian_coords'], coords={f'{coord_face_x}':([dimn_faces], self.ds[f'{coord_face_x}']), f'{coord_face_y}':([dimn_faces], self.ds[f'{coord_face_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh centroids', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})   
+
+        # >> 1. Get the distance vector
+        # > Get the edge coordinates
+        edge_coords = self.edge_coords
+
+        # > Put edge coordinates into face-edge connectivity matrix
+        face_edge_coords = xr.where(face_edges!=fill_value, edge_coords.isel({dimn_edges:face_edges}), np.nan)
+
+        # > Subtract the face coordinates from each of the edge coordinates in the connectivity matrix
+        distance_vectors = face_edge_coords - centroid_coords
+
+        return distance_vectors
 
     # def _setup(self, data):
     #     """Iterates over keys in dictionary. Handles 4d-data, if one argument is left empty, dummy dimension will be created.
