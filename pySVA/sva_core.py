@@ -291,45 +291,50 @@ class constructorSVA:
         # > Define the to-be-interpolated tracer DataArray and grid
         uda = self.ds[f"{varname}"]
         grid = self.ds.grid
-
-        # > Get dimension and grid names
         dimn_faces = self.dimn_faces
-        dimn_edges = self.dimn_edges
-        fill_value = self.fill_value
-        gridname = self.gridname
-        dimn_maxef = self.dimn_maxef
 
-        # > Get the edge-face connectivity and replace fill values with -1
-        edge_faces = self.edge_faces
-        edge_faces_validbool = edge_faces!=fill_value
-        edge_faces = edge_faces.where(edge_faces_validbool, -1)
+        if dimn_faces in uda.dims:
 
-        # > Make sure the face dimension is not chunked, otherwise we will 
-        # > get "PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks."
-        chunks = {dimn_faces:-1}
-        uda = uda.chunk(chunks)
+            # > Get dimension and grid names
+            dimn_faces = self.dimn_faces
+            dimn_edges = self.dimn_edges
+            fill_value = self.fill_value
+            dimn_maxef = self.dimn_maxef
 
-        # > Select the varname on faces in the edge-face connetivity matrix
-        edge_faces_stacked = edge_faces.stack(__tmp_dim__=(dimn_edges, dimn_maxef))
-        edge_var_stacked = uda.isel({dimn_faces: edge_faces_stacked})
-        edge_var = edge_var_stacked.unstack("__tmp_dim__")
-        # > Convert data-array back to an xu.UgridDataArray
-        edge_var = xu.UgridDataArray(edge_var, grid=grid)
+            # > Get the edge-face connectivity and replace fill values with -1
+            edge_faces = self.edge_faces
+            edge_faces_validbool = edge_faces!=fill_value
+            edge_faces = edge_faces.where(edge_faces_validbool, -1)
 
-        # > Set fill values to nan-values
-        edge_var = edge_var.where(edge_faces_validbool, np.nan)
+            # > Make sure the face dimension is not chunked, otherwise we will 
+            # > get "PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks."
+            chunks = {dimn_faces:-1}
+            uda = uda.chunk(chunks)
 
-        # > Calculate the variable on the edges, based on the face_weights
-        face_weights = self.edge_face_weights
-        edge_var = (edge_var * face_weights).sum(dim=dimn_maxef)
+            # > Select the varname on faces in the edge-face connetivity matrix
+            edge_faces_stacked = edge_faces.stack(__tmp_dim__=(dimn_edges, dimn_maxef))
+            edge_var_stacked = uda.isel({dimn_faces: edge_faces_stacked})
+            edge_var = edge_var_stacked.unstack("__tmp_dim__")
+            # > Convert data-array back to an xu.UgridDataArray
+            edge_var = xu.UgridDataArray(edge_var, grid=grid)
 
-        # edge_var = edge_var.mean(dim=dimn_maxef)
-        # Give name and attributes
-        attr_list = {'location': 'edge', 'cell_methods': f'{dimn_faces}: inverse distance weighted mean'}
-        edge_var = edge_var.assign_attrs(
-                attr_list).rename(varname)
+            # > Set fill values to nan-values
+            edge_var = edge_var.where(edge_faces_validbool, np.nan)
+
+            # > Calculate the variable on the edges, based on the face_weights
+            face_weights = self.edge_face_weights
+            edge_var = (edge_var * face_weights).sum(dim=dimn_maxef)
+
+            # edge_var = edge_var.mean(dim=dimn_maxef)
+            # Give name and attributes
+            attr_list = {'location': 'edge', 'cell_methods': f'{dimn_faces}: inverse distance weighted mean'}
+            edge_var = edge_var.assign_attrs(
+                    attr_list).rename(varname)
+            
+            return edge_var
         
-        return edge_var
+        else:
+            raise ValueError(f'Variable {varname} does not contain dimension faces, so cannot be transformed from faces to edges.')
 
     def compute_gradient_on_face(self, varname):
 
