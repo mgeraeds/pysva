@@ -993,6 +993,10 @@ def uda_to_edges(constructorSVA, uda):
     face_weights = build_edge_face_weights(constructorSVA)
     edge_var = (edge_var * face_weights).sum(dim=dimn_maxef)
     # edge_var = edge_var.mean(dim=dimn_maxef)
+    # Give name and attributes
+    attr_list = {'location': 'edge', 'cell_methods': f'{dimn_faces}: inverse distance weighted mean'}
+    edge_var = edge_var.assign_attrs(
+            attr_list).rename(uda.name)
     
     return edge_var
 
@@ -1038,3 +1042,19 @@ def calculate_distance_vectors(constructorSVA, **kwargs):
     distance_vectors = face_edge_coords - centroid_coords
 
     return distance_vectors
+
+def compute_kzz(uds, dicoww=5e-5, prandtl_schmidt=0.7,  tracer='mesh2d_sa1'):
+
+    gridname = uds.grid.name
+
+    vicwwu = uds[f'{gridname}_vicwwu']
+    dicwwu = vicwwu / prandtl_schmidt
+    
+    if tracer == f'{gridname}_sa1':
+        k_l = (1/700) * 10e-6
+    elif tracer == f'{gridname}_tem1': 
+        k_l = (1/6.7) * 10e-6
+
+    uds['mesh2d_dicwwu'] = dicwwu + dicoww + k_l
+
+    return uds
