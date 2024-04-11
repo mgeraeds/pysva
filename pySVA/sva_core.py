@@ -31,23 +31,33 @@ class constructorSVA:
             raise IOError("Please provide xr.Dataset, xu.core.wrap.UgridDataset, xr.DataArray, or a file path to a netCDF.")
 
         # self._setup(data=data_description)
+        # Dimension-related attributes
+        self.grid = self.ds.grid
+        self.gridname = self.ds.grid.name
+        self.dimn_maxef = f'{self.gridname}_nMax_edge_faces'
+        self.dimn_maxfn = self.grid.to_dataset().mesh2d.attrs['max_face_nodes_dimension']
+        self.dimn_maxen = f'{self.gridname}_nMax_edge_nodes'
+        self.dimn_cart = f'{self.gridname}_nCartesian_coords'
 
-        self.kzz = self.ds[f'{data_description["kzz"]}']
+        self.dimn_nodes = self.ds.grid.node_dimension
+        self.dimn_edges = self.ds.grid.edge_dimension
+        self.dimn_faces = self.ds.grid.face_dimension
+        self.fill_value = self.ds.grid.fill_value
+
+        # Attributes
         self.velx = self.ds[f'{data_description["velx"]}']
         self.vely = self.ds[f'{data_description["vely"]}']
         self.velz = self.ds[f'{data_description["velz"]}']
         self.flow_area = self.ds[f'{data_description["flow_area"]}']
         self.volume = self.ds[f'{data_description["volume"]}']
         self.viscosity = self.ds[f'{data_description["viscosity"]}']
-
         self.tracer = self.ds[f'{data_description["tracer"]}']
-        self.tracer_variance = None
 
         # Hidden/calculated values
         self.edge_nodes = self.edge_nodes
         self.face_nodes = self.face_nodes
         self.kzz = self.kzz
-
+        self.tracer_variance = None
         self._tracer_perturbation = None
         self._velocity_perturbation = None
 
@@ -115,135 +125,146 @@ class constructorSVA:
 
         return face_coords, edge_coords, node_coords
 
-    def build_edge_node_coordinates(self):
-        # > Get dimension names
-        fill_value = self.ds.grid.fill_value
-        dimn_nodes = self.ds.grid.node_dimension
+    @property
+    def edge_node_coords(self):
+        if not hasattr(self, 'edge_node_coords'):
+            # > Get dimension names
+            fill_value = self.fill_value
+            dimn_nodes = self.dimn_nodes
 
-        # > Get/buid edge-node connectivity
-        edge_nodes = self.edge_nodes
+            # > Get/buid edge-node connectivity
+            edge_nodes = self.edge_nodes
 
-        # > Build the node_coords
-        _, _, node_coords = self.get_all_coordinates()  # just get the node_coords
+            # > Build the node_coords
+            _, _, node_coords = self.get_all_coordinates()  # just get the node_coords
 
-        # > Get the coordinates of all nodes belonging to an edge
-        edge_node_coords = xr.where(edge_nodes != fill_value, node_coords.isel({dimn_nodes: edge_nodes}), np.nan)
+            # > Get the coordinates of all nodes belonging to an edge
+            edge_node_coords = xr.where(edge_nodes != fill_value, node_coords.isel({dimn_nodes: edge_nodes}), np.nan)
 
-        return edge_node_coords 
+            return edge_node_coords 
     
     @property
     def kzz(self, dicoww=5e-5, prandtl_schmidt=0.7):
+        if not hasattr(self, 'kzz'):
+            tracer = self.tracer
+            uds = self.ds
+            gridname = self.gridname
+            dimn_edges = self.dimn_edges
+            viscosity = self.viscosity
+            dicwwu = viscosity / prandtl_schmidt
+            
+            if tracer == f'{gridname}_sa1':
+                k_l = (1/700) * 10e-6
+            elif tracer == f'{gridname}_tem1': 
+                k_l = (1/6.7) * 10e-6
 
-        tracer = self.tracer
-        uds = self.ds
-        gridname = uds.grid.name
-        dimn_edges = uds.grid.edge_dimension
-        gridname = uds.grid.name
+            # > Calculate kzz
+            kzz = dicwwu + dicoww + k_l
+            # > Assign attributes and rename 
+            kzz = kzz.assign_attrs({'mesh': f'{gridname}', 
+                                'location': 'edge',
+                                'cell_methods': f'{dimn_edges}: mean',
+                                'standard_name': 'eddy_diffusivity',
+                                'long_name': 'turbulent vertical eddy diffusivity', 
+                                'units': 'm2 s-1', 
+                                'grid_mapping': 'projected_coordinate_system'}).rename(f'{gridname}_dicwwu')
+            
+            # > Add calculated diffusivity to dataset
+            uds[f'{gridname}_dicwwu'] = (kzz.dims, kzz.data)
 
-        vicwwu = uds[f'{gridname}_vicwwu']
-        dicwwu = vicwwu / prandtl_schmidt
-        
-        if tracer == f'{gridname}_sa1':
-            k_l = (1/700) * 10e-6
-        elif tracer == f'{gridname}_tem1': 
-            k_l = (1/6.7) * 10e-6
-
-        # > Calculate kzz
-        kzz = dicwwu + dicoww + k_l
-        # > Assign attributes and rename 
-        kzz = kzz.assign_attrs({'mesh': f'{gridname}'}, 
-                               'location': 'edge',
-                               'cell_methods': f'{dimn_edges}: mean',
-                               'standard_name': 'eddy_diffusivity',
-                               'long_name': 'turbulent vertical eddy diffusivity', 
-                               'units': 'm2 s-1', 
-                               'grid_mapping': 'projected_coordinate_system').rename(f'{gridname}_dicwwu')
-        
-        # > Add calculated diffusivity to dataset
-        uds[f'{gridname}_dicwwu'] = (kzz.dims, kzz.data)
-
-        return kzz
+            return kzz
     
     @property
+    def edge_faces(self):
+        if not hasattr(self, 'edge_faces'):
+            # > Get dimensions and fill value
+            fill_value = self.fill_value
+            dimn_edges = self.dimn_edges
+            dimn_maxef = self.dimn_maxef
+            
+            edge_faces = xr.DataArray(self.ds.ugrid.grid.edge_face_connectivity, dims=(dimn_edges, dimn_maxef))
+            edge_faces_validbool = edge_faces!=fill_value
+            edge_faces = edge_faces.where(edge_faces_validbool, -1)
+
+            return edge_faces
+
+    @property
     def edge_nodes(self):
-
-        # First check if the provided dataset is a xu.core.wrap.UgridDataset
-        uds = constructorSVA.ds
-
-        if isinstance(uds, xu.core.wrap.UgridDataset):
+        if not hasattr(self, 'edge_nodes'):
             # > Get fill value, grid name and dimensions
-            fill_value = uds.grid.fill_value
-            gridname = uds.grid.name
-            dimn_edges = uds.grid.edge_dimension
+            fill_value = self.fill_value
+            dimn_edges = self.dimn_edges
 
             # > Get coordinate names
-            coord_edge_x, coord_edge_y = uds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'edge').split()
+            coord_edge_x, coord_edge_y = self.ds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'edge').split()
 
             # > Determine dimension name
-            dimn_maxen = f'{gridname}_nMax_edge_nodes'
+            dimn_maxen = self.dimn_maxen
 
             # > Get connectivity
-            edge_nodes = uds.grid.edge_node_connectivity
+            edge_nodes = self.ds.grid.edge_node_connectivity
 
             # > Make into xr.DataArray with correct sizes, dimensions, and coordinates
-            edge_nodes = xr.DataArray(data=edge_nodes, dims=[dimn_edges, dimn_maxen], coords={f'{coord_edge_x}':([dimn_edges], uds[f'{coord_edge_x}']), f'{coord_edge_y}':([dimn_edges], uds[f'{coord_edge_y}'])}, attrs={'cf_role': 'edge_node_connectivity', 'start_index':0, '_FillValue':fill_value}, name=uds.grid.to_dataset().mesh2d.attrs['edge_node_connectivity'])
+            edge_nodes = xr.DataArray(data=edge_nodes, dims=[dimn_edges, dimn_maxen], coords={f'{coord_edge_x}':([dimn_edges], self.ds[f'{coord_edge_x}']), f'{coord_edge_y}':([dimn_edges], self.ds[f'{coord_edge_y}'])}, attrs={'cf_role': 'edge_node_connectivity', 'start_index':0, '_FillValue':fill_value}, name=self.ds.grid.to_dataset().mesh2d.attrs['edge_node_connectivity'])
 
-        else:
-            raise IOError("Please provide xu.core.wrap.UgridDataset to be able to automatically derive connectivities of the unstructured grid.")
-
-        return edge_nodes
+            return edge_nodes
     
     @property
     def unvs(self):
-        import pyproj
+        if not hasattr(self, 'unvs'):
+            import pyproj
 
-        # First check if the provided dataset is a xu.core.wrap.UgridDataset
-        uds = constructorSVA.ds
+            # First check if the provided dataset is a xu.core.wrap.UgridDataset
+            uds = constructorSVA.ds
 
-        if isinstance(uds, xu.core.wrap.UgridDataset):
-            # > Get dimensions, gridname, and coordinates
-            gridname = uds.grid.name
-            dimn_maxen = f'{gridname}_nMax_edge_nodes'
-            dimn_cart = f'{gridname}_nCartesian_coords'
+            if isinstance(uds, xu.core.wrap.UgridDataset):
+                # > Get dimensions, gridname, and coordinates
+                gridname = uds.grid.name
+                dimn_cart = self.dimn_cart
 
-            varname_unvs = f'{gridname}_unvs'
+                varname_unvs = f'{gridname}_unvs'
 
-            # > Get edge coordinate names
-            edge_node_coords = build_edge_node_coordinates()
+                # > Get edge coordinate names
+                edge_node_coords = self.edge_node_coords
 
-            # > Check if the coordinate reference system is WGS84 (latitude, longitude)
-            x1 = edge_node_coords[:, 0, 0]
-            x2 = edge_node_coords[:, 1, 0]
-            y1 = edge_node_coords[:, 0, 1]
-            y2 = edge_node_coords[:, 1, 1]
+                # > Check if the coordinate reference system is WGS84 (latitude, longitude)
+                x1 = edge_node_coords[:, 0, 0]
+                x2 = edge_node_coords[:, 1, 0]
+                y1 = edge_node_coords[:, 0, 1]
+                y2 = edge_node_coords[:, 1, 1]
 
-            if uds.ugrid.crs[f'{gridname}'].name == 'WGS 84':
-                geodesic = pyproj.Geod(ellps='WGS84')
-                lat1 = y1
-                lat2 = y2
-                lon1 = x1
-                lon2 = x2
-                fwd_azimuth, back_azimuth, distance = geodesic.inv(lat2, lon2, lat1, lon1)
-                az_rad = np.deg2rad(fwd_azimuth)
-                x = np.sin(az_rad) * distance
-                y = np.cos(az_rad) * distance
+                if uds.ugrid.crs[f'{gridname}'].name == 'WGS 84':
+
+                    # > Define coordinate reference system
+                    geodesic = pyproj.Geod(ellps='WGS84')
+
+                    # > Infer latitudes and longitudes from the edge-node-coordinates
+                    lat1 = y1
+                    lat2 = y2
+                    lon1 = x1
+                    lon2 = x2
+                    # > Calculate distance vector
+                    fwd_azimuth, _, distance = geodesic.inv(lat2, lon2, lat1, lon1)
+                    az_rad = np.deg2rad(fwd_azimuth)
+                    x = np.sin(az_rad) * distance
+                    y = np.cos(az_rad) * distance
+
+                else:
+                    x = x2 - x1
+                    y = y2 - y1
+
+                nf = nf = xr.concat([-y, x], dimn_cart).T #np.dstack([-y, x])
+                vm_nf = nf.linalg.norm(dims=dimn_cart)
+
+                # > Calculate the norm and divide by the norm
+                unvs = nf / vm_nf 
+                unvs = unvs.rename(varname_unvs)
+                uds[f'{varname_unvs}'] = (unvs.dims, unvs.data)
 
             else:
-                x = x2 - x1
-                y = y2 - y1
-
-            nf = nf = xr.concat([-y, x], dimn_cart).T #np.dstack([-y, x])
-            vm_nf = nf.linalg.norm(dims=dimn_cart)
-
-            # > Calculate the norm and divide by the norm
-            unvs = nf / vm_nf 
-            unvs = unvs.rename(varname_unvs)
-            uds[f'{varname_unvs}'] = (unvs.dims, unvs.data)
-
-        else:
-            unvs = None
-            
-        return unvs
+                unvs = None
+                
+            return unvs
 
     # def _setup(self, data):
     #     """Iterates over keys in dictionary. Handles 4d-data, if one argument is left empty, dummy dimension will be created.
