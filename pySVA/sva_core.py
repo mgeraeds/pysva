@@ -70,22 +70,22 @@ class constructorSVA:
 
     @property
     def edge_face_weights(self):
+        if not hasattr(self, 'edge_face_weights'):
+            # > Get dimension names
+            dimn_faces = self.dimn_faces
+            fill_value = self.fill_value
+            
+            # > Get the edge-face connectivity
+            edge_faces = self.edge_faces
+            
+            face_coords = self.face_coords
+            edge_coords = self.edge_coords
 
-        # > Get dimension names
-        dimn_faces = self.dimn_faces
-        fill_value = self.fill_value
-        
-        # > Get the edge-face connectivity
-        edge_faces = self.edge_faces
-        
-        face_coords = self.face_coords
-        edge_coords = self.edge_coords
-
-        # > Fill edge-face-connectivity matrix with face coordinates
-        edge_face_coords = xr.where(edge_faces!=fill_value, face_coords.isel({dimn_faces:edge_faces}), np.nan)
-        
-        # > Build the weights
-        edge_face_weights = build_inverse_distance_weights(edge_coords, edge_face_coords)
+            # > Fill edge-face-connectivity matrix with face coordinates
+            edge_face_coords = xr.where(edge_faces!=fill_value, face_coords.isel({dimn_faces:edge_faces}), np.nan)
+            
+            # > Build the weights
+            edge_face_weights = build_inverse_distance_weights(edge_coords, edge_face_coords)
         
         return edge_face_weights
 
