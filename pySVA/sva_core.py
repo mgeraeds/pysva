@@ -142,8 +142,7 @@ class constructorSVA:
     @cached_property
     def kzz(self, dicoww=5e-5, prandtl_schmidt=0.7):
 
-        tracer = self.tracer
-        uds = self.ds
+        tracer = self.tracer.name
         gridname = self.gridname
         dimn_edges = self.dimn_edges
         viscosity = self.viscosity
@@ -166,7 +165,7 @@ class constructorSVA:
                             'grid_mapping': 'projected_coordinate_system'}).rename(f'{gridname}_dicwwu')
         
         # > Add calculated diffusivity to dataset
-        uds[f'{gridname}_dicwwu'] = (kzz.dims, kzz.data)
+        self.ds[f'{gridname}_dicwwu'] = (kzz.dims, kzz.data)
 
         return kzz
     
@@ -238,7 +237,7 @@ class constructorSVA:
         import pyproj
 
         # First check if the provided dataset is a xu.core.wrap.UgridDataset
-        uds = constructorSVA.ds
+        uds = self.ds
 
         # > Get dimensions, gridname, and coordinates
         gridname = uds.grid.name
@@ -265,6 +264,7 @@ class constructorSVA:
             lat2 = y2
             lon1 = x1
             lon2 = x2
+
             # > Calculate distance vector
             fwd_azimuth, _, distance = geodesic.inv(lat2, lon2, lat1, lon1)
             az_rad = np.deg2rad(fwd_azimuth)
