@@ -45,6 +45,7 @@ class constructorSVA:
         self.dimn_edges = self.ds.grid.edge_dimension
         self.dimn_faces = self.ds.grid.face_dimension
         self.fill_value = self.ds.grid.fill_value
+        self.dimn_layer = self.ds.grid.to_dataset()[self.gridname].layer_dimension
 
         self.face_coords, self.edge_coords, self.node_coords = self.get_all_coordinates()
 
@@ -61,9 +62,9 @@ class constructorSVA:
         self.edge_nodes = self.edge_nodes
         self.face_edges = self.face_edges
         self.kzz = self.kzz
-        self.tracer_variance = None
-        self._tracer_perturbation = None
-        self._velocity_perturbation = None
+        self.tracer_variance = self.tracer_variance
+        # self._tracer_perturbation = None
+        # self._velocity_perturbation = None
 
     def _read(self, file_name, **kwargs):
         # self.ds = xr.open_dataset(file_name, use_cftime=True, **kwargs)
@@ -282,9 +283,9 @@ class constructorSVA:
                 
         return unvs
     
-    def uda_to_edges(self, varname):
+    def uda_to_edges(self, uda):
         # > Define the to-be-interpolated tracer DataArray and grid
-        uda = self.ds[f"{varname}"]
+        varname = uda.name
         grid = self.ds.grid
         dimn_faces = self.dimn_faces
 
@@ -331,7 +332,7 @@ class constructorSVA:
         else:
             raise ValueError(f'Variable {varname} does not contain dimension faces, so cannot be transformed from faces to edges.')
 
-    def compute_gradient_on_face(self, varname):
+    def compute_gradient_on_face(self, uda, add_to_dataset=False):
 
         # > Obtain uds and grid from constructorSVA object
         uds = self.ds
@@ -344,9 +345,6 @@ class constructorSVA:
         fill_value = self.fill_value
         gridname = self.gridname
         dimn_cart = self.dimn_cart
-
-        # > Determine varname from the provided array\
-        uda = uds[varname]
 
         # > Get unit normal vectors
         unvs = self.unvs
@@ -379,7 +377,7 @@ class constructorSVA:
         # > to get to the final vector, we have to multiply u1/u0 by the normal vector
         # > first. Also, we need to check their sign for every edge.
         if not dimn_edges in uda.dims:
-            uda = self.uda_to_edges(varname)
+            uda = self.uda_to_edges(uda)
         else:
             pass
 
@@ -412,7 +410,12 @@ class constructorSVA:
         
         # > Multiply the total result with (1/cell volume) (dimension: faces, cartesian_coordinates)
         gradient = (1/volume) * face_vars
-        uds[f'{gridname}_{varname}_gradient'] = (gradient.dims, gradient.data)
+
+        # > Check if it needs to be added to the dataset self.ds
+        if add_to_dataset:
+            # > Determine varname from the provided array
+            varname = uda.name
+            uds[f'{gridname}_{varname}_gradient'] = (gradient.dims, gradient.data)
             
         return gradient
 
@@ -448,6 +451,38 @@ class constructorSVA:
 
         return distance_vectors
 
+    @cached_property
+    def tracer_variance(self):
+
+        mean_tracer = self.tracer.mean(dim=self.dimn_layer)
+        tracer_perturbation = self.tracer - mean_tracer
+        tracer_variance = tracer_perturbation**2
+
+        return tracer_variance 
+    
+    @cached_property
+    def advection(self):
+
+        # > First calculate (S')^2 * u and (S')^2 * v
+        u_sv2 = self.velx * self.tracer_variance
+        v_sv2 = self.vely * self.tracer_variance
+
+        # > Integrate terms in x and y direction
+        u_sv2_int = u_sv2.integrate(self.dimn_layer).rename(f"{self.gridname}_horizontal_tracer_advection")
+        v_sv2_int = v_sv2.integrate(self.dimn_layer).rename(f"{self.gridname}_vertical_tracer_advection")
+
+        # > Interpolate values to edges
+        u_sv2_int = self.uda_to_edges(u_sv2_int)
+        v_sv2_int = self.uda_to_edges(v_sv2_int)
+
+        # > Calculate gradient
+        grad_usv2 = self.compute_gradient_on_face(u_sv2_int) 
+        grad_vsv2 =  self.compute_gradient_on_face(v_sv2_int)
+
+        # > Cartesian dimension 0 is x-direction, 1 is y-direction
+        # > We need du/dx + dv/dy for the horizontal divergence of the velocity * salinity variance vector
+        
+        
     # def _setup(self, data):
     #     """Iterates over keys in dictionary. Handles 4d-data, if one argument is left empty, dummy dimension will be created.
     #     Args:
