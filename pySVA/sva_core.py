@@ -178,8 +178,6 @@ class constructorSVA:
         dimn_maxef = self.dimn_maxef
         
         edge_faces = xr.DataArray(self.ds.ugrid.grid.edge_face_connectivity, dims=(dimn_edges, dimn_maxef))
-        edge_faces_validbool = edge_faces!=fill_value
-        edge_faces = edge_faces.where(edge_faces_validbool, -1)
 
         return edge_faces
 
@@ -225,16 +223,13 @@ class constructorSVA:
                                                     f'{coord_face_y}': ([dimn_faces], self.ds[f'{coord_face_y}'])},
                                             attrs={'cf_role': 'face_edge_connectivity', 'start_index': 0,
                                                     '_FillValue': fill_value}, name=f'{gridname}_face_edges')
-        # > Mask any numbers where there are no more edges in the face-edge-connectivity
-        face_edges_validbool = face_edges!=fill_value
-        face_edges = face_edges.where(face_edges_validbool, -1)
 
         return face_edges
         
     @cached_property
     def unvs(self):
             
-        import pyproj
+        from pyproj import Transformer
 
         # First check if the provided dataset is a xu.core.wrap.UgridDataset
         uds = self.ds
@@ -256,24 +251,26 @@ class constructorSVA:
 
         if uds.ugrid.crs[f'{gridname}'].name == 'WGS 84':
 
-            # > Define coordinate reference system
-            geodesic = pyproj.Geod(ellps='WGS84')
-
             # > Infer latitudes and longitudes from the edge-node-coordinates
             lat1 = y1
             lat2 = y2
             lon1 = x1
             lon2 = x2
 
-            # > Calculate distance vector
-            fwd_azimuth, _, distance = geodesic.inv(lat2, lon2, lat1, lon1)
-            az_rad = np.deg2rad(fwd_azimuth)
-            x = np.sin(az_rad) * distance
-            y = np.cos(az_rad) * distance
+            latlon2rd = Transformer.from_crs("epsg:4326",
+                                     "+proj=sterea +lat_0=52.15616055555555 +lon_0=5.38763888888889 +k=0.9999079 +x_0=155000 +y_0=463000 +ellps=bessel +towgs84=565.237,50.0087,465.658,-0.406857,0.350733,-1.87035,4.0812 +units=m +no_defs")
+            # Transform coordinates
+            x1_n, y1_n = latlon2rd.transform(lat1, lon1)
+            x2_n, y2_n = latlon2rd.transform(lat2, lon2)
 
-        else:
-            x = x2 - x1
-            y = y2 - y1
+            # Give correct attiributes
+            x1 = xr.DataArray(x1_n, dims=x1.dims, coords=x1.coords)
+            x2 = xr.DataArray(x2_n, dims=x2.dims, coords=x2.coords)
+            y1 = xr.DataArray(y1_n, dims=y1.dims, coords=y1.coords)
+            y2 = xr.DataArray(y2_n, dims=y2.dims, coords=y2.coords)
+
+        x = x2 - x1
+        y = y2 - y1
 
         nf = nf = xr.concat([-y, x], dimn_cart).T #np.dstack([-y, x])
         vm_nf = nf.linalg.norm(dims=dimn_cart)
@@ -363,6 +360,8 @@ class constructorSVA:
         face_edges = self.face_edges
         # > Get boolean to mask other arrays too
         face_edges_validbool = face_edges!=fill_value
+        # > Mask edges that don't have a value
+        face_edges = face_edges.where(face_edges_validbool, -1)
 
         # > Get the unit normal vectors (nf) also in the face-edges matrix
         fe_nfs = xr.where(face_edges_validbool, unvs.isel({dimn_edges: face_edges}), np.nan)
@@ -442,7 +441,7 @@ class constructorSVA:
         edge_coords = self.edge_coords
 
         # > Put edge coordinates into face-edge connectivity matrix
-        face_edge_coords = xr.where(face_edges!=fill_value, edge_coords.isel({dimn_edges:face_edges}), np.nan)
+        face_edge_coords = xr.where(face_edges!=fill_value, edge_coords.isel({dimn_edges: face_edges}), np.nan)
 
         # > Subtract the face coordinates from each of the edge coordinates in the connectivity matrix
         distance_vectors = face_edge_coords - centroid_coords
