@@ -481,7 +481,38 @@ class constructorSVA:
 
         # > Cartesian dimension 0 is x-direction, 1 is y-direction
         # > We need du/dx + dv/dy for the horizontal divergence of the velocity * salinity variance vector
+        advection = grad_usv2.isel({f'{self.dimn_cart}':0}) + grad_vsv2.isel({f'{self.dimn_cart}':1})
         
+        return advection
+    
+    @cached_property
+    def straining(self):
+
+        # > Get the tracer variance
+        tracer_variance = self.tracer_variance
+
+        # > Get the velocity perturbation
+        ux_p = self.velx - self.velx.mean(dim=self.dimn_layer)
+        uy_p = self.vely - self.vely.mean(dim=self.dimn_layer)
+
+        # > Get the mean tracer over depth
+        tracer_name = self.tracer.name
+        tracer_mean = self.tracer.mean(dim=self.dimn_layer).rename(f'{self.gridname}_{tracer_name}a') # a stands for averaged
+
+        # > Get the gradient of the tracer mean
+        tracer_mean_gradient = self.compute_gradient_on_face(tracer_mean)
+
+        # > Calculate -2*sv2*ux_p and uy_p
+        sv2_uxp = -2 * tracer_variance * ux_p
+        sv2_uyp = -2 * tracer_variance * uy_p
+
+        # > Calculate the dot product of the vector (-2*sv2*ux_p, -2*sv2*uy_p) with the tracer_mean_gradient
+        dot_prod = tracer_mean_gradient.isel({f'{self.dimn_cart}':0}) * sv2_uxp + tracer_mean_gradient.isel({f'{self.dimn_cart}':1})  * sv2_uyp
+
+        # > Integrate to get the straining term
+        straining = dot_prod.integrate(dim=self.dimn_layer)
+
+        return straining
         
     # def _setup(self, data):
     #     """Iterates over keys in dictionary. Handles 4d-data, if one argument is left empty, dummy dimension will be created.
