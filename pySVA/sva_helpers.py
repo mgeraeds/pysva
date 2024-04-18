@@ -6,7 +6,7 @@ import xarray_einstats
 
 
 def build_inverse_distance_weights(a, b):
-    import numpy as np
+
     """
     Caculate inverse distance weights based and apply using xarray.
 
@@ -1058,3 +1058,6 @@ def compute_kzz(uds, dicoww=5e-5, prandtl_schmidt=0.7,  tracer='mesh2d_sa1'):
     uds['mesh2d_dicwwu'] = dicwwu + dicoww + k_l
 
     return uds
+
+def integrate_trapz(y, x, dim=None):
+    return ((x.isel({f'{dim}':slice(1, None)}) - x.isel({f'{dim}':slice(None, -1)})) * (y.isel({f'{dim}':slice(1, None)}) + y.isel({f'{dim}':slice(None, -1)})) / 2).sum(dim=dim)
