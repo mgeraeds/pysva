@@ -468,13 +468,18 @@ class constructorSVA:
         u_sv2 = self.velx * self.tracer_variance
         v_sv2 = self.vely * self.tracer_variance
 
+        # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
+        u_sv2_int = u_sv2_int.drop_vars([n for n,v in u_sv2_int.coords.items() if f"{self.dimn_layer}" in v.dims])
+        v_sv2_int = v_sv2_int.drop_vars([n for n,v in v_sv2_int.coords.items() if f"{self.dimn_layer}" in v.dims])
+        depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
+
         # > Integrate terms in x and y direction
-        u_sv2_int = u_sv2.integrate(self.dimn_layer).rename(f"{self.gridname}_horizontal_tracer_advection")
-        v_sv2_int = v_sv2.integrate(self.dimn_layer).rename(f"{self.gridname}_vertical_tracer_advection")
+        u_sv2_int = integrate_trapz(u_sv2, depth, dim=self.dimn_layer).rename(f"{self.gridname}_{self.tracer.name}_adv_x")
+        v_sv2_int = integrate_trapz(v_sv2, depth, dim=self.dimn_layer).rename(f"{self.gridname}_{self.tracer.name}_adv_y")
 
         # > Interpolate values to edges
-        u_sv2_int = (self.uda_to_edges(u_sv2_int)).integrate(self.dimn_layer)
-        v_sv2_int = (self.uda_to_edges(v_sv2_int)).integrate(self.dimn_layer)
+        u_sv2_int = self.uda_to_edges(u_sv2_int)
+        v_sv2_int = self.uda_to_edges(v_sv2_int)
 
         # > Calculate gradient
         grad_usv2 = self.compute_gradient_on_face(u_sv2_int) 
@@ -511,8 +516,8 @@ class constructorSVA:
         dot_prod = tracer_mean_gradient.isel({f'{self.dimn_cart}':0})*sv2_uxp + tracer_mean_gradient.isel({f'{self.dimn_cart}':1})*sv2_uyp
 
         # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
-        dot_prod = dot_prod.drop_vars([n for n,v in dot_prod.coords.items() if f"{sva_obj.dimn_layer}" in v.dims])
-        depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{sva_obj.dimn_layer}" in v.dims])
+        dot_prod = dot_prod.drop_vars([n for n,v in dot_prod.coords.items() if f"{self.dimn_layer}" in v.dims])
+        depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
 
         # > Integrate to get the straining term (trapezoidal rule)
         straining = integrate_trapz(dot_prod, depth, dim=self.dimn_layer)
@@ -525,8 +530,8 @@ class constructorSVA:
         tracer_variance = self.tracer_variance
 
         # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
-        tracer_variance = tracer_variance.drop_vars([n for n,v in tracer_variance.coords.items() if f"{sva_obj.dimn_layer}" in v.dims])
-        depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{sva_obj.dimn_layer}" in v.dims])
+        tracer_variance = tracer_variance.drop_vars([n for n,v in tracer_variance.coords.items() if f"{self.dimn_layer}" in v.dims])
+        depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
 
         # > Integrate tracer variance over depth
         tv_int = integrate_trapz(tracer_variance, depth, self.dimn_layer)
@@ -546,8 +551,8 @@ class constructorSVA:
         dsdz_sq = 2 * kzz* (dsdz**2)
 
         # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
-        dsdz_sq = dsdz_sq.drop_vars([n for n,v in dsdz_sq.coords.items() if f"{sva_obj.dimn_layer}" in v.dims])
-        depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{sva_obj.dimn_layer}" in v.dims])
+        dsdz_sq = dsdz_sq.drop_vars([n for n,v in dsdz_sq.coords.items() if f"{self.dimn_layer}" in v.dims])
+        depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
 
         # > Integrate the total term
         dissipation = -1 * (integrate_trapz(dsdz_sq, depth, self.dimn_layer))
