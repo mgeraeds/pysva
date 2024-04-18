@@ -46,6 +46,7 @@ class constructorSVA:
         self.dimn_faces = self.ds.grid.face_dimension
         self.fill_value = self.ds.grid.fill_value
         self.dimn_layer = self.ds.grid.to_dataset()[self.gridname].layer_dimension
+        self.dimn_interface = self.ds.grid.to_dataset()[self.gridname].interface_dimension
 
         self.face_coords, self.edge_coords, self.node_coords = self.get_all_coordinates()
 
@@ -546,9 +547,14 @@ class constructorSVA:
         # > Get the vertical turbulent diffusivity
         kzz = self.kzz
         
+        # > See if the depth dimension is in the kzz variable, if not then it's a staggered grid.
+        # > If staggered grid, then interpolate to dimension
+        if (self.dimn_interface != None) and (self.dimn_interface in kzz.dims):
+            kzz = dfmt.uda_interfaces_to_centers(self.kzz)
+
         # > Differentiate the tracer over depth
         dsdz = self.tracer.differentiate(self.dimn_layer)
-        dsdz_sq = 2 * kzz* (dsdz**2)
+        dsdz_sq = 2 * kzz * (dsdz**2)
 
         # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
         dsdz_sq = dsdz_sq.drop_vars([n for n,v in dsdz_sq.coords.items() if f"{self.dimn_layer}" in v.dims])
