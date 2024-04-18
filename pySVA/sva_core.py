@@ -470,8 +470,8 @@ class constructorSVA:
         v_sv2 = self.vely * self.tracer_variance
 
         # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
-        u_sv2_int = u_sv2_int.drop_vars([n for n,v in u_sv2_int.coords.items() if f"{self.dimn_layer}" in v.dims])
-        v_sv2_int = v_sv2_int.drop_vars([n for n,v in v_sv2_int.coords.items() if f"{self.dimn_layer}" in v.dims])
+        u_sv2 = u_sv2.drop_vars([n for n,v in u_sv2.coords.items() if f"{self.dimn_layer}" in v.dims])
+        v_sv2 = v_sv2.drop_vars([n for n,v in v_sv2.coords.items() if f"{self.dimn_layer}" in v.dims])
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
 
         # > Integrate terms in x and y direction
@@ -566,7 +566,7 @@ class constructorSVA:
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
 
         # > Integrate the total term
-        dissipation = -1 * (integrate_trapz(dsdz_sq, depth, self.dimn_layer))
+        dissipation = integrate_trapz(dsdz_sq, depth, self.dimn_layer)
 
         return dissipation
         
