@@ -550,7 +550,12 @@ class constructorSVA:
         # > See if the depth dimension is in the kzz variable, if not then it's a staggered grid.
         # > If staggered grid, then interpolate to dimension
         if (self.dimn_interface != None) and (self.dimn_interface in kzz.dims):
-            kzz = dfmt.uda_interfaces_to_centers(self.kzz)
+            kzz = dfmt.uda_interfaces_to_centers(kzz)
+
+        # > Check if the vertical eddy diffusivity is defined on the edges, and if it is,
+        # > interpolate it on the edges
+        if self.dimn_edges in kzz.dims:
+            kzz = dfmt.uda_to_edges(kzz)
 
         # > Differentiate the tracer over depth
         dsdz = self.tracer.differentiate(self.dimn_layer)
