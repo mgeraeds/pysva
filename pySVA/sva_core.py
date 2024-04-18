@@ -13,7 +13,7 @@ import xugrid as xu
 import dfm_tools as dfmt
 import numpy as np
 from functools import cached_property
-from pySVA.sva_helpers import build_inverse_distance_weights
+from pySVA.sva_helpers import build_inverse_distance_weights, integrate_trapz
 
 class constructorSVA:
     def __init__(self, input_file, data_description, **kwargs): # removed data description data_description,
@@ -57,6 +57,7 @@ class constructorSVA:
         self.volume = self.ds[f'{data_description["volume"]}']
         self.viscosity = self.ds[f'{data_description["viscosity"]}']
         self.tracer = self.ds[f'{data_description["tracer"]}']
+        self.depth = self.ds[f'{data_description["depth"]}']
 
         # Hidden/calculated values
         self.edge_nodes = self.edge_nodes
@@ -472,8 +473,8 @@ class constructorSVA:
         v_sv2_int = v_sv2.integrate(self.dimn_layer).rename(f"{self.gridname}_vertical_tracer_advection")
 
         # > Interpolate values to edges
-        u_sv2_int = self.uda_to_edges(u_sv2_int)
-        v_sv2_int = self.uda_to_edges(v_sv2_int)
+        u_sv2_int = (self.uda_to_edges(u_sv2_int)).integrate(self.dimn_layer)
+        v_sv2_int = (self.uda_to_edges(v_sv2_int)).integrate(self.dimn_layer)
 
         # > Calculate gradient
         grad_usv2 = self.compute_gradient_on_face(u_sv2_int) 
@@ -496,23 +497,62 @@ class constructorSVA:
         uy_p = self.vely - self.vely.mean(dim=self.dimn_layer)
 
         # > Get the mean tracer over depth
-        tracer_name = self.tracer.name
-        tracer_mean = self.tracer.mean(dim=self.dimn_layer).rename(f'{self.gridname}_{tracer_name}a') # a stands for averaged
+        # tracer_mean = self.tracer.mean(dim=self.dimn_layer).rename(f'{self.gridname}_{self.tracer.name}a') # a stands for averaged
 
-        # > Get the gradient of the tracer mean
-        tracer_mean_gradient = self.compute_gradient_on_face(tracer_mean)
+        # > Get the gradient of the tracer mean (assuming the mean of the gradient == the gradient of the mean)
+        tracer_gradient = self.compute_gradient_on_face(self.tracer) 
+        tracer_mean_gradient = tracer_gradient.mean(dim=self.dimn_layer)
 
         # > Calculate -2*sv2*ux_p and uy_p
         sv2_uxp = -2 * tracer_variance * ux_p
         sv2_uyp = -2 * tracer_variance * uy_p
 
         # > Calculate the dot product of the vector (-2*sv2*ux_p, -2*sv2*uy_p) with the tracer_mean_gradient
-        dot_prod = tracer_mean_gradient.isel({f'{self.dimn_cart}':0}) * sv2_uxp + tracer_mean_gradient.isel({f'{self.dimn_cart}':1})  * sv2_uyp
+        dot_prod = tracer_mean_gradient.isel({f'{self.dimn_cart}':0})*sv2_uxp + tracer_mean_gradient.isel({f'{self.dimn_cart}':1})*sv2_uyp
 
-        # > Integrate to get the straining term
-        straining = dot_prod.integrate(dim=self.dimn_layer)
+        # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
+        dot_prod = dot_prod.drop_vars([n for n,v in dot_prod.coords.items() if f"{sva_obj.dimn_layer}" in v.dims])
+        depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{sva_obj.dimn_layer}" in v.dims])
+
+        # > Integrate to get the straining term (trapezoidal rule)
+        straining = integrate_trapz(dot_prod, depth, dim=self.dimn_layer)
 
         return straining
+    
+    @cached_property
+    def tendency(self):
+        # > Get tracer variance
+        tracer_variance = self.tracer_variance
+
+        # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
+        tracer_variance = tracer_variance.drop_vars([n for n,v in tracer_variance.coords.items() if f"{sva_obj.dimn_layer}" in v.dims])
+        depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{sva_obj.dimn_layer}" in v.dims])
+
+        # > Integrate tracer variance over depth
+        tv_int = integrate_trapz(tracer_variance, depth, self.dimn_layer)
+
+        # > Take the difference in time (d/dt) 
+        tendency = tv_int.differentiate("time", datetime_unit="s")
+
+        return tendency
+
+    @cached_property
+    def dissipation(self):
+        # > Get the vertical turbulent diffusivity
+        kzz = self.kzz
+        
+        # > Differentiate the tracer over depth
+        dsdz = self.tracer.differentiate(self.dimn_layer)
+        dsdz_sq = 2 * kzz* (dsdz**2)
+
+        # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
+        dsdz_sq = dsdz_sq.drop_vars([n for n,v in dsdz_sq.coords.items() if f"{sva_obj.dimn_layer}" in v.dims])
+        depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{sva_obj.dimn_layer}" in v.dims])
+
+        # > Integrate the total term
+        dissipation = -1 * (integrate_trapz(dsdz_sq, depth, self.dimn_layer))
+
+        return dissipation
         
     # def _setup(self, data):
     #     """Iterates over keys in dictionary. Handles 4d-data, if one argument is left empty, dummy dimension will be created.
