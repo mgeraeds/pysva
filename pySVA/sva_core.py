@@ -13,7 +13,7 @@ import xugrid as xu
 import dfm_tools as dfmt
 import numpy as np
 from functools import cached_property
-from pySVA.sva_helpers import build_inverse_distance_weights, integrate_trapz
+from pySVA.sva_helpers import build_inverse_distance_weights, integrate_trapz, calculate_distance_pythagoras
 
 class constructorSVA:
     def __init__(self, input_file, data_description, **kwargs): # removed data description data_description,
@@ -59,6 +59,12 @@ class constructorSVA:
         self.viscosity = self.ds[f'{data_description["viscosity"]}']
         self.tracer = self.ds[f'{data_description["tracer"]}']
         self.depth = self.ds[f'{data_description["depth"]}']
+
+        # > Optional attributes
+        if 'interfaces' in data_description.keys():
+            self.interfaces = self.ds[f'{data_description["interfaces"]}']
+        else:
+            self.interfaces = None
 
         # Hidden/calculated values
         self.edge_nodes = self.edge_nodes
@@ -333,8 +339,19 @@ class constructorSVA:
         
         else:
             raise ValueError(f'Variable {varname} does not contain dimension faces, so cannot be transformed from faces to edges.')
+    
+    def reconstruct_cell_thickness(self):
+        if self.dimn_interface != None:
+            # > First get the cell thickness at each face
+            cell_thickness = self.interfaces.diff(dim=self.dimn_interfaces).rename({f'{self.dimn_interfaces}':self.dimn_layer}).rename(f'{self.gridname}_cell_thickness')
 
-    def compute_gradient_on_face(self, uda, add_to_dataset=False):
+        else:
+            #TODO: add functionality for if interface dimension doesn't exist.
+            raise NameError('Reconstruction of the cell thickness requires interface values. No interface values provided. Please provide these.')
+
+        return cell_thickness
+
+    def compute_gradient_on_face(self, uda, add_to_dataset=False, depth_averaged=False):
 
         # > Obtain uds and grid from constructorSVA object
         uds = self.ds
@@ -355,6 +372,26 @@ class constructorSVA:
         # > constructor first, then check the dataset, else throw error
         flow_area = self.flow_area
         volume = self.volume
+
+        # > If you want to calculate a gradient of an averaged quantity, we assume a depth-averaged volume based 
+        # > on the average thickness of the cell in the watercolumn. Nan's are skipped.
+        if depth_averaged:
+            # > Derive cell thickness
+            cell_thickness = self.reconstruct_cell_thickness()
+            cell_thickness_mean = cell_thickness.mean(dim=self.dimn_layer)
+            # > Derive the cell area
+            A_cell = xr.DataArray(self.ds.grid.area, dims=(dimn_faces), name=f'{gridname}_cell_area')
+            # > Derive the average cell volume
+            volume = (A_cell * cell_thickness_mean).assign_attrs(self.volume.attrs).rename(self.volume.name)
+            # > Get the edge length
+            edge_node_coords = self.edge_node_coords
+            edge_length = calculate_distance_pythagoras(edge_node_coords[:,0,0], edge_node_coords[:,0,1], edge_node_coords[:,1,0], edge_node_coords[:,1,1]).rename(f'{gridname}_edge_length')
+            # > Interpolate the cell thickness on the edges
+            cell_thickness_mean = self.uda_to_edges(cell_thickness_mean)
+            # > Derive the average flow area from the cell thickness and the edge length
+            flow_area = (edge_length * cell_thickness_mean).assign_attrs(self.flow_area.attrs).rename(self.flow_area.name)
+        else:
+            pass
             
         # > Get the face-edge connectivity and replace fill values with -1
         face_edges = self.face_edges
