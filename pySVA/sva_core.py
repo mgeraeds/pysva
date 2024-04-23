@@ -339,19 +339,8 @@ class constructorSVA:
         
         else:
             raise ValueError(f'Variable {varname} does not contain dimension faces, so cannot be transformed from faces to edges.')
-    
-    def reconstruct_cell_thickness(self):
-        if self.dimn_interface != None:
-            # > First get the cell thickness at each face
-            cell_thickness = self.interfaces.diff(dim=self.dimn_interfaces).rename({f'{self.dimn_interfaces}':self.dimn_layer}).rename(f'{self.gridname}_cell_thickness')
 
-        else:
-            #TODO: add functionality for if interface dimension doesn't exist.
-            raise NameError('Reconstruction of the cell thickness requires interface values. No interface values provided. Please provide these.')
-
-        return cell_thickness
-
-    def compute_gradient_on_face(self, uda, add_to_dataset=False, depth_averaged=False):
+    def compute_gradient_on_face(self, uda, add_to_dataset=False, depth_integrated=False, depth_averaged=False):
 
         # > Obtain uds and grid from constructorSVA object
         uds = self.ds
@@ -373,25 +362,13 @@ class constructorSVA:
         flow_area = self.flow_area
         volume = self.volume
 
-        # > If you want to calculate a gradient of an averaged quantity, we assume a depth-averaged volume based 
-        # > on the average thickness of the cell in the watercolumn. Nan's are skipped.
-        if depth_averaged:
-            # > Derive cell thickness
-            cell_thickness = self.reconstruct_cell_thickness()
-            cell_thickness_mean = cell_thickness.mean(dim=self.dimn_layer)
-            # > Derive the cell area
-            A_cell = xr.DataArray(self.ds.grid.area, dims=(dimn_faces), name=f'{gridname}_cell_area')
-            # > Derive the average cell volume
-            volume = (A_cell * cell_thickness_mean).assign_attrs(self.volume.attrs).rename(self.volume.name)
-            # > Get the edge length
-            edge_node_coords = self.edge_node_coords
-            edge_length = calculate_distance_pythagoras(edge_node_coords[:,0,0], edge_node_coords[:,0,1], edge_node_coords[:,1,0], edge_node_coords[:,1,1]).rename(f'{gridname}_edge_length')
-            # > Interpolate the cell thickness on the edges
-            cell_thickness_mean = self.uda_to_edges(cell_thickness_mean)
-            # > Derive the average flow area from the cell thickness and the edge length
-            flow_area = (edge_length * cell_thickness_mean).assign_attrs(self.flow_area.attrs).rename(self.flow_area.name)
-        else:
-            pass
+        # if depth_integrated:
+        #     # > Derive the summed cell volume
+        #     volume = self.volume.sum(dim=self.dimn_layer, keep_attrs=True)
+        #     # > Get the summed cell area
+        #     flow_area = self.flow_area.sum(dim=self.dimn_layer, keep_attrs=True)
+        # else:
+        #     pass
             
         # > Get the face-edge connectivity and replace fill values with -1
         face_edges = self.face_edges
@@ -399,6 +376,8 @@ class constructorSVA:
         face_edges_validbool = face_edges!=fill_value
         # > Mask edges that don't have a value
         face_edges = face_edges.where(face_edges_validbool, -1)
+        # > Stack face_edges for later use
+        face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
 
         # > Get the unit normal vectors (nf) also in the face-edges matrix
         fe_nfs = xr.where(face_edges_validbool, unvs.isel({dimn_edges: face_edges}), np.nan)
@@ -420,14 +399,11 @@ class constructorSVA:
         else:
             pass
 
-        # > Stack face_edges for later use
-        face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
-
         # > Make sure the edge dimension is not chunked, otherwise we will 
         # > get "PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks."
         chunks = {dimn_edges:-1}
         uda = uda.chunk(chunks)
-
+        
         # > Fill the face-edges matrix with the varname
         # > Do this via stack and unstack since 2D indexing does not
         # > properly work in dask yet: https://github.com/dask/dask/pull/10237
@@ -512,21 +488,21 @@ class constructorSVA:
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
 
         # > Integrate terms in x and y direction
-        u_sv2_int = integrate_trapz(u_sv2, depth, dim=self.dimn_layer).rename(f"{self.gridname}_{self.tracer.name}_adv_x")
-        v_sv2_int = integrate_trapz(v_sv2, depth, dim=self.dimn_layer).rename(f"{self.gridname}_{self.tracer.name}_adv_y")
-
-        # > Interpolate values to edges
-        u_sv2_int = self.uda_to_edges(u_sv2_int)
-        v_sv2_int = self.uda_to_edges(v_sv2_int)
+        # u_sv2_int = integrate_trapz(u_sv2, depth, dim=self.dimn_layer).rename(f"{self.gridname}_{self.tracer.name}_adv_x")
+        # v_sv2_int = integrate_trapz(v_sv2, depth, dim=self.dimn_layer).rename(f"{self.gridname}_{self.tracer.name}_adv_y")
 
         # > Calculate gradient
-        grad_usv2 = self.compute_gradient_on_face(u_sv2_int) 
-        grad_vsv2 =  self.compute_gradient_on_face(v_sv2_int)
+        grad_usv2 = self.compute_gradient_on_face(u_sv2) 
+        grad_vsv2 =  self.compute_gradient_on_face(v_sv2)
 
         # > Cartesian dimension 0 is x-direction, 1 is y-direction
         # > We need du/dx + dv/dy for the horizontal divergence of the velocity * salinity variance vector
         advection = grad_usv2.isel({f'{self.dimn_cart}':0}) + grad_vsv2.isel({f'{self.dimn_cart}':1})
         
+        # > Applying the Leibniz rule, we know that the divergence of an integral with fixed limits
+        # > is equal to the integral of the divergence, so we take the integral of the previously calculated advection term
+        advection = integrate_trapz(advection, depth, dim=self.dimn_layer).rename(f"{self.gridname}_{self.tracer.name}_advection")
+
         return advection
     
     @cached_property
@@ -540,11 +516,13 @@ class constructorSVA:
         uy_p = self.vely - self.vely.mean(dim=self.dimn_layer)
 
         # > Get the mean tracer over depth
-        # tracer_mean = self.tracer.mean(dim=self.dimn_layer).rename(f'{self.gridname}_{self.tracer.name}a') # a stands for averaged
+        # tracer_mean = self.tracer.mean(dim=self.dimn_layer,  keep_attrs=True).rename(f'{self.gridname}_{self.tracer.name}a') # a stands for averaged
 
-        # > Get the gradient of the tracer mean (assuming the mean of the gradient == the gradient of the mean)
+        # > Get the gradient of the tracer mean using the Leibniz rule determining that
+        # > the mean of the gradient == the gradient of the mean
         tracer_gradient = self.compute_gradient_on_face(self.tracer) 
         tracer_mean_gradient = tracer_gradient.mean(dim=self.dimn_layer)
+        # tracer_mean_gradient = self.compute_gradient_on_face(tracer_mean, depth_averaged=True)
 
         # > Calculate -2*sv2*ux_p and uy_p
         sv2_uxp = -2 * tracer_variance * ux_p
@@ -590,7 +568,7 @@ class constructorSVA:
             kzz = dfmt.uda_interfaces_to_centers(kzz)
 
         # > Check if the vertical eddy diffusivity is defined on the edges, and if it is,
-        # > interpolate it on the edges
+        # > interpolate it on the efaces
         if self.dimn_edges in kzz.dims:
             kzz = dfmt.uda_to_faces(kzz)
 
@@ -603,7 +581,7 @@ class constructorSVA:
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
 
         # > Integrate the total term
-        dissipation = integrate_trapz(dsdz_sq, depth, self.dimn_layer)
+        dissipation = -1 * integrate_trapz(dsdz_sq, depth, self.dimn_layer)
 
         return dissipation
         
