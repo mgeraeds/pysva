@@ -1,13 +1,5 @@
 __all__ = ['constructorSVA']
 
-# tef.tracer = tef.ds.salt
-# data_description = {
-#     "depth" : "mesh2d_nLayers",
-#     "time" : "time",
-#     "faces" : "mesh2d_nFaces"
-# }
-
-# Do imports
 import xarray as xr
 import xugrid as xu
 import dfm_tools as dfmt
@@ -504,6 +496,18 @@ class constructorSVA:
         advection = integrate_trapz(advection, depth, dim=self.dimn_layer).rename(f"{self.gridname}_{self.tracer.name}_advection")
 
         return advection
+    
+    @cached_property
+    def cell_thickness(self):
+        # > Get all of the dimensions
+        dimn_interface = self.dimn_interface
+        dimn_layer = self.dimn_layer
+        gridname = self.gridname
+
+        # > Get the cell thickness at each face on the layer dimension
+        cell_thickness = self.ds.mesh2d_flowelem_zw.diff(dim=dimn_interface).rename({f'{dimn_interface}':dimn_layer}).rename(f'{gridname}_cell_thickness')
+
+        return cell_thickness
     
     @cached_property
     def straining(self):
