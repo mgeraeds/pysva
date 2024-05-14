@@ -42,15 +42,30 @@ class constructorSVA:
 
         self.face_coords, self.edge_coords, self.node_coords = self.get_all_coordinates()
 
-        # Attributes
+        # Mandatory attributes
         self.velx = self.ds[f'{data_description["velx"]}']
         self.vely = self.ds[f'{data_description["vely"]}']
         self.velz = self.ds[f'{data_description["velz"]}']
-        self.flow_area = self.ds[f'{data_description["flow_area"]}']
-        self.volume = self.ds[f'{data_description["volume"]}']
         self.viscosity = self.ds[f'{data_description["viscosity"]}']
         self.tracer = self.ds[f'{data_description["tracer"]}']
         self.depth = self.ds[f'{data_description["depth"]}']
+
+        # Optional attributes
+        if 'volume' in data_description.keys():
+            self.volume = self.ds[f'{data_description["volume"]}']
+        else:
+            try:
+                self.volume = self.volume
+            except:
+                self.volume = None
+                
+        if 'flow_area' in data_description.keys():
+            self.flow_area = self.ds[f'{data_description["flow_area"]}']
+        else:
+            try:
+                self.flow_area = self.flow_area
+            except:
+                self.flow_area = None
 
         if 'bed_level' in data_description.keys():
             self.bed_level = self.ds[f'{data_description["bed_level"]}']
@@ -60,7 +75,6 @@ class constructorSVA:
             except:
                 self.bed_level = None   
 
-        # > Optional attributes
         if 'interfaces' in data_description.keys():
             self.interfaces = self.ds[f'{data_description["interfaces"]}']
         else:
@@ -71,8 +85,6 @@ class constructorSVA:
         self.face_edges = self.face_edges
         self.kzz = self.kzz
         self.tracer_variance = self.tracer_variance
-        # self._tracer_perturbation = None
-        # self._velocity_perturbation = None
 
     def _read(self, file_name, **kwargs):
         # self.ds = xr.open_dataset(file_name, use_cftime=True, **kwargs)
@@ -563,7 +575,7 @@ class constructorSVA:
     
     @cached_property
     def cell_thickness(self):
-        # > Get the cell thickness at each face on the layer dimension
+
         cell_thickness = self.ds.mesh2d_flowelem_zw.diff(dim=self.dimn_interface).rename({f'{self.dimn_interface}':self.dimn_layer}).rename(f'{self.gridname}_cell_thickness')
 
         return cell_thickness
@@ -574,6 +586,13 @@ class constructorSVA:
         cell_area = xr.DataArray(self.ds.grid.area, dims=(self.dimn_faces), name=f'{self.gridname}_cell_area')
 
         return cell_area
+    
+    @cached_property
+    def volume(self):
+
+        volume = self.cell_area * self.cell_thickness
+
+        return volume
     
     @cached_property
     def straining(self):
