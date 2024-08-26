@@ -382,12 +382,18 @@ class constructorSVA:
             edge_var = edge_var_stacked.unstack("__tmp_dim__")
             # > Convert data-array back to an xu.UgridDataArray
             edge_var = xu.UgridDataArray(edge_var, grid=grid)
-
+            
             # > Set fill values to nan-values
             edge_var = edge_var.where(edge_faces_validbool, np.nan)
 
             # > Calculate the variable on the edges, based on the face_weights
             face_weights = self.edge_face_weights
+
+            # > Rechunk back with setting = "auto" #todo: provide option for custom chunksizes
+            uda = uda.chunk(chunks="auto")
+            edge_var = edge_var.chunk(chunks="auto")
+
+            # Multipy edge variables with the face_weights to get the variable size on the edges
             edge_var = (edge_var * face_weights).sum(dim=dimn_maxef)
 
             # edge_var = edge_var.mean(dim=dimn_maxef)
@@ -449,7 +455,8 @@ class constructorSVA:
 
         # > Get the unit normal vectors (nf) also in the face-edges matrix
         fe_nfs = xr.where(face_edges_validbool, unvs.isel({dimn_edges: face_edges}), np.nan)
-
+        fe_nfs = fe_nfs.chunk(chunks="auto")
+        
         # // 2. See if the normal vectors are pointing out of the cell. If not, flip them.
         # > Calculate distance vectors
         dv = self.distance_vectors
@@ -486,6 +493,11 @@ class constructorSVA:
         flow_area = flow_area.chunk(chunks)
         edge_au_stacked = flow_area.isel({dimn_edges:face_edges_stacked})
         edge_au = edge_au_stacked.unstack("__tmp_dim__")
+
+        # > Rechunk the data back to the original
+        edge_var = edge_var.chunk(chunks="auto")
+        uda = uda.chunk(chunks="auto")
+        edge_au = edge_au.chunk(chunks="auto")
 
         # > Multiply the variable with the edge area (flow area), multiply by the 
         # > "flipped boolean" and the unit normal vector, and sum (dimension: faces)
@@ -565,11 +577,12 @@ class constructorSVA:
 
         # > Cartesian dimension 0 is x-direction, 1 is y-direction
         # > We need du/dx + dv/dy for the horizontal divergence of the velocity * salinity variance vector
-        advection = grad_usv2.isel({f'{self.dimn_cart}':0}) + grad_vsv2.isel({f'{self.dimn_cart}':1})
+        adv = grad_usv2.isel({f'{self.dimn_cart}':0}) + grad_vsv2.isel({f'{self.dimn_cart}':1})
+        # adv = advection.chunk("auto")
         
         # > Applying the Leibniz rule, we know that the divergence of an integral with fixed limits
         # > is equal to the integral of the divergence, so we take the integral of the previously calculated advection term
-        advection = integrate_trapz(advection, depth, dim=self.dimn_layer).rename(f"{self.gridname}_{self.tracer.name}_advection")
+        advection = integrate_trapz(adv, depth, dim=self.dimn_layer).rename(f"{self.tracer.name}_advection")
 
         return advection
     
@@ -642,6 +655,12 @@ class constructorSVA:
         tv_int = integrate_trapz(tracer_variance, depth, self.dimn_layer)
 
         # > Take the difference in time (d/dt) 
+        # > For this, chunk size in time must be larger than 1; check this first
+        if all(val == 1 for val in tv_int.chunksizes['time']):
+            tv_int = tv_int.chunk({'time': 2})
+        else:
+            pass
+
         tendency = tv_int.differentiate("time", datetime_unit="s")
 
         return tendency
