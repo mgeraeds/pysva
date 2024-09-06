@@ -556,6 +556,15 @@ class constructorSVA:
         return tracer_variance 
     
     @cached_property
+    def depth_integrated_tracer_variance(self):
+        
+        tracer_variance = self.tracer_variance
+        depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
+        depth_integrated_tracer_variance = integrate_trapz(tracer_variance, depth, dim=self.dimn_layer).rename(f"depth_integrated_{self.tracer.name}_variance")
+        
+        return depth_integrated_tracer_variance
+            
+    @cached_property
     def advection(self):
 
         # > First calculate (S')^2 * u and (S')^2 * v
