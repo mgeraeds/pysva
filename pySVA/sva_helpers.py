@@ -1059,5 +1059,25 @@ def compute_kzz(uds, dicoww=5e-5, prandtl_schmidt=0.7,  tracer='mesh2d_sa1'):
 
     return uds
 
-def integrate_trapz(y, x, dim=None):
-    return ((x.isel({f'{dim}':slice(1, None)}) - x.isel({f'{dim}':slice(None, -1)})) * (y.isel({f'{dim}':slice(1, None)}) + y.isel({f'{dim}':slice(None, -1)})) / 2).sum(dim=dim)
+import xarray as xr
+from typing import Optional
+
+def integrate_trapz(y: xr.DataArray, x: xr.DataArray, dim: Optional[str] = None) -> xr.DataArray:
+    """
+    Perform trapezoidal integration along a specified dimension.
+
+    Parameters:
+        y (xr.DataArray): The values to integrate.
+        x (xr.DataArray): The coordinate values along which to integrate.
+        dim (str, optional): The dimension along which to integrate. If None, the operation
+                             is applied along all dimensions.
+
+    Returns:
+        xr.DataArray: The result of the trapezoidal integration.
+    """
+    dx = x.isel({dim: slice(1, None)}) - x.isel({dim: slice(None, -1)})
+    avg_y = (y.isel({dim: slice(1, None)}) + y.isel({dim: slice(None, -1)})) / 2
+
+    result = (dx * avg_y).sum(dim=dim)
+
+    return result
