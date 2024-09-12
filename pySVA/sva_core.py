@@ -139,7 +139,28 @@ class constructorSVA:
         edge_length = calculate_distance_pythagoras(edge_node_coords[:,0,0], edge_node_coords[:,0,1], edge_node_coords[:,1,0], edge_node_coords[:,1,1]).rename(f'{gridname}_edge_length')
 
         return edge_length
-            
+    
+    @cached_property
+    def face_edge_weights(self):
+        
+        # > Get dimension names
+        dimn_edges = self.dimn_edges
+        fill_value = self.fill_value
+        
+        # > Get the edge-face connectivity
+        face_edges = self.face_edges
+        
+        face_coords = self.face_coords
+        edge_coords = self.edge_coords
+        
+        # > Fill face-edge-connectivity matrix with face coordinates
+        face_edge_coords = xr.where(face_edges!=fill_value, edge_coords.isel({dimn_edges: face_edges}), np.nan)
+        
+        # > Build the weights
+        face_edge_weights = build_inverse_distance_weights(face_coords, face_edge_coords)
+        
+        return face_edge_weights
+        
     @cached_property
     def edge_face_weights(self):
 
@@ -352,16 +373,76 @@ class constructorSVA:
                 
         return unvs
     
+#     def update_connectivities(self, boolean):
+        
+#         dimn_faces = self.dimn_faces
+#         dimn_edges = self.dimn_edges
+#         fill_value = self.fill_value
+#         gridname = self.grid_name
+        
+#         if dimn_faces in boolean.dims:
+            
+#             # > Get voordinate names
+#             coord_face_x, coord_face_y = self.ds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'face').split()
+#             coord_edge_x, coord_edge_y = self.ds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'edge').split()  
+            
+#             # > Get dimensions
+#             dimn_maxfn = self.dimn_maxfn
+#             dimn_maxef = self.dimn_maxef
+            
+#             # > Start with chunking the boolean correctly
+#             chunks = {dimn_faces:-1}
+#             boolean = boolean.chunk(chunks)
+            
+#             # 1. The edge_faces parameter
+#             # > Get edge_faces
+#             edge_faces = self.edge_faces
+            
+#             # > Select the boolean on faces in the edge-face connectivity matrix
+#             edge_faces_stacked = edge_faces.stack(__tmp_dim__=(dimn_edges, dimn_maxef))
+#             boolean_ef_stacked = boolean.isel({dimn_faces: edge_faces_stacked})
+#             boolean_ef = boolean_ef_stacked.unstack("__tmp_dim__")
+
+#             # > Make into xr.DataArray with correct sizes, dimensions, and coordinates
+#             # > Make the new face_edges 
+#             edge_faces = xr.DataArray(edge_faces.where(boolean_ef, -999).values, dims=(dimn_edges, dimn_maxef))
+            
+#             # > Set the cached_property anew
+#             self.edge_faces = edge_faces
+            
+#             # Get the boolean for whether the edges are valid (dim: meshd_nEdges)
+#             nan_bool = (edge_faces == fill_value).all(dim=dimn_maxef)
+            
+#             # 2. The face_edges parameter
+#             # > Get face_edges
+#             face_edges = self.face_edges
+            
+#             # > Select the varname on faces in the edge-face connectivity matrix
+#             face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
+#             boolean_fn_stacked = nan_bool.isel({dimn_edges: face_edges_stacked})
+#             boolean_fn = boolean_fn_stacked.unstack("__tmp_dim__")
+            
+#             face_edges = face_edges.where(boolean_fn, -999)
+            
+#             face_edges = xr.DataArray(face_edges, dims=[dimn_faces, dimn_maxfn],
+#                                             coords={f'{coord_face_x}': ([dimn_faces], self.ds[f'{coord_face_x}']),
+#                                                     f'{coord_face_y}': ([dimn_faces], self.ds[f'{coord_face_y}'])},
+#                                             attrs={'cf_role': 'face_edge_connectivity', 'start_index': 0,
+#                                                     '_FillValue': fill_value}, name=f'{gridname}_face_edges')
+            
+#             self.face_edges = face_edges
+            
+#             return            
+                 
     def uda_to_edges(self, uda):
         # > Define the to-be-interpolated tracer DataArray and grid
         varname = uda.name
         grid = self.ds.grid
         dimn_faces = self.dimn_faces
-
+        
         if dimn_faces in uda.dims:
 
             # > Get dimension and grid names
-            dimn_faces = self.dimn_faces
             dimn_edges = self.dimn_edges
             fill_value = self.fill_value
             dimn_maxef = self.dimn_maxef
@@ -376,10 +457,11 @@ class constructorSVA:
             chunks = {dimn_faces:-1}
             uda = uda.chunk(chunks)
 
-            # > Select the varname on faces in the edge-face connetivity matrix
+            # > Select the varname on faces in the edge-face connectivity matrix
             edge_faces_stacked = edge_faces.stack(__tmp_dim__=(dimn_edges, dimn_maxef))
             edge_var_stacked = uda.isel({dimn_faces: edge_faces_stacked})
             edge_var = edge_var_stacked.unstack("__tmp_dim__")
+            
             # > Convert data-array back to an xu.UgridDataArray
             edge_var = xu.UgridDataArray(edge_var, grid=grid)
             
@@ -392,10 +474,17 @@ class constructorSVA:
             # > Rechunk back with setting = "auto" #todo: provide option for custom chunksizes
             uda = uda.chunk(chunks="auto")
             edge_var = edge_var.chunk(chunks="auto")
-
+            
+            # If both of the edge vars are np.nan, then the sum should also be np.nan
+            # Make a boolean for this to test the next step on
+            nan_bool = ~edge_var.isnull().all(dim=dimn_maxef)
+            
             # Multipy edge variables with the face_weights to get the variable size on the edges
             edge_var = (edge_var * face_weights).sum(dim=dimn_maxef)
-
+            
+            # Apply the boolean
+            edge_var = edge_var.where(nan_bool)
+            
             # edge_var = edge_var.mean(dim=dimn_maxef)
             # Give name and attributes
             attr_list = {'location': 'edge', 'cell_methods': f'{dimn_faces}: inverse distance weighted mean'}
@@ -406,7 +495,71 @@ class constructorSVA:
         
         else:
             raise ValueError(f'Variable {varname} does not contain dimension faces, so cannot be transformed from faces to edges.')
+    
+    def uda_to_faces(self, uda):
+              
+        # > Define the to-be-interpolated tracer DataArray and grid
+        varname = uda.name
+        grid = self.ds.grid
+        
+        dimn_nodes = self.dimn_nodes
+        dimn_edges = self.dimn_edges
+        
+        if dimn_edges in uda.dims:
+            
+            dimn_faces = self.dimn_faces
+            fill_value = self.fill_value
+            dimn_maxfn = self.dimn_maxfn
+            
+            # > Get the edge-face connectivity and replace fill values with -1
+            face_edges = self.face_edges
+            face_edges_validbool = face_edges!=fill_value
+            face_edges = face_edges.where(face_edges_validbool, -1)
+            
+            # > Make sure the face dimension is not chunked, otherwise we will 
+            # > get "PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks."
+            chunks = {dimn_edges:-1}
+            uda = uda.chunk(chunks)
+            
+            # > Select the varname on faces in the edge-face connectivity matrix
+            face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
+            face_var_stacked = uda.isel({dimn_edges: face_edges_stacked})
+            face_var = face_var_stacked.unstack("__tmp_dim__")
+            
+            # > Convert data-array back to an xu.UgridDataArray
+            face_var = xu.UgridDataArray(face_var, grid=grid)
+            
+            # > Set fill values to nan-values
+            face_var = face_var.where(face_edges_validbool, np.nan)
+            
+            # > Rechunk back with setting = "auto" #todo: provide option for custom chunksizes
+            uda = uda.chunk(chunks="auto")
+            face_var = face_var.chunk(chunks="auto")
+            
+            # If all of the edge vars are np.nan, then the sum should also be np.nan
+            # Make a boolean for this to test the next step on
+            # nan_bool = ~face_var.isnull().all(dim=dimn_maxfn)
+            
+            # > Calculate the variable on the edges, based on the face_weights
+            edge_weights = self.face_edge_weights
+            
+            # Multipy edge variables with the face_weights to get the variable size on the edges
+            # face_var = face_var.mean(dim=dimn_maxfn)
+            face_var = (face_var * edge_weights).sum(dim=dimn_maxfn)
+            
+            # # Apply the boolean
+            #  face_var = face_var.where(nan_bool)
+            
+            # Update attributes from node/edge to face
+            face_attrs = {'location': 'face', 'cell_methods': f'{dimn_faces}: mean'}
+            face_var = face_var.assign_attrs(face_attrs)
+            
+            return face_var
+    
+        else:
+            raise ValueError(f'Variable {varname} does not contain dimension edges, so cannot be transformed from edges to faces.')
 
+    
     def compute_gradient_on_face(self, uda, add_to_dataset=False, mode_depth=None):
 
         # > Obtain uds and grid from constructorSVA object
@@ -687,7 +840,7 @@ class constructorSVA:
         # > Check if the vertical eddy diffusivity is defined on the edges, and if it is,
         # > interpolate it on the efaces
         if self.dimn_edges in kzz.dims:
-            kzz = dfmt.uda_to_faces(kzz)
+            kzz = self.uda_to_faces(kzz)
 
         # > Differentiate the tracer over depth
         dsdz = self.tracer.differentiate(self.dimn_layer)
