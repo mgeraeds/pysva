@@ -716,38 +716,7 @@ class constructorSVA:
         depth_integrated_tracer_variance = integrate_trapz(tracer_variance, depth, dim=self.dimn_layer).rename(f"depth_integrated_{self.tracer.name}_variance")
         
         return depth_integrated_tracer_variance
-            
-    @cached_property
-    def advection(self):
-
-        # > First calculate (S')^2 * u and (S')^2 * v
-        u_sv2 = self.velx * self.tracer_variance
-        v_sv2 = self.vely * self.tracer_variance
-
-        # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
-        u_sv2 = u_sv2.drop_vars([n for n,v in u_sv2.coords.items() if f"{self.dimn_layer}" in v.dims])
-        v_sv2 = v_sv2.drop_vars([n for n,v in v_sv2.coords.items() if f"{self.dimn_layer}" in v.dims])
-        depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
-
-        # > Integrate terms in x and y direction
-        # u_sv2_int = integrate_trapz(u_sv2, depth, dim=self.dimn_layer).rename(f"{self.gridname}_{self.tracer.name}_adv_x")
-        # v_sv2_int = integrate_trapz(v_sv2, depth, dim=self.dimn_layer).rename(f"{self.gridname}_{self.tracer.name}_adv_y")
-
-        # > Calculate gradient
-        grad_usv2 = self.compute_gradient_on_face(u_sv2) 
-        grad_vsv2 =  self.compute_gradient_on_face(v_sv2)
-
-        # > Cartesian dimension 0 is x-direction, 1 is y-direction
-        # > We need du/dx + dv/dy for the horizontal divergence of the velocity * salinity variance vector
-        adv = grad_usv2.isel({f'{self.dimn_cart}':0}) + grad_vsv2.isel({f'{self.dimn_cart}':1})
-        # adv = advection.chunk("auto")
-        
-        # > Applying the Leibniz rule, we know that the divergence of an integral with fixed limits
-        # > is equal to the integral of the divergence, so we take the integral of the previously calculated advection term
-        advection = integrate_trapz(adv, depth, dim=self.dimn_layer).rename(f"{self.tracer.name}_advection")
-
-        return advection
-    
+     
     @cached_property
     def cell_thickness(self):
 
@@ -769,9 +738,8 @@ class constructorSVA:
 
         return volume
     
-    @cached_property
-    def straining(self):
-
+    def straining(self, integration='depth'):
+        
         # > Get the tracer variance
         tracer_variance = self.tracer_variance
 
@@ -798,24 +766,36 @@ class constructorSVA:
         # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
         dot_prod = dot_prod.drop_vars([n for n,v in dot_prod.coords.items() if f"{self.dimn_layer}" in v.dims])
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
-
-        # > Integrate to get the straining term (trapezoidal rule)
-        straining = integrate_trapz(dot_prod, depth, dim=self.dimn_layer)
-
-        return straining
+        
+        if integration.lower() == 'depth':
+            # > Integrate to get the straining term (trapezoidal rule)
+            straining = integrate_trapz(dot_prod, depth, dim=self.dimn_layer)
+        elif integration.lower() == 'volume':
+            # > Multiply with volume per cell and sum over all cells
+            straining = (dot_prod * self.volume).sum(dim=[f'{self.dimn_layer}', f'{self.dimn_faces}'])
+        else:
+            raise ValueError(f"Could not derive what to do with integration={integration} keyword.")
+            
+        return straining.rename(f"{integration}_integrated_{self.tracer.name}_straining")
     
-    @cached_property
-    def tendency(self):
+    def tendency(self, integration='depth'):
+        
         # > Get tracer variance
         tracer_variance = self.tracer_variance
 
         # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
         tracer_variance = tracer_variance.drop_vars([n for n,v in tracer_variance.coords.items() if f"{self.dimn_layer}" in v.dims])
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
-
-        # > Integrate tracer variance over depth
-        tv_int = integrate_trapz(tracer_variance, depth, self.dimn_layer)
-
+        
+        if integration.lower() == 'depth':
+            # > Integrate tracer variance over depth (trapezoidal rule)
+            tv_int = integrate_trapz(tracer_variance, depth, self.dimn_layer)
+        elif integration.lower() == 'volume':
+            # > Multiply with volume per cell and sum over all cells
+            tv_int = (tracer_variance * self.volume).sum(dim=[f'{self.dimn_layer}', f'{self.dimn_faces}'])
+        else:
+            raise ValueError(f"Could not derive what to do with integration={integration} keyword.")
+            
         # > Take the difference in time (d/dt) 
         # > For this, chunk size in time must be larger than 1; check this first
         if all(val == 1 for val in tv_int.chunksizes['time']):
@@ -823,12 +803,48 @@ class constructorSVA:
         else:
             pass
 
-        tendency = tv_int.differentiate("time", datetime_unit="s")
+        tendency = tv_int.differentiate("time", datetime_unit="s").rename(f"{integration}_integrated_{self.tracer.name}_tendency")
 
         return tendency
+       
+    def advection(self, integration='depth'):
 
-    @cached_property
-    def dissipation(self):
+        # > First calculate (S')^2 * u and (S')^2 * v
+        u_sv2 = self.velx * self.tracer_variance
+        v_sv2 = self.vely * self.tracer_variance
+
+        # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
+        u_sv2 = u_sv2.drop_vars([n for n,v in u_sv2.coords.items() if f"{self.dimn_layer}" in v.dims])
+        v_sv2 = v_sv2.drop_vars([n for n,v in v_sv2.coords.items() if f"{self.dimn_layer}" in v.dims])
+        depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
+
+        # > Integrate terms in x and y direction
+        # u_sv2_int = integrate_trapz(u_sv2, depth, dim=self.dimn_layer).rename(f"{self.gridname}_{self.tracer.name}_adv_x")
+        # v_sv2_int = integrate_trapz(v_sv2, depth, dim=self.dimn_layer).rename(f"{self.gridname}_{self.tracer.name}_adv_y")
+
+        # > Calculate gradient
+        grad_usv2 = self.compute_gradient_on_face(u_sv2) 
+        grad_vsv2 =  self.compute_gradient_on_face(v_sv2)
+
+        # > Cartesian dimension 0 is x-direction, 1 is y-direction
+        # > We need du/dx + dv/dy for the horizontal divergence of the velocity * salinity variance vector
+        adv = grad_usv2.isel({f'{self.dimn_cart}':0}) + grad_vsv2.isel({f'{self.dimn_cart}':1})
+        # adv = advection.chunk("auto")
+        
+        if integration.lower() == 'depth':
+            # > Integrate advection over depth (trapezoidal rule)
+            # > Applying the Leibniz rule, we know that the divergence of an integral with fixed limits
+            # > is equal to the integral of the divergence, so we take the integral of the previously calculated advection term
+            advection = integrate_trapz(adv, depth, dim=self.dimn_layer)
+        elif integration.lower() == 'volume':
+            # > Multiply with volume per cell and sum over all cells
+            advection = (adv * self.volume).sum(dim=[f'{self.dimn_layer}', f'{self.dimn_faces}'])
+        else:
+            raise ValueError(f"Could not derive what to do with integration={integration} keyword.")
+
+        return advection.rename(f"{integration}_integrated_{self.tracer.name}_advection")
+    
+    def dissipation(self, integration='depth'):
         # > Get the vertical turbulent diffusivity
         kzz = self.kzz
         
@@ -850,10 +866,17 @@ class constructorSVA:
         dsdz_sq = dsdz_sq.drop_vars([n for n,v in dsdz_sq.coords.items() if f"{self.dimn_layer}" in v.dims])
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
 
-        # > Integrate the total term
-        dissipation = -1 * integrate_trapz(dsdz_sq, depth, self.dimn_layer)
-
-        return dissipation
+        # > Integrate the total term and multiply with -1 
+        if integration.lower() == 'depth':
+            # > Integrate dissipation over depth (trapezoidal rule)
+            dissipation = -1 * integrate_trapz(dsdz_sq, depth, self.dimn_layer)
+        elif integration.lower() == 'volume':
+            # > Multiply with volume per cell and sum over all cells
+            dissipation = -1 * ((dsdz_sq * self.volume).sum(dim=[f'{self.dimn_layer}', f'{self.dimn_faces}']))
+        else:
+            raise ValueError(f"Could not derive what to do with integration={integration} keyword.")
+            
+        return dissipation.rename(f"{integration}_integrated_{self.tracer.name}_dissipation")
         
     # def _setup(self, data):
     #     """Iterates over keys in dictionary. Handles 4d-data, if one argument is left empty, dummy dimension will be created.
