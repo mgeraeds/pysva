@@ -246,6 +246,7 @@ class constructorSVA:
 
         # > Calculate kzz
         kzz = dicwwu + dicoww + k_l
+        
         # > Assign attributes and rename 
         kzz = kzz.assign_attrs({'mesh': f'{gridname}', 
                             'location': 'edge',
@@ -869,10 +870,10 @@ class constructorSVA:
         # > Integrate the total term and multiply with -1 
         if integration.lower() == 'depth':
             # > Integrate dissipation over depth (trapezoidal rule)
-            dissipation = -1 * integrate_trapz(dsdz_sq, depth, self.dimn_layer)
+            dissipation = integrate_trapz(dsdz_sq, depth, self.dimn_layer)
         elif integration.lower() == 'volume':
             # > Multiply with volume per cell and sum over all cells
-            dissipation = -1 * ((dsdz_sq * self.volume).sum(dim=[f'{self.dimn_layer}', f'{self.dimn_faces}']))
+            dissipation = ((dsdz_sq * self.volume).sum(dim=[f'{self.dimn_layer}', f'{self.dimn_faces}']))
         else:
             raise ValueError(f"Could not derive what to do with integration={integration} keyword.")
             
