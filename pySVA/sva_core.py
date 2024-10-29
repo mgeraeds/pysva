@@ -5,7 +5,7 @@ import xugrid as xu
 import dfm_tools as dfmt
 import numpy as np
 from functools import cached_property
-from pySVA.sva_helpers import build_inverse_distance_weights, integrate_trapz, calculate_distance_pythagoras
+from pySVA.sva_helpers import build_inverse_distance_weights, integrate_trapz, calculate_distance_pythagoras, differentiate_over_3d_coord
 
 class constructorSVA:
     def __init__(self, input_file, data_description, **kwargs): # removed data description data_description,
@@ -123,14 +123,21 @@ class constructorSVA:
         flow_area = xr.where(delta_bl < delta*edge_length, edge_length*wd_edges, edge_length*wd_edges*min_huj_bl*(1-0.5*min_bl_huj)).rename(f'{gridname}_au')
 
         return flow_area
+    
+    @cached_property
+    def water_depth(self):
+        water_level = self.interfaces.max(dim=self.dimn_interface)
+        water_depth = water_level - self.bed_level
+        
+        return water_depth
         
     @cached_property
     def bed_level(self):
         try:
-            bed_level = self.interfaces.min(dim=self.dimn_interfaces).mean(dim='time')
-            return bed_level
+            bed_level = self.interfaces.min(dim=self.dimn_interface).mean(dim='time')
         except:
             raise ValueError('For the bed level to be calculated, you need to provide the depth of the interface between the layers, specified as "interfaces". These can be varying in time.')
+        return bed_level
         
     @cached_property
     def edge_length(self):
@@ -739,7 +746,7 @@ class constructorSVA:
 
         return volume
     
-    def straining(self, integration='depth'):
+    def straining(self, integration='depth', depth_averaged=False):
         
         # > Get the tracer variance
         tracer_variance = self.tracer_variance
@@ -768,18 +775,23 @@ class constructorSVA:
         dot_prod = dot_prod.drop_vars([n for n,v in dot_prod.coords.items() if f"{self.dimn_layer}" in v.dims])
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
         
+        if depth_averaged:
+            dot_prod = dot_prod * (1/self.water_depth)
+                   
         if integration.lower() == 'depth':
             # > Integrate to get the straining term (trapezoidal rule)
             straining = integrate_trapz(dot_prod, depth, dim=self.dimn_layer)
         elif integration.lower() == 'volume':
             # > Multiply with volume per cell and sum over all cells
             straining = (dot_prod * self.volume).sum(dim=[f'{self.dimn_layer}', f'{self.dimn_faces}'])
+        elif integration.lower() == 'none':
+             straining = dot_prod
         else:
             raise ValueError(f"Could not derive what to do with integration={integration} keyword.")
             
         return straining.rename(f"{integration}_integrated_{self.tracer.name}_straining")
     
-    def tendency(self, integration='depth'):
+    def tendency(self, integration='depth', depth_averaged=False):
         
         # > Get tracer variance
         tracer_variance = self.tracer_variance
@@ -788,12 +800,17 @@ class constructorSVA:
         tracer_variance = tracer_variance.drop_vars([n for n,v in tracer_variance.coords.items() if f"{self.dimn_layer}" in v.dims])
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
         
+        if depth_averaged:
+            tracer_variance = tracer_variance * (1/self.water_depth)
+
         if integration.lower() == 'depth':
             # > Integrate tracer variance over depth (trapezoidal rule)
             tv_int = integrate_trapz(tracer_variance, depth, self.dimn_layer)
         elif integration.lower() == 'volume':
             # > Multiply with volume per cell and sum over all cells
             tv_int = (tracer_variance * self.volume).sum(dim=[f'{self.dimn_layer}', f'{self.dimn_faces}'])
+        elif integration.lower() == 'none':
+            tv_int = tracer_variance
         else:
             raise ValueError(f"Could not derive what to do with integration={integration} keyword.")
             
@@ -808,7 +825,7 @@ class constructorSVA:
 
         return tendency
        
-    def advection(self, integration='depth'):
+    def advection(self, integration='depth',  depth_averaged=False):
 
         # > First calculate (S')^2 * u and (S')^2 * v
         u_sv2 = self.velx * self.tracer_variance
@@ -832,6 +849,9 @@ class constructorSVA:
         adv = grad_usv2.isel({f'{self.dimn_cart}':0}) + grad_vsv2.isel({f'{self.dimn_cart}':1})
         # adv = advection.chunk("auto")
         
+        if depth_averaged:
+            adv = adv * (1/self.water_depth)
+            
         if integration.lower() == 'depth':
             # > Integrate advection over depth (trapezoidal rule)
             # > Applying the Leibniz rule, we know that the divergence of an integral with fixed limits
@@ -840,12 +860,14 @@ class constructorSVA:
         elif integration.lower() == 'volume':
             # > Multiply with volume per cell and sum over all cells
             advection = (adv * self.volume).sum(dim=[f'{self.dimn_layer}', f'{self.dimn_faces}'])
+        elif integration.lower() == 'none':
+            advection = adv
         else:
             raise ValueError(f"Could not derive what to do with integration={integration} keyword.")
 
         return advection.rename(f"{integration}_integrated_{self.tracer.name}_advection")
     
-    def dissipation(self, integration='depth'):
+    def dissipation(self, integration='depth', depth_averaged=False):
         # > Get the vertical turbulent diffusivity
         kzz = self.kzz
         
@@ -860,13 +882,16 @@ class constructorSVA:
             kzz = self.uda_to_faces(kzz)
 
         # > Differentiate the tracer over depth
-        dsdz = self.tracer.differentiate(self.dimn_layer)
+        dsdz = differentiate_over_3d_coord(self.tracer, f"{self.depth.name}", axis=-1)
         dsdz_sq = 2 * kzz * (dsdz**2)
 
         # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
         dsdz_sq = dsdz_sq.drop_vars([n for n,v in dsdz_sq.coords.items() if f"{self.dimn_layer}" in v.dims])
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
-
+           
+        if depth_averaged:
+            dsdz_sq = dsdz_sq * (1/self.water_depth)
+            
         # > Integrate the total term and multiply with -1 
         if integration.lower() == 'depth':
             # > Integrate dissipation over depth (trapezoidal rule)
@@ -874,11 +899,14 @@ class constructorSVA:
         elif integration.lower() == 'volume':
             # > Multiply with volume per cell and sum over all cells
             dissipation = ((dsdz_sq * self.volume).sum(dim=[f'{self.dimn_layer}', f'{self.dimn_faces}']))
+        elif integration.lower() == 'none':
+            dissipation = dsdz_sq
         else:
             raise ValueError(f"Could not derive what to do with integration={integration} keyword.")
             
         return dissipation.rename(f"{integration}_integrated_{self.tracer.name}_dissipation")
-        
+               
+    
     # def _setup(self, data):
     #     """Iterates over keys in dictionary. Handles 4d-data, if one argument is left empty, dummy dimension will be created.
     #     Args:
