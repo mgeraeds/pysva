@@ -1081,3 +1081,56 @@ def integrate_trapz(y: xr.DataArray, x: xr.DataArray, dim: Optional[str] = None)
     result = (dx * avg_y).sum(dim=dim)
 
     return result
+
+def depth_int2volume_int(uda: xr.DataArray, cell_area: xr.DataArray, dimn_faces: str) -> xr.DataArray:
+    """
+    Convert a depth-integrated DataArray to a volume-integrated DataArray.
+
+    Parameters:
+    ----------
+    uda : xr.DataArray
+        The input DataArray representing depth-integrated values.
+    cell_area : xr.DataArray
+        A 2D DataArray representing the cell area for each spatial grid point.
+    dimn_faces : str
+        The name of the faces dimension to integrate over.
+
+    Returns:
+    -------
+    xr.DataArray
+        The volume-integrated DataArray.
+    """
+    volume_int = (uda * cell_area).sum(dim=[dimn_faces])
+    
+    return volume_int
+
+def differentiate_over_3d_coord(uda: xr.DataArray, coord_var: str, axis: int = -1) -> xr.DataArray:
+    """
+    Differentiate a Dask-backed xarray DataArray over a 3D coordinate variable.
+
+    Parameters:
+    ----------
+    uda : xr.DataArray
+        The input DataArray to differentiate.
+    coord_var : str
+        The name of the 3D coordinate variable.
+    axis : int, optional
+        The axis number of the coordinate dimension to differentiate over. Defaults to -1.
+        
+    Returns:
+    -------
+    xr.DataArray
+        Differentiated DataArray over the given coordinate.
+    """
+    # Deduce name of depth dimension
+    depth_dim = uda[coord_var].dims[axis]
+    
+    # Calculate central difference with .diff() to reduce shifts
+    data_diff = uda.diff(depth_dim)
+    coord_diff = uda[coord_var].diff(depth_dim)
+    
+    # Calculate the derivative and re-align dimensions with padding
+    differentiated = data_diff / coord_diff
+    differentiated = differentiated.pad({depth_dim: (1, 0)}, mode="edge")
+
+    return differentiated
