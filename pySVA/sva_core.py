@@ -92,6 +92,7 @@ class constructorSVA:
     
     @cached_property
     def flow_area(self):
+        
         # > // Get bed levels at nodes and bed levels at edges //
         # > Get the bed_levels on the faces, and fill it in in the edge_node_connectivity matrix 
         bl_edge_faces = xr.where(self.edge_faces!=self.fill_value,  self.bed_level.isel({f'{self.dimn_faces}':self.edge_faces}), np.nan)
@@ -120,8 +121,8 @@ class constructorSVA:
         min_bl_huj = xr.where((edge_length/wd_edges)!=np.nan, min_bl_huj, np.nan) 
 
         # > Calculate actual flow area based on Algorithm 5 (Eqs 6.16 and 6.17)
-        flow_area = xr.where(delta_bl < delta*edge_length, edge_length*wd_edges, edge_length*wd_edges*min_huj_bl*(1-0.5*min_bl_huj)).rename(f'{gridname}_au')
-
+        flow_area = xr.where(delta_bl < delta*edge_length, edge_length*wd_edges, edge_length*wd_edges*min_huj_bl*(1-0.5*min_bl_huj)).rename(f'{self.gridname}_au')
+        
         return flow_area
     
     @cached_property
@@ -141,9 +142,9 @@ class constructorSVA:
         
     @cached_property
     def edge_length(self):
-
+        
         edge_node_coords = self.edge_node_coords
-        edge_length = calculate_distance_pythagoras(edge_node_coords[:,0,0], edge_node_coords[:,0,1], edge_node_coords[:,1,0], edge_node_coords[:,1,1]).rename(f'{gridname}_edge_length')
+        edge_length = calculate_distance_pythagoras(edge_node_coords[:,0,0], edge_node_coords[:,0,1], edge_node_coords[:,1,0], edge_node_coords[:,1,1]).rename(f'{self.gridname}_edge_length')
 
         return edge_length
     
@@ -690,8 +691,7 @@ class constructorSVA:
         # > Get face-edge-connectivity
         face_edges = self.face_edges
 
-        # > Get the cell centroid coordinates
-        # > NOTE: this is different from the face_coords!
+        # > Get the cell face_coords!
         centroid_array = self.ds.grid.face_coordinates
         centroid_coords = xr.DataArray(data=centroid_array, dims=[dimn_faces, dimn_cart], coords={f'{coord_face_x}':([dimn_faces], self.ds[f'{coord_face_x}']), f'{coord_face_y}':([dimn_faces], self.ds[f'{coord_face_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh centroids', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})   
 
@@ -707,6 +707,7 @@ class constructorSVA:
 
         return distance_vectors
 
+    
     @cached_property
     def tracer_variance(self):
 
@@ -734,8 +735,42 @@ class constructorSVA:
     
     @cached_property
     def cell_area(self):
-
-        cell_area = xr.DataArray(self.ds.grid.area, dims=(self.dimn_faces), name=f'{self.gridname}_cell_area')
+        # > Get the distance vectors first
+        dv = self.distance_vectors
+        
+        # > Get face_edges
+        face_edges = self.face_edges
+        # > Get boolean to mask other arrays too
+        face_edges_validbool = face_edges!=self.fill_value
+        # > Mask edges that don't have a value
+        face_edges = face_edges.where(face_edges_validbool, -1)
+        # > Stack face_edges for later use
+        face_edges_stacked = face_edges.stack(__tmp_dim__=(self.dimn_faces, self.dimn_maxfn))
+        # > Get unit normal vectors
+        unvs = self.unvs
+        
+        # > Get the unit normal vectors (nf) also in the face-edges matrix
+        fe_nfs = xr.where(face_edges_validbool, unvs.isel({self.dimn_edges: face_edges}), np.nan)
+        fe_nfs = fe_nfs.chunk(chunks="auto")
+        
+        # > Calculate the dot product between the calculated normal vectors and the distance vector for each face
+        i_nfs = xr.dot(fe_nfs, dv, dims=[self.dimn_cart])
+        # > if the product < 1, multiply by -1 to get an outwards facing normal vector, and update the variable
+        fe_nfs = xr.where(i_nfs > 0, fe_nfs, fe_nfs * -1)
+        
+        # > Get the flow area
+        flow_area = self.flow_area
+        # > Fill face_edge matrix with flow area data
+        edge_length = self.edge_length
+        edge_length = edge_length.chunk(chunks)
+        edge_len_stacked = edge_length.isel({self.dimn_edges:face_edges_stacked})
+        edge_len = edge_len_stacked.unstack("__tmp_dim__")
+        
+        # > Calculate the area
+        grid_area = ((1/2)*(xr.dot(dv, fe_nfs, dim=[dimn_cart])*edge_len)).sum(dim=dimn_maxfn).rename(f'{self.gridname}_cell_area')
+           
+        # Incorrect as of 3-4-2025
+        # cell_area = xr.DataArray(self.ds.grid.area, dims=(self.dimn_faces), name=f'{self.gridname}_cell_area')
 
         return cell_area
     
@@ -774,9 +809,6 @@ class constructorSVA:
         # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
         dot_prod = dot_prod.drop_vars([n for n,v in dot_prod.coords.items() if f"{self.dimn_layer}" in v.dims])
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
-        
-        if depth_averaged:
-            dot_prod = dot_prod * (1/self.water_depth)
                    
         if integration.lower() == 'depth':
             # > Integrate to get the straining term (trapezoidal rule)
@@ -788,6 +820,9 @@ class constructorSVA:
              straining = dot_prod
         else:
             raise ValueError(f"Could not derive what to do with integration={integration} keyword.")
+        
+        if depth_averaged:
+            straining = straining * (1/self.water_depth)
             
         return straining.rename(f"{integration}_integrated_{self.tracer.name}_straining")
     
@@ -799,9 +834,6 @@ class constructorSVA:
         # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
         tracer_variance = tracer_variance.drop_vars([n for n,v in tracer_variance.coords.items() if f"{self.dimn_layer}" in v.dims])
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
-        
-        if depth_averaged:
-            tracer_variance = tracer_variance * (1/self.water_depth)
 
         if integration.lower() == 'depth':
             # > Integrate tracer variance over depth (trapezoidal rule)
@@ -814,15 +846,20 @@ class constructorSVA:
         else:
             raise ValueError(f"Could not derive what to do with integration={integration} keyword.")
             
+        tv_int = tv_int.unify_chunks()
+        
         # > Take the difference in time (d/dt) 
         # > For this, chunk size in time must be larger than 1; check this first
-        if all(val == 1 for val in tv_int.chunksizes['time']):
-            tv_int = tv_int.chunk({'time': 2})
+        if any(val == 1 for val in tv_int.chunksizes['time']):
+            tv_int = tv_int.chunk({'time': 4})
         else:
             pass
 
         tendency = tv_int.differentiate("time", datetime_unit="s").rename(f"{integration}_integrated_{self.tracer.name}_tendency")
-
+        
+        if depth_averaged:
+            tendency = tendency * (1/self.water_depth)
+            
         return tendency
        
     def advection(self, integration='depth',  depth_averaged=False):
@@ -847,11 +884,7 @@ class constructorSVA:
         # > Cartesian dimension 0 is x-direction, 1 is y-direction
         # > We need du/dx + dv/dy for the horizontal divergence of the velocity * salinity variance vector
         adv = grad_usv2.isel({f'{self.dimn_cart}':0}) + grad_vsv2.isel({f'{self.dimn_cart}':1})
-        # adv = advection.chunk("auto")
         
-        if depth_averaged:
-            adv = adv * (1/self.water_depth)
-            
         if integration.lower() == 'depth':
             # > Integrate advection over depth (trapezoidal rule)
             # > Applying the Leibniz rule, we know that the divergence of an integral with fixed limits
@@ -864,7 +897,10 @@ class constructorSVA:
             advection = adv
         else:
             raise ValueError(f"Could not derive what to do with integration={integration} keyword.")
-
+            
+        if depth_averaged:
+            advection = advection * (1/self.water_depth)
+            
         return advection.rename(f"{integration}_integrated_{self.tracer.name}_advection")
     
     def dissipation(self, integration='depth', depth_averaged=False):
@@ -888,9 +924,6 @@ class constructorSVA:
         # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
         dsdz_sq = dsdz_sq.drop_vars([n for n,v in dsdz_sq.coords.items() if f"{self.dimn_layer}" in v.dims])
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
-           
-        if depth_averaged:
-            dsdz_sq = dsdz_sq * (1/self.water_depth)
             
         # > Integrate the total term and multiply with -1 
         if integration.lower() == 'depth':
@@ -903,6 +936,9 @@ class constructorSVA:
             dissipation = dsdz_sq
         else:
             raise ValueError(f"Could not derive what to do with integration={integration} keyword.")
+        
+        if depth_averaged:
+            dissipation = dissipation * (1/self.water_depth)
             
         return dissipation.rename(f"{integration}_integrated_{self.tracer.name}_dissipation")
                
