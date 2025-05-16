@@ -1,0 +1,25 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: pySVA
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Marlein
+    family-names: Geraeds
+    email: m.e.g.geraeds@tudelft.nl
+    affiliation: Delft University of Technology
+    orcid: 'https://orcid.org/0000-0001-6643-9073'
+repository-code: 'https://gitlab.tudelft.nl/meggeraeds/pysva/-/tree/main'
+keywords:
+  - salinity variance analysis
+  - sva
+  - oceanography
+  - estuarine physics
+license: MIT
+commit: a6c9069b8d6efeef7efb9d1905f59db6d8cca6ba
+version: 0.1.0
+date-released: '2025-06-01'
