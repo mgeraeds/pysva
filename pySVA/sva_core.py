@@ -120,19 +120,14 @@ class constructorSVA:
         bed_level = bed_level.chunk(chunks)
         interfaces = interfaces.chunk(chunks)
 
-        # > Select the varname on faces in the edge-face connectivity matrix
-        edge_faces_stacked = edge_faces.stack(__tmp_dim__=(dimn_edges, dimn_maxef))
-
         # > // Get bed levels at nodes and bed levels at edges //
         # > Get the bed_levels on the faces, and fill it in in the edge_node_connectivity matrix 
-        bl_edge_faces_stacked = bed_level.isel({dimn_faces: edge_faces_stacked})
-        bl_edge_faces = bl_edge_faces_stacked.unstack("__tmp_dim__")
+        bl_edge_faces = bed_level.isel({dimn_faces: edge_faces})
         bl_edge_faces = xr.where(edge_faces_validbool, bl_edge_faces, np.nan)
 
         # // Get face-based water depth (Algorithm 4, Equation 6.14) //
         # > Get the water levels on the faces, and fill it in in the edge-face connectivity matrix
-        wl_edge_faces_stacked = interfaces.isel({dimn_faces:edge_faces_stacked})
-        wl_edge_faces = wl_edge_faces_stacked.unstack("__tmp_dim__")
+        wl_edge_faces = interfaces.isel({dimn_faces:edge_faces})
         wl_edge_faces = xr.where(edge_faces_validbool, wl_edge_faces, np.nan)
 
         # > Calculate the water depth based on Algorithm 4 of the Technical refernece manual (huj in Eq. 6.14)
@@ -464,68 +459,7 @@ class constructorSVA:
         uds[f'{varname_unvs}'] = (unvs.dims, unvs.data)
                 
         return unvs
-    
-#     def update_connectivities(self, boolean):
-        
-#         dimn_faces = self.dimn_faces
-#         dimn_edges = self.dimn_edges
-#         fill_value = self.fill_value
-#         gridname = self.grid_name
-        
-#         if dimn_faces in boolean.dims:
-            
-#             # > Get voordinate names
-#             coord_face_x, coord_face_y = self.ds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'face').split()
-#             coord_edge_x, coord_edge_y = self.ds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'edge').split()  
-            
-#             # > Get dimensions
-#             dimn_maxfn = self.dimn_maxfn
-#             dimn_maxef = self.dimn_maxef
-            
-#             # > Start with chunking the boolean correctly
-#             chunks = {dimn_faces:-1}
-#             boolean = boolean.chunk(chunks)
-            
-#             # 1. The edge_faces parameter
-#             # > Get edge_faces
-#             edge_faces = self.edge_faces
-            
-#             # > Select the boolean on faces in the edge-face connectivity matrix
-#             edge_faces_stacked = edge_faces.stack(__tmp_dim__=(dimn_edges, dimn_maxef))
-#             boolean_ef_stacked = boolean.isel({dimn_faces: edge_faces_stacked})
-#             boolean_ef = boolean_ef_stacked.unstack("__tmp_dim__")
 
-#             # > Make into xr.DataArray with correct sizes, dimensions, and coordinates
-#             # > Make the new face_edges 
-#             edge_faces = xr.DataArray(edge_faces.where(boolean_ef, -999).values, dims=(dimn_edges, dimn_maxef))
-            
-#             # > Set the cached_property anew
-#             self.edge_faces = edge_faces
-            
-#             # Get the boolean for whether the edges are valid (dim: meshd_nEdges)
-#             nan_bool = (edge_faces == fill_value).all(dim=dimn_maxef)
-            
-#             # 2. The face_edges parameter
-#             # > Get face_edges
-#             face_edges = self.face_edges
-            
-#             # > Select the varname on faces in the edge-face connectivity matrix
-#             face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
-#             boolean_fn_stacked = nan_bool.isel({dimn_edges: face_edges_stacked})
-#             boolean_fn = boolean_fn_stacked.unstack("__tmp_dim__")
-            
-#             face_edges = face_edges.where(boolean_fn, -999)
-            
-#             face_edges = xr.DataArray(face_edges, dims=[dimn_faces, dimn_maxfn],
-#                                             coords={f'{coord_face_x}': ([dimn_faces], self.ds[f'{coord_face_x}']),
-#                                                     f'{coord_face_y}': ([dimn_faces], self.ds[f'{coord_face_y}'])},
-#                                             attrs={'cf_role': 'face_edge_connectivity', 'start_index': 0,
-#                                                     '_FillValue': fill_value}, name=f'{gridname}_face_edges')
-            
-#             self.face_edges = face_edges
-            
-#             return            
-                 
     def uda_to_edges(self, uda):
         # > Define the to-be-interpolated tracer DataArray and grid
         varname = uda.name
@@ -550,12 +484,7 @@ class constructorSVA:
             uda = uda.chunk(chunks)
 
             # > Select the varname on faces in the edge-face connectivity matrix
-            edge_faces_stacked = edge_faces.stack(__tmp_dim__=(dimn_edges, dimn_maxef))
-            edge_var_stacked = uda.isel({dimn_faces: edge_faces_stacked})
-            edge_var = edge_var_stacked.unstack("__tmp_dim__")
-            
-            # > Convert data-array back to an xu.UgridDataArray
-            edge_var = xu.UgridDataArray(edge_var, grid=grid)
+            edge_var = uda.isel({dimn_faces: edge_faces})
             
             # > Set fill values to nan-values
             edge_var = edge_var.where(edge_faces_validbool, np.nan)
@@ -614,9 +543,7 @@ class constructorSVA:
             uda = uda.chunk(chunks)
             
             # > Select the varname on faces in the edge-face connectivity matrix
-            face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
-            face_var_stacked = uda.isel({dimn_edges: face_edges_stacked})
-            face_var = face_var_stacked.unstack("__tmp_dim__")
+            face_var_stacked = uda.isel({dimn_edges: face_edges})
             
             # > Convert data-array back to an xu.UgridDataArray
             face_var = xu.UgridDataArray(face_var, grid=grid)
@@ -671,10 +598,8 @@ class constructorSVA:
         
         # > Get the volume and flow area variables: check if they're in the 
         # > constructor first, then check the dataset, else throw error
-        if scalar:
-            flow_area = self.face_area
-        else:
-            flow_area = self.flow_area
+        flow_area = self.flow_area
+        face_area = self.face_area
         volume = self.volume
 
         if mode_depth == 'sum':
@@ -698,9 +623,7 @@ class constructorSVA:
         face_edges_validbool = face_edges!=fill_value
         # > Mask edges that don't have a value
         face_edges = face_edges.where(face_edges_validbool, -1)
-        # > Stack face_edges for later use
-        face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
-
+        
         # > Get the unit normal vectors (nf) also in the face-edges matrix
         fe_nfs = xr.where(face_edges_validbool, unvs.isel({dimn_edges: face_edges}), np.nan)
         fe_nfs = fe_nfs.chunk(chunks="auto")
@@ -730,20 +653,36 @@ class constructorSVA:
         # > Fill the face-edges matrix with the varname
         # > Do this via stack and unstack since 2D indexing does not
         # > properly work in dask yet: https://github.com/dask/dask/pull/10237
-        edge_var_stacked = uda.isel({dimn_edges: face_edges_stacked})
-        edge_var = edge_var_stacked.unstack("__tmp_dim__")
-        # > Convert data-array back to an xu.UgridDataArray
-        edge_var = xu.UgridDataArray(edge_var, grid=grid)
+        edge_var_stacked = uda.isel({dimn_edges: face_edges})
         # > Replace locations of the validbools with NaN's
         edge_var = xr.where(face_edges_validbool, edge_var, np.nan)
 
         # > Fill face_edge matrix with flow area data
         flow_area = flow_area.chunk(chunks)
-        edge_au_stacked = flow_area.isel({dimn_edges:face_edges_stacked})
-        edge_au = edge_au_stacked.unstack("__tmp_dim__")
-
+        edge_au_stacked = flow_area.isel({dimn_edges:face_edges})
+        
+        if scalar:
+            # > If the gradient of a scalar is calculated, boundary faces are handled
+            # > in a specific way. The boundary faces will be filled with the face_area
+            # >to make the gradient smoother.
+            face_area = face_area.chunk(chunks)
+            edge_a_stacked = face_area.isel({dimn_edges:face_edges})
+            
+            # > Convert data-array back to an xu.UgridDataArray
+            edge_a = xu.UgridDataArray(edge_a, grid=grid)
+            
+            # > Determine the boolean that will determine which faces are boundary
+            # > faces based on the distance vector and the flow_area: flow_area = 0 with
+            # > (internal) boundary faces.
+            boundary_edge_bool = (~np.isfinite(edge_au) & np.isfinite(dv.isel({dimn_cart:1})))
+            
+            # > Reconstruct the flow area on boundaries based on the boundary_edge_bool
+            edge_au = edge_au.where(~boundary_edge_bool, edge_a)
+            
         # > Rechunk the data back to the original
         edge_var = edge_var.chunk(chunks="auto")
+        flow_area = flow_area.chunk(chunks="auto")
+        face_area = face_area.chunk(chunks="auto")
         uda = uda.chunk(chunks="auto")
         edge_au = edge_au.chunk(chunks="auto")
 
@@ -777,7 +716,7 @@ class constructorSVA:
         # > Get face-edge-connectivity
         face_edges = self.face_edges
 
-        # > Get the cell face_coords!
+        # > Get the cell face_coords
         centroid_array = self.ds.grid.face_coordinates
         centroid_coords = xr.DataArray(data=centroid_array, dims=[dimn_faces, dimn_cart], coords={f'{coord_face_x}':([dimn_faces], self.ds[f'{coord_face_x}']), f'{coord_face_y}':([dimn_faces], self.ds[f'{coord_face_y}'])}, attrs={'units':'m', 'standard_name': 'projection_x_coordinate, projection_y_coordinate', 'long_name':'Characteristic coordinates of mesh centroids', 'bounds': 'mesh2d_face_x_bnd, mesh_face_y_bnd'})   
 
@@ -833,8 +772,6 @@ class constructorSVA:
         face_edges_validbool = face_edges!=self.fill_value
         # > Mask edges that don't have a value
         face_edges = face_edges.where(face_edges_validbool, -1)
-        # > Stack face_edges for later use
-        face_edges_stacked = face_edges.stack(__tmp_dim__=(self.dimn_faces, self.dimn_maxfn))
         # > Get unit normal vectors
         unvs = self.unvs
         
@@ -854,8 +791,7 @@ class constructorSVA:
         
         chunks = {dimn_edges:-1}
         edge_length = edge_length.chunk(chunks)
-        edge_len_stacked = edge_length.isel({self.dimn_edges:face_edges_stacked})
-        edge_len = edge_len_stacked.unstack("__tmp_dim__")
+        edge_len_stacked = edge_length.isel({self.dimn_edges:face_edges})
         
         # > Calculate the area
         cell_area = ((1/2)*(xr.dot(dv, fe_nfs, dim=[dimn_cart])*edge_len)).sum(dim=dimn_maxfn).rename(f'{self.gridname}_cell_area')
