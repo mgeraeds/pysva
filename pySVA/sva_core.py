@@ -543,7 +543,7 @@ class constructorSVA:
             uda = uda.chunk(chunks)
             
             # > Select the varname on faces in the edge-face connectivity matrix
-            face_var_stacked = uda.isel({dimn_edges: face_edges})
+            face_var = uda.isel({dimn_edges: face_edges})
             
             # > Convert data-array back to an xu.UgridDataArray
             face_var = xu.UgridDataArray(face_var, grid=grid)
@@ -653,20 +653,20 @@ class constructorSVA:
         # > Fill the face-edges matrix with the varname
         # > Do this via stack and unstack since 2D indexing does not
         # > properly work in dask yet: https://github.com/dask/dask/pull/10237
-        edge_var_stacked = uda.isel({dimn_edges: face_edges})
+        edge_var = uda.isel({dimn_edges: face_edges})
         # > Replace locations of the validbools with NaN's
         edge_var = xr.where(face_edges_validbool, edge_var, np.nan)
 
         # > Fill face_edge matrix with flow area data
         flow_area = flow_area.chunk(chunks)
-        edge_au_stacked = flow_area.isel({dimn_edges:face_edges})
+        edge_au = flow_area.isel({dimn_edges:face_edges})
         
         if scalar:
             # > If the gradient of a scalar is calculated, boundary faces are handled
             # > in a specific way. The boundary faces will be filled with the face_area
             # >to make the gradient smoother.
             face_area = face_area.chunk(chunks)
-            edge_a_stacked = face_area.isel({dimn_edges:face_edges})
+            edge_a = face_area.isel({dimn_edges:face_edges})
             
             # > Convert data-array back to an xu.UgridDataArray
             edge_a = xu.UgridDataArray(edge_a, grid=grid)
@@ -791,7 +791,7 @@ class constructorSVA:
         
         chunks = {dimn_edges:-1}
         edge_length = edge_length.chunk(chunks)
-        edge_len_stacked = edge_length.isel({self.dimn_edges:face_edges})
+        edge_len = edge_length.isel({self.dimn_edges:face_edges})
         
         # > Calculate the area
         cell_area = ((1/2)*(xr.dot(dv, fe_nfs, dim=[dimn_cart])*edge_len)).sum(dim=dimn_maxfn).rename(f'{self.gridname}_cell_area')
