@@ -3,7 +3,7 @@ import xarray as xr
 import warnings
 import numpy as np
 import xarray_einstats
-
+from typing import Optional
 
 def build_inverse_distance_weights(a, b):
 
@@ -1059,28 +1059,72 @@ def compute_kzz(uds, dicoww=5e-5, prandtl_schmidt=0.7,  tracer='mesh2d_sa1'):
 
     return uds
 
-import xarray as xr
-from typing import Optional
-
 def integrate_trapz(y: xr.DataArray, x: xr.DataArray, dim: Optional[str] = None) -> xr.DataArray:
     """
     Perform trapezoidal integration along a specified dimension.
 
     Parameters:
-        y (xr.DataArray): The values to integrate.
-        x (xr.DataArray): The coordinate values along which to integrate.
-        dim (str, optional): The dimension along which to integrate. If None, the operation
-                             is applied along all dimensions.
+    ----------
+    y : xr.DataArray
+        The values to integrate.
+    x : xr.DataArray
+        The coordinate values along which to integrate.
+    dim : str, optional
+        The dimension along which to integrate. If None, the operation
+        is applied along all dimensions.
 
     Returns:
-        xr.DataArray: The result of the trapezoidal integration.
+    -------
+    xr.DataArray
+        The result of the trapezoidal integration.
     """
-    dx = x.isel({dim: slice(1, None)}) - x.isel({dim: slice(None, -1)})
-    avg_y = (y.isel({dim: slice(1, None)}) + y.isel({dim: slice(None, -1)})) / 2
-
+    # Shift arrays for central differences
+    dx = x - x.shift({dim: 1})
+    avg_y = (y + y.shift({dim: 1})) / 2
+    
+    # Mask NaNs introduced by shifting at the start of the array
+    valid_mask = dx.notnull() & avg_y.notnull()
+    dx = dx.where(valid_mask, 0)
+    avg_y = avg_y.where(valid_mask, 0)
+    
+    # Integrate by summing the product along the specified dimension
     result = (dx * avg_y).sum(dim=dim)
-
+    result = result.chunk("auto")
+    
     return result
+
+# def integrate_trapz(y: xr.DataArray, x: xr.DataArray, dim: Optional[str] = None) -> xr.DataArray:
+#     """
+#     Perform trapezoidal integration along a specified dimension.
+
+#     Parameters:
+#     ----------
+#     y : xr.DataArray
+#         The values to integrate.
+#     x : xr.DataArray
+#         The coordinate values along which to integrate.
+#     dim : str, optional
+#         The dimension along which to integrate. If None, the operation
+#         is applied along all dimensions.
+
+#     Returns:
+#     -------
+#     xr.DataArray
+#         The result of the trapezoidal integration.
+#     """
+#     # Rechunk to make chunks compatible along 'dim'
+#     y = y.chunk({dim: -1})  # Merge all chunks along the integration dimension
+#     x = x.chunk({dim: -1})  # Rechunk x similarly
+
+#     # Calculate dx and the averaged y values
+#     dx = x.isel({dim: slice(1, None)}) - x.isel({dim: slice(None, -1)})
+#     avg_y = (y.isel({dim: slice(1, None)}) + y.isel({dim: slice(None, -1)})) / 2
+
+#     # Perform the trapezoidal integration
+#     result = (dx * avg_y).sum(dim=dim)
+    
+    return result
+
 
 def depth_int2volume_int(uda: xr.DataArray, cell_area: xr.DataArray, dimn_faces: str) -> xr.DataArray:
     """
