@@ -185,6 +185,7 @@ class constructorSVA:
         cell_thickness_edges = self.uda_to_edges(cell_thickness)
         
         face_area = (cell_thickness_edges * edge_length).rename(f'{gridname}_face_area')
+        face_area = face_area.chunk('auto')
         
         return face_area
     
