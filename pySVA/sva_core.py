@@ -546,7 +546,7 @@ class constructorSVA:
             face_var = uda.isel({dimn_edges: face_edges})
             
             # > Convert data-array back to an xu.UgridDataArray
-            face_var = xu.UgridDataArray(face_var, grid=grid)
+#             face_var = xu.UgridDataArray(face_var, grid=grid)
             
             # > Set fill values to nan-values
             face_var = face_var.where(face_edges_validbool, np.nan)
@@ -669,7 +669,7 @@ class constructorSVA:
             edge_a = face_area.isel({dimn_edges:face_edges})
             
             # > Convert data-array back to an xu.UgridDataArray
-            edge_a = xu.UgridDataArray(edge_a, grid=grid)
+#             edge_a = xu.UgridDataArray(edge_a, grid=grid)
             
             # > Determine the boolean that will determine which faces are boundary
             # > faces based on the distance vector and the flow_area: flow_area = 0 with
