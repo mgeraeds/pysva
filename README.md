@@ -1,92 +1,103 @@
 # pySVA
 
-pySVA is a project and Python packages that calculates a salinity variance analysis based on netCDF data.
+The pySVA toolbox is Python-based open-source software for the calculation of terms in a salinity variance budget that can be applied to model output from models with unstructured, staggered C-grid meshes such as [D-FLOW Flexible Mesh](https://content.oss.deltares.nl/delft3d/D-Flow_FM_User_Manual.pdf). 
 
-## Getting started
+## The salinity variance budget
+Burchard et al. (2008) first described the total salinity variance equation. %to link physical and numerical mixing using an idealised model. 
+The premise of their work was that tracer variance decay can be used to discern both physical and numerical mixing, which they tested on an idealised model. 
+To derive the salinity variance equation, Burchard et al. (2008) started from the Reynolds-averaged salt conservation advection-diffusion equation in a three-dimensional domain (Burchard et al. 2008, Li et al. 2018),
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+![equation](https://latex.codecogs.com/svg.image?%5Cfrac%7B%5Cpartial%20S%7D%7B%5Cpartial%20t%7D&plus;%5Cmathbf%7Bu%7D%5Ccdot%5Cnabla%20S-%5Cnabla%5Ccdot(%5Cmathbf%7BK%7D%5Cnabla%20S)=0,)
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+where ![equation](https://latex.codecogs.com/svg.image?%5Cinline%20%5Cbg%7Bwhite%7D%5Cmathbf%7Bu%7D=(u,v,w))is the three-dimensional velocity vector and ![equation](https://latex.codecogs.com/svg.image?%5Cinline%20%5Cbg%7Bwhite%7D%5Cmathbf%7BK%7D=(K_%7Bxx%7D,K_%7Byy%7D,K_%7Bzz%7D)) is the diffusivity tensor. Applying a Reynolds decomposition to the total salinity and velocity vector, these can be decomposed in a volume mean and varying part as ![equation](https://latex.codecogs.com/svg.image?%5Cinline%20%5Cbg%7Bwhite%7DS=%5B%5B%7BS%7D%5D%5D&plus;S'_%7Btot%7D) and ![equation](https://latex.codecogs.com/svg.image?%5Cinline%20%5Cbg%7Bwhite%7D%5Cmathbf%7Bu%7D=%5Cmathbf%7B%5Cbar%7Bu%7D%7D&plus;%5Cmathbf%7Bu%7D') respectively, with ![equation](https://latex.codecogs.com/svg.image?%5Cinline%20%5Cbg%7Bwhite%7D%5B%5B%5Ccdot%5D%5D) denoting the volume average.  
+Substituting this decomposition into the salt conservation equation, Burchard et al. (2008) obtained an expression for the conservation of volume mean salinity. Taking the difference between the salt conservation equation and the obtained expression for conservation of volume mean salinity and multiplying this difference with $2S'$ yields the salinity variance equation:
 
-## Add your files
+![equation](https://latex.codecogs.com/svg.image?%5Cbg%7Bwhite%7D%5Cfrac%7B%5Cpartial(S'_%7Btot%7D)%5E2%7D%7B%5Cpartial%20t%7D&plus;%5Cnabla%5Ccdot%5B%5Cmathbf%7Bu%7D(S'_%7Btot%7D)%5E2-%5Cmathbf%7BK%7D%5Cnabla(S'_%7Btot%7D)%5E2%5D-2S'%5B%5B%5Cmathbf%7Bu%7D'%5Ccdot%5Cnabla%20S'_%7Btot%7D%5D%5D=-2(%5Cmathbf%7BK%7D%5Cnabla%20S'_%7Btot%7D)%5Ccdot(%5Cnabla%20S'_%7Btot%7D).)
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+In a paper applying the principle of salinity variance to the Changjiang estuary, \cite{li_transformation_2018} built on this method by decomposing the total salinity variance into horizontal and vertical contributions. The individual horizontal and vertical contributions can be calculated by decomposing the total volume-integrated salinity variance. Since it holds that ![equation](https://latex.codecogs.com/svg.image?%5Cinline%20%5Cbg%7Bwhite%7DS=%5B%5BS%5D%5D&plus;S'_%7Btot%7D), with ![equation](https://latex.codecogs.com/svg.image?%5Cinline%20%5Cbg%7Bwhite%7D%5B%5BS%5D%5D) the volume-averaged salinity and ![equation](https://latex.codecogs.com/svg.image?%5Cinline%20%5Cbg%7Bwhite%7DS'_%7Btot%7D) the deviation from the volume average, and it also holds that ![equation](https://latex.codecogs.com/svg.image?%5Cinline%20%5Cbg%7Bwhite%7DS=%5Coverline%7BS%7D&plus;S'_v), where ![equation](https://latex.codecogs.com/svg.image?%5Cinline%20%5Cbg%7Bwhite%7D%5Coverline%7BS%7D) is the depth-averaged salinity and ![equation](https://latex.codecogs.com/svg.image?%5Cinline%20%5Cbg%7Bwhite%7DS'_v) is the vertical deviation from the depth-averaged salinity, the following relations can be derived:
 
-```
-cd existing_repo
-git remote add origin https://gitlab.tudelft.nl/meggeraeds/pysva.git
-git branch -M main
-git push -uf origin main
-```
+![equation](https://latex.codecogs.com/svg.image?%5Cbg%7Bwhite%7D%5Cbegin%7Balign%7D(S'_v)%5E2&=(S-%5Coverline%7BS%7D)%5E2%5C%5C(S'_h)%5E2&=(%5Coverline%7BS%7D-%5B%5BS%5D%5D)%5E2,%5Cmathrm%7Band%7D%5C%5C(S'_%7Btot%7D)%5E2&=(S-%5B%5BS%5D%5D)%5E2,%5C%5C%5Cend%7Balign%7D)
 
-## Integrate with your tools
+where ![equation](https://latex.codecogs.com/svg.image?%5Cinline%20%5Cbg%7Bwhite%7D(S'_h)%5E2) is the horizontal salinity variance, ![equation](https://latex.codecogs.com/svg.image?%5Cinline%20%5Cbg%7Bwhite%7D(S'_v)%5E2) is the vertical salinity variance, and ![equation](https://latex.codecogs.com/svg.image?%5Cinline%20%5Cbg%7Bwhite%7D(S'_{tot})%5E2) is the total salinity variance. 
 
-- [ ] [Set up project integrations](https://gitlab.tudelft.nl/meggeraeds/pysva/-/settings/integrations)
+The vertical salinity variance equation can be derived using these variance relations and the salinity variance balance of Burchard et al. (2008). 
+Considering a single vertical water column and decomposing the salinity and velocity in a depth-averaged mean and a perturbation from the vertical average, where ![equation](https://latex.codecogs.com/svg.image?%5Cinline%20%5Cbg%7Bwhite%7DS=%5Coverline%7BS%7D&plus;S'_v) and ![equation](https://latex.codecogs.com/svg.image?%5Cinline%20%5Cbg%7Bwhite%7D%5Cmathbf%7Bu%7D=%5Cmathbf%7B%5Coverline%7Bu%7D%7D&plus;%5Cmathbf%7Bu'_v%7D), Li et al. (2018) obtained the following expression:
+![equation](https://latex.codecogs.com/svg.image?%5Cinline%20%5Cbg%7Bwhite%7D%5Cunderbrace%7B%5Cfrac%7B%5Cpartial%7D%7B%5Cpartial%20t%7D%5Cint(S'_v)%5E2%5Cmathrm%7Bd%7Dz%7D_%7B%5Cmathrm%7Btendency%7D%7D=-%5Cunderbrace%7B%5Cnabla_h%5Ccdot%5Cint%5Cmathbf%7Bu_h%7D(S'_v)%5E2%5Cmathrm%7Bd%7Dz%7D_%7B%5Cmathrm%7Badvection%7D%7D&plus;%5Cunderbrace%7B%5Cint-2%5Cmathbf%7Bu'_v%7DS'_v%5Ccdot%5Cnabla%5Coverline%7BS%7D%5Cmathrm%7Bd%7Dz%7D_%7B%5Cmathrm%7Bstraining%7D%7D-%5Cunderbrace%7B%5Cint%202%5Cfrac%7B%5Cpartial%5E2%20K%7D%7B%5Cpartial%20z%5E2%7D%5Cbigg(%5Cfrac%7B%5Cpartial%20S%7D%7B%5Cpartial%20z%7D%5Cbigg)%5E2%5Cmathrm%7Bd%7Dz%7D_%7B%5Cmathrm%7Bdissipation%7D%7D-%5Cunderbrace%7B%5Cint%5Cmathcal%7BM%7D_%7B%5Cmathrm%7Bnum%7D%7D%5Cmathrm%7Bd%7Dz%7D_%7B%5Cmathrm%7Bnum.mixing%7D%7D,)
 
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!).  Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+The left-hand side of this equation represents the temporal change of the salinity variance in time, referred to as the _tendency_. The first three terms on the right-hand side _advection, straining_ and _dissipation_, respectively---can be used to quantify and visualise the mechanisms responsible for the spatial patterns of stratification within a coast-delta system and thus give us insight into the system's behaviour. This package can be used to calculate these four different terms based on the provided model data.
 
 ## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+This package is still under development, which is why it is most convenient to install the most recent release from GitHub directly. Use git to clone the repository using:
+```
+$ git clone https://github.com/mgeraeds/pysva.git
+```
+Navigate to the directory where your cloned repository lives. You can find the _setup.py_ file in this directory. Install the package in development mode using:
+```
+$ pip install .
+```
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## Logic structure and usage
+The core of the package is built around a constructor class (\texttt{constructorSVA}) that initialises the analysis environment from either a file path or an in-memory dataset. It serves as the entry point for hydrodynamic and tracer analyses. This design ensures flexibility in handling different data sources, such as \texttt{xarray.Dataset}, \texttt{xarray.DataArray}, \texttt{xugrid.UgridDataset}, \texttt{xugrid.UgridDataArray}, or other UGRID-compliant data structures.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+The constructor accepts as input either a NetCDF file or an \href{https://docs.xarray.dev/en/stable/}{xarray}-based object, together with a dictionary describing the relevant physical variables (e.g., velocity components, tracer, volume, flow area). Upon initialisation, the class reads the dataset. It automatically attaches references to fundamental hydrodynamic variables (velocity components, volume, viscosity, tracer concentration, depth), as well as optional fields such as layer interfaces. Grid-related attributes (node/edge/face coordinates, connectivity, and dimensional metadata) are stored for subsequent computations. This design abstracts away dataset-specific details and provides a standardised interface for subsequent diagnostics and numerical experiments.
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+               ┌──────────────────────────────┐
+               │           Inputs             │
+               │ ──────────────────────────── │
+               │ • NetCDF file (path)         │
+               │ • xarray.Dataset             │
+               │ • xarray.DataArray           │
+               │ • xu.UgridDataset            │
+               │ • data_description (dict)    │
+               └───────────────┬──────────────┘
+                               │
+                               ▼
+               ┌──────────────────────────────┐
+               │          Constructor         │
+               │  ─────────────────────────── │
+               │ • Reads dataset              │
+               │ • Extracts grid + dimensions │
+               │ • Assigns core variables     │
+               │   (velx, vely, velz, tracer, │
+               │    viscosity, depth, etc.)   │
+               │ • Sets optional vars         │
+               │   (volume, flow_area, etc.)  │
+               └───────────────┬──────────────┘
+                               │
+                               ▼
+          ┌────────────────────────────────────────┐
+          │      Cached geometry properties        │
+          │ ────────────────────────────────────── │
+          │ • flow_area (Algorithm 5, TRM eqns)    │
+          │ • face_area                            │
+          │ • water_depth                          │
+          │ • bed_level                            │
+          │ • edge_length (pythagoras distance)    │
+          │ • face_edge_weights, edge_face_weights │
+          │ • face_coords, edge_coords, node_coords│
+          │ • edge_node_coords                     │
+          └───────────────────┬────────────────────┘
+                              │
+                              ▼
+               ┌──────────────────────────────┐
+               │       Outputs / API          │
+               │ ──────────────────────────── │
+               │ • Standardised grid metadata │
+               │ • Hydrodynamic variables     │
+               │ • Derived diagnostics        │
+               │   (kzz, tracer variance)     │
+               └──────────────────────────────┘
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+A more detailed explanation on the usage of the package can be found in the documentation. Examples are included in the notebooks folder.
 
 ## License
-For open source projects, say how it is licensed.
+This software is licensed under an MIT license. Details on the license can be found in the LICENSE file.
 
 ## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+🚨🚨 The development of this package has been stalled. Issues can still be opened, but fixes might take longer.
+
+## References
+[1] Hans Burchard, Hannes Rennau, _Comparative quantification of physically and numerically induced mixing in ocean models_, Ocean Modelling, 20(3), 2008, Pages 293-311,ISSN 1463-5003, doi:10.1016/j.ocemod.2007.10.003.
+
+[2] Li, X., Geyer, W. R., Zhu, J., & Wu, H. (2018). The Transformation of Salinity Variance: A New Approach to Quantifying the Influence of Straining and Mixing on Estuarine Stratification. Journal of Physical Oceanography, 48(3), 607-623. https://doi-org.tudelft.idm.oclc.org/10.1175/JPO-D-17-0189.1
