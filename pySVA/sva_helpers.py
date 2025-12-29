@@ -1075,6 +1075,14 @@ def integrate_trapz(y: xr.DataArray, x: xr.DataArray, dim: Optional[str] = None)
     Returns:
         xr.DataArray: The result of the trapezoidal integration.
     """
+    # First drop the x coordinate (the one to integrate over), as this will cause conflicts
+    y = y.drop_vars(x.name)
+    x = x.drop_vars(x.name)
+    
+    desired_order = list(x.dims)
+    y = y.transpose(*desired_order)
+    
+    # Calculate dx and average y
     dx = x.isel({dim: slice(1, None)}) - x.isel({dim: slice(None, -1)})
     avg_y = (y.isel({dim: slice(1, None)}) + y.isel({dim: slice(None, -1)})) / 2
 
@@ -1126,11 +1134,19 @@ def differentiate_over_3d_coord(uda: xr.DataArray, coord_var: str, axis: int = -
     depth_dim = uda[coord_var].dims[axis]
     
     # Calculate central difference with .diff() to reduce shifts
-    data_diff = uda.diff(depth_dim)
-    coord_diff = uda[coord_var].diff(depth_dim)
+    # data_diff = uda.diff(depth_dim)
+    # coord_diff = uda[coord_var].diff(depth_dim)
     
     # Calculate the derivative and re-align dimensions with padding
-    differentiated = data_diff / coord_diff
+    # differentiated = data_diff / coord_diff
+    differentiated = xr.apply_ufunc(
+        lambda x, y: x.diff(depth_dim) / y.diff(depth_dim),
+        uda, uda[coord_var],
+        dask="parallelized",
+        output_dtypes=[uda.dtype],
+        join="override"
+    )
+
     differentiated = differentiated.pad({depth_dim: (1, 0)}, mode="edge")
 
     return differentiated
