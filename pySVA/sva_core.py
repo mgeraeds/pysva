@@ -3,6 +3,7 @@ __all__ = ['constructorSVA']
 import xarray as xr
 import xugrid as xu
 import dfm_tools as dfmt
+import dask.array as da
 import numpy as np
 from functools import cached_property
 from pySVA.sva_helpers import build_inverse_distance_weights, integrate_trapz, calculate_distance_pythagoras, differentiate_over_3d_coord
@@ -49,7 +50,12 @@ class constructorSVA:
         self.viscosity = self.ds[f'{data_description["viscosity"]}']
         self.tracer = self.ds[f'{data_description["tracer"]}']
         self.depth = self.ds[f'{data_description["depth"]}']
-
+        
+        if 'horizontal_diffusivity' in data_description.keys():
+            self.diu = self.ds[f'{data_description["horizontal_diffusivity"]}']
+        else: # > Todo: add possible calculation of these
+            self.diu = None
+            
         if 'interfaces' in data_description.keys():
             self.interfaces = self.ds[f'{data_description["interfaces"]}']
         else: # > Todo: add possible calculation of these
@@ -75,7 +81,7 @@ class constructorSVA:
         if 'flow_area' in data_description.keys():
             self.flow_area = self.ds[f'{data_description["flow_area"]}']
         else:
-            self.flow_area = self.flow_area
+            self.flow_area = None #self.flow_area
 #             try:
 #                 self.flow_area = self.flow_area
 #             except:
@@ -91,87 +97,89 @@ class constructorSVA:
         # self.ds = xr.open_dataset(file_name, use_cftime=True, **kwargs)
         self.ds = dfmt.open_partitioned_dataset(file_name, **kwargs)
             
-    @cached_property
-    def flow_area(self):
-        # > Get dimension names
-        dimn_faces = self.dimn_faces
-        dimn_maxef = self.dimn_maxef
-        dimn_interface = self.dimn_interface
-        dimn_edges = self.dimn_edges
+#     @cached_property
+#     def flow_area(self):
+#         # > Get dimension names
+#         dimn_faces = self.dimn_faces
+#         dimn_maxef = self.dimn_maxef
+#         dimn_interface = self.dimn_interface
+#         dimn_edges = self.dimn_edges
         
-        # > Get general strings
-        fill_value = self.fill_value
-        gridname = self.gridname
+#         # > Get general strings
+#         fill_value = self.fill_value
+#         gridname = self.gridname
         
-        # > Get properties
-        bed_level = self.bed_level
-        interfaces = self.interfaces
-        dimn_layer = self.dimn_layer
-        edge_faces = self.edge_faces
+#         # > Get properties
+#         bed_level = self.bed_level
+#         interfaces = self.interfaces
+#         dimn_layer = self.dimn_layer
+#         edge_faces = self.edge_faces
         
-        # > Get the edge-face connectivity and replace fill values with -1
-        edge_faces = self.edge_faces
-        edge_faces_validbool = edge_faces!=fill_value
-        edge_faces = edge_faces.where(edge_faces_validbool, -1)
+#         # > Get the edge-face connectivity and replace fill values with -1
+#         edge_faces = self.edge_faces
+#         edge_faces = edge_faces.reset_coords(drop=True)
+#         edge_faces_validbool = (edge_faces!=fill_value).data
+#         edge_faces = edge_faces.where(edge_faces_validbool, -1)
 
-        # > Make sure the face dimension is not chunked, otherwise we will 
-        # > get "PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks."
-        chunks = {dimn_faces:-1}
-        bed_level = bed_level.chunk(chunks)
-        interfaces = interfaces.chunk(chunks)
+#         # > Make sure the face dimension is not chunked, otherwise we will 
+#         # > get "PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks."
+#         chunks = {dimn_faces:-1}
+#         bed_level = bed_level.chunk(chunks)
+#         interfaces = interfaces.chunk(chunks)
 
-        # > Select the varname on faces in the edge-face connectivity matrix
-        edge_faces_stacked = edge_faces.stack(__tmp_dim__=(dimn_edges, dimn_maxef))
+#         # > Select the varname on faces in the edge-face connectivity matrix
+#         edge_faces_stacked = edge_faces.stack(__tmp_dim__=(dimn_edges, dimn_maxef))
 
-        # > // Get bed levels at nodes and bed levels at edges //
-        # > Get the bed_levels on the faces, and fill it in in the edge_node_connectivity matrix 
-        bl_edge_faces_stacked = bed_level.isel({dimn_faces: edge_faces_stacked})
-        bl_edge_faces = bl_edge_faces_stacked.unstack("__tmp_dim__")
-        bl_edge_faces = xr.where(edge_faces_validbool, bl_edge_faces, np.nan)
+#         # > // Get bed levels at nodes and bed levels at edges //
+#         # > Get the bed_levels on the faces, and fill it in in the edge_node_connectivity matrix 
+#         bl_edge_faces_stacked = bed_level.isel({dimn_faces: edge_faces_stacked})
+#         bl_edge_faces = bl_edge_faces_stacked.unstack("__tmp_dim__")
+#         bl_edge_faces = xr.where(edge_faces_validbool, bl_edge_faces, np.nan)
 
-        # // Get face-based water depth (Algorithm 4, Equation 6.14) //
-        # > Get the water levels on the faces, and fill it in in the edge-face connectivity matrix
-        wl_edge_faces_stacked = interfaces.isel({dimn_faces:edge_faces_stacked})
-        wl_edge_faces = wl_edge_faces_stacked.unstack("__tmp_dim__")
-        wl_edge_faces = xr.where(edge_faces_validbool, wl_edge_faces, np.nan)
+#         # // Get face-based water depth (Algorithm 4, Equation 6.14) //
+#         # > Get the water levels on the faces, and fill it in in the edge-face connectivity matrix
+#         wl_edge_faces_stacked = interfaces.isel({dimn_faces:edge_faces_stacked})
+#         wl_edge_faces = wl_edge_faces_stacked.unstack("__tmp_dim__")
+#         wl_edge_faces = xr.where(edge_faces_validbool, wl_edge_faces, np.nan)
 
-        # > Calculate the water depth based on Algorithm 4 of the Technical refernece manual (huj in Eq. 6.14)
-#         wd_edges = xr.where(wl_edge_faces[:,0,:,:] > wl_edge_faces[:,1,:,:], wl_edge_faces[:,0,:,:] - bl_edge_faces.min(dim=dimn_maxef), wl_edge_faces[:,1,:,:] - bl_edge_faces.min(dim=dimn_maxef)).diff(dim=dimn_interface)
-        bl_min = bl_edge_faces.min(dim=dimn_maxef)
-        wl0 = wl_edge_faces.isel({dimn_maxef: 0})
-        wl1 = wl_edge_faces.isel({dimn_maxef: 1})
-        wd_edges = xr.where(wl0 > wl1, wl0 - bl_min, wl1 - bl_min).diff(dim=dimn_interface)
+#         # > Calculate the water depth based on Algorithm 4 of the Technical refernece manual (huj in Eq. 6.14)
+# #         wd_edges = xr.where(wl_edge_faces[:,0,:,:] > wl_edge_faces[:,1,:,:], wl_edge_faces[:,0,:,:] - bl_edge_faces.min(dim=dimn_maxef), wl_edge_faces[:,1,:,:] - bl_edge_faces.min(dim=dimn_maxef)).diff(dim=dimn_interface)
+#         bl_min = bl_edge_faces.min(dim=dimn_maxef)
+#         wl0 = wl_edge_faces.isel({dimn_maxef: 0})
+#         wl1 = wl_edge_faces.isel({dimn_maxef: 1})
+#         wd_edges = xr.where(wl0 > wl1, wl0 - bl_min, wl1 - bl_min).diff(dim=dimn_interface)
 
-        # // Calculate the cross-sectional bed variation //
-        # > Calculate the difference between the bed levels (6.16)
-        delta_bl = bl_edge_faces.max(dim=dimn_maxef) - bl_edge_faces.min(dim=dimn_maxef)
-        # > Define delta value
-        delta = 10e-3
+#         # // Calculate the cross-sectional bed variation //
+#         # > Calculate the difference between the bed levels (6.16)
+#         delta_bl = bl_edge_faces.max(dim=dimn_maxef) - bl_edge_faces.min(dim=dimn_maxef)
+#         # > Define delta value
+#         delta = 10e-3
 
-        # > Get the edge_length
-        edge_length = self.edge_length
+#         # > Get the edge_length
+#         edge_length = self.edge_length
         
-        # > Get minimum of huj/delta_blj and 1 
-        min_huj_bl = xr.where(wd_edges/edge_length < 1, wd_edges/edge_length, 1)
-        # > Turn nan's back into min_huj_bl
-        min_huj_bl = xr.where((wd_edges/edge_length)!=np.nan, min_huj_bl, np.nan)
-        # Get minumum of delta_blj/huj
-        min_bl_huj = xr.where(edge_length/wd_edges < 1, edge_length/wd_edges, 1)
-        # > Turn nan's back into min_bl_huj
-        min_bl_huj = xr.where((edge_length/wd_edges)!=np.nan, min_bl_huj, np.nan) 
+#         # > Get minimum of huj/delta_blj and 1 
+#         min_huj_bl = xr.where(wd_edges/edge_length < 1, wd_edges/edge_length, 1)
+#         # > Turn nan's back into min_huj_bl
+#         min_huj_bl = xr.where((wd_edges/edge_length)!=np.nan, min_huj_bl, np.nan)
+#         # Get minumum of delta_blj/huj
+#         min_bl_huj = xr.where(edge_length/wd_edges < 1, edge_length/wd_edges, 1)
+#         # > Turn nan's back into min_bl_huj
+#         min_bl_huj = xr.where((edge_length/wd_edges)!=np.nan, min_bl_huj, np.nan) 
         
-        # Chunk back
-        bed_level = bed_level.chunk("auto")
-        interfaces = interfaces.chunk("auto")
+#         # Chunk back
+#         bed_level = bed_level.chunk("auto")
+#         interfaces = interfaces.chunk("auto")
 
-        # > Calculate actual flow area based on Algorithm 5 (Eqs 6.16 and 6.17)
-        flow_area = xr.where(delta_bl < delta*edge_length, edge_length*wd_edges, edge_length*wd_edges*min_huj_bl*(1-0.5*min_bl_huj)).rename({dimn_interface:dimn_layer})
-        flow_area = flow_area.rename(f'{gridname}_au')
+#         # > Calculate actual flow area based on Algorithm 5 (Eqs 6.16 and 6.17)
+#         flow_area = xr.where(delta_bl < delta*edge_length, edge_length*wd_edges, edge_length*wd_edges*min_huj_bl*(1-0.5*min_bl_huj)).rename({dimn_interface:dimn_layer})
+#         flow_area = flow_area.rename(f'{gridname}_au')
         
-        return flow_area
+#         return flow_area
    
     @cached_property
     def face_area(self):
+        dimn_edges = self.dimn_edges
         
         # > Get general strings
         fill_value = self.fill_value
@@ -179,10 +187,14 @@ class constructorSVA:
         
         # > Get edge length
         edge_length = self.edge_length
+        edge_length = edge_length
         # > Get the cell thickness 
         cell_thickness = self.cell_thickness
         # > Interpolate the cell thickness on the edges 
         cell_thickness_edges = self.uda_to_edges(cell_thickness)
+        
+        chunks = {dimn_edges:-1}
+        cell_thickness_edges = cell_thickness_edges.chunk(chunks)
         
         face_area = (cell_thickness_edges * edge_length).rename(f'{gridname}_face_area')
         face_area = face_area.chunk('auto')
@@ -241,6 +253,7 @@ class constructorSVA:
         
         # > Get the edge-face connectivity
         face_edges = self.face_edges
+        face_edges = face_edges.reset_coords(drop=True)
         face_coords = self.face_coords
         edge_coords = self.edge_coords
         
@@ -258,9 +271,11 @@ class constructorSVA:
         # > Get dimension names
         dimn_faces = self.dimn_faces
         fill_value = self.fill_value
+        gridname = self.gridname
         
         # > Get the edge-face connectivity
         edge_faces = self.edge_faces
+        edge_faces = edge_faces.reset_coords(drop=True)
         
         face_coords = self.face_coords
         edge_coords = self.edge_coords
@@ -270,6 +285,10 @@ class constructorSVA:
         
         # > Build the weights
         edge_face_weights = build_inverse_distance_weights(edge_coords, edge_face_coords)
+        
+        # > Make into dask array
+        edge_face_weights = edge_face_weights.reset_coords(drop=True)
+        edge_face_weights = xr.DataArray(da.from_array(edge_face_weights), dims=[*edge_face_weights.dims], coords=edge_face_weights.coords, name='grid_edge_face_weights')
         
         return edge_face_weights
 
@@ -400,7 +419,7 @@ class constructorSVA:
 
         # > Get connectivity
         face_edges = self.ds.grid.face_edge_connectivity
-
+        
         # > Make into xr.DataArray with correct sizes, dimensions, and coordinates
         face_edges = xr.DataArray(face_edges, dims=[dimn_faces, dimn_maxfn],
                                             coords={f'{coord_face_x}': ([dimn_faces], self.ds[f'{coord_face_x}']),
@@ -542,7 +561,8 @@ class constructorSVA:
 
             # > Get the edge-face connectivity and replace fill values with -1
             edge_faces = self.edge_faces
-            edge_faces_validbool = edge_faces!=fill_value
+            edge_faces = edge_faces.reset_coords(drop=True)
+            edge_faces_validbool = (edge_faces!=fill_value).data
             edge_faces = edge_faces.where(edge_faces_validbool, -1)
 
             # > Make sure the face dimension is not chunked, otherwise we will 
@@ -563,8 +583,9 @@ class constructorSVA:
 
             # > Calculate the variable on the edges, based on the face_weights
             face_weights = self.edge_face_weights
+            face_weights = face_weights.reset_coords(drop=True)
 
-            # > Rechunk back with setting = "auto" #todo: provide option for custom chunksizes
+            # > Rechunk back with settin:g = "auto" #todo: provide option for custom chunksizes
             uda = uda.chunk(chunks="auto")
             edge_var = edge_var.chunk(chunks="auto")
             
@@ -572,8 +593,20 @@ class constructorSVA:
             # Make a boolean for this to test the next step on
             nan_bool = ~edge_var.isnull().all(dim=dimn_maxef)
             
+            # If one of the edges is nan, it's a boundary edge and this means that the corresponding
+            # edge should be equal to the value in the non-nan cell > adjust the face_weights accordingly.
+            # > First expand the face weights to correspond to the full edge_var array
+            expanded_face_weights = face_weights.broadcast_like(edge_var)
+            expanded_face_weights = expanded_face_weights.chunk("auto").chunk(edge_var.chunks)
+            
+            valid_mask = edge_var.notnull().reset_coords(drop=True)
+            adjusted_face_weights = expanded_face_weights.where(valid_mask.data)
+            
+            # > Adjust the weights over the layer dimension so that the weights always add up to 1.
+            adjusted_face_weights = (adjusted_face_weights / adjusted_face_weights.sum(dim=dimn_maxef, skipna=True))
+            
             # Multipy edge variables with the face_weights to get the variable size on the edges
-            edge_var = (edge_var * face_weights).sum(dim=dimn_maxef)
+            edge_var = (edge_var * adjusted_face_weights).sum(dim=dimn_maxef)
             
             # Apply the boolean
             edge_var = edge_var.where(nan_bool)
@@ -581,8 +614,7 @@ class constructorSVA:
             # edge_var = edge_var.mean(dim=dimn_maxef)
             # Give name and attributes
             attr_list = {'location': 'edge', 'cell_methods': f'{dimn_faces}: inverse distance weighted mean'}
-            edge_var = edge_var.assign_attrs(
-                    attr_list).rename(varname)
+            edge_var = edge_var.assign_attrs(attr_list).rename(varname)
             
             return edge_var
         
@@ -606,7 +638,8 @@ class constructorSVA:
             
             # > Get the edge-face connectivity and replace fill values with -1
             face_edges = self.face_edges
-            face_edges_validbool = face_edges!=fill_value
+            face_edges = face_edges.reset_coords(drop=True)
+            face_edges_validbool = (face_edges!=fill_value).data
             face_edges = face_edges.where(face_edges_validbool, -1)
             
             # > Make sure the face dimension is not chunked, otherwise we will 
@@ -631,7 +664,7 @@ class constructorSVA:
             
             # If all of the edge vars are np.nan, then the sum should also be np.nan
             # Make a boolean for this to test the next step on
-            # nan_bool = ~face_var.isnull().all(dim=dimn_maxfn)
+            nan_bool = ~face_var.isnull().all(dim=dimn_maxfn)
             
             # > Calculate the variable on the edges, based on the face_weights
             edge_weights = self.face_edge_weights
@@ -641,7 +674,7 @@ class constructorSVA:
             face_var = (face_var * edge_weights).sum(dim=dimn_maxfn)
             
             # # Apply the boolean
-            #  face_var = face_var.where(nan_bool)
+            face_var = face_var.where(nan_bool)
             
             # Update attributes from node/edge to face
             face_attrs = {'location': 'face', 'cell_methods': f'{dimn_faces}: mean'}
@@ -669,6 +702,7 @@ class constructorSVA:
 
         # > Get unit normal vectors
         unvs = self.unvs
+        unvs = unvs.reset_coords(drop=True)
         
         # > Get the volume and flow area variables: check if they're in the 
         # > constructor first, then check the dataset, else throw error
@@ -696,12 +730,18 @@ class constructorSVA:
         # > Get the face-edge connectivity and replace fill values with -1
         face_edges = self.face_edges
         # > Get boolean to mask other arrays too
-        face_edges_validbool = face_edges!=fill_value
+        face_edges_validbool = (face_edges!=fill_value)
         # > Mask edges that don't have a value
-        face_edges = face_edges.where(face_edges_validbool, -1)
+        face_edges = face_edges.where(face_edges_validbool.data, -1)
         # > Stack face_edges for later use
         face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
+        
+        # > Take the lentgth of the cartesian axis
+        nc = unvs.sizes[dimn_cart]
 
+        # Make (faces, maxfn) -> (faces, maxfn, cart)
+#         face_edges_validbool3d = face_edges_validbool.expand_dims({dimn_cart: nc}).data
+        
         # > Get the unit normal vectors (nf) also in the face-edges matrix
         fe_nfs = xr.where(face_edges_validbool, unvs.isel({dimn_edges: face_edges}), np.nan)
         fe_nfs = fe_nfs.chunk(chunks="auto")
@@ -709,6 +749,8 @@ class constructorSVA:
         # // 2. See if the normal vectors are pointing out of the cell. If not, flip them.
         # > Calculate distance vectors
         dv = self.distance_vectors
+        dv = dv.reset_coords(drop=True)
+        
         # > Calculate the dot product between the calculated normal vectors and the distance vector for each face
         i_nfs = xr.dot(fe_nfs, dv, dims=[dimn_cart])
         # > if the product < 1, multiply by -1 to get an outwards facing normal vector, and update the variable
@@ -777,6 +819,7 @@ class constructorSVA:
 
         # > Get face-edge-connectivity
         face_edges = self.face_edges
+        face_edges = face_edges.reset_coords(drop=True)
 
         # > Get the cell face_coords!
         centroid_array = self.ds.grid.face_coordinates
@@ -820,6 +863,7 @@ class constructorSVA:
     def cell_thickness(self):
 
         cell_thickness = self.ds.mesh2d_flowelem_zw.diff(dim=self.dimn_interface).rename({f'{self.dimn_interface}':self.dimn_layer}).rename(f'{self.gridname}_cell_thickness')
+        cell_thickness = cell_thickness.reset_coords(drop=True)
 
         return cell_thickness
     
@@ -827,17 +871,20 @@ class constructorSVA:
     def cell_area(self):
         # > Get the distance vectors first
         dv = self.distance_vectors
+        dv = dv.reset_coords(drop=True)
         
         # > Get face_edges
         face_edges = self.face_edges
+        face_edges = face_edges #.reset_coords(drop=True)
         # > Get boolean to mask other arrays too
-        face_edges_validbool = face_edges!=self.fill_value
+        face_edges_validbool = (face_edges!=self.fill_value).data
         # > Mask edges that don't have a value
         face_edges = face_edges.where(face_edges_validbool, -1)
         # > Stack face_edges for later use
         face_edges_stacked = face_edges.stack(__tmp_dim__=(self.dimn_faces, self.dimn_maxfn))
         # > Get unit normal vectors
         unvs = self.unvs
+        unvs = unvs #.reset_coords(drop=True)
         
         # > Get the unit normal vectors (nf) also in the face-edges matrix
         fe_nfs = xr.where(face_edges_validbool, unvs.isel({self.dimn_edges: face_edges}), np.nan)
@@ -1001,6 +1048,48 @@ class constructorSVA:
             
         return advection.rename(f"{integration}_integrated_{self.tracer.name}_advection")
     
+    def horizontal_dissipation(self, integration='depth', depth_averaged=False):
+        # > Get the dimensions
+        dimn_cart = self.dimn_cart
+        # > Get the horizontal diffusion
+        diu = self.diu
+        
+        # > Check if the horizontal diffusivity is defined on the edges, and if it is,
+        # > interpolate it on the faces
+        if self.dimn_edges in diu.dims:
+            diu = self.uda_to_faces(diu)
+            ho
+        try:
+            tracer_grad = self.compute_gradient_on_face(self.tracer, scalar=True)
+            dsdx = tracer_grad.isel({dimn_cart:0}).transpose(*list(diu.dims)).reset_coords(drop=True)
+            dsdy = tracer_grad.isel({dimn_cart:1}).transpose(*list(diu.dims)).reset_coords(drop=True)
+
+            hor_dis = 2*diu*(dsdx**2 + dsdy**2)
+            
+            # > Drop coordinates that have coordinate to be integrated over before integrating so no difficulties arise
+            hor_dis = hor_dis.drop_vars([n for n,v in hor_dis.coords.items() if f"{self.dimn_layer}" in v.dims])
+            depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
+
+            # > Integrate the total term and multiply with -1 
+            if integration.lower() == 'depth':
+                # > Integrate dissipation over depth (trapezoidal rule)
+                dissipation = integrate_trapz(hor_dis, depth, self.dimn_layer)
+            elif integration.lower() == 'volume':
+                # > Multiply with volume per cell and sum over all cells
+                dissipation = ((hor_dis * self.volume).sum(dim=[f'{self.dimn_layer}', f'{self.dimn_faces}']))
+            elif integration.lower() == 'none':
+                dissipation = hor_dis
+            else:
+                raise ValueError(f"Could not derive what to do with integration={integration} keyword.")
+
+            if depth_averaged:
+                dissipation = dissipation * (1/self.water_depth)
+        
+            return dissipation.rename(f"{integration}_integrated_{self.tracer.name}_horizontal_dissipation")
+        
+        except:
+            return None
+        
     def dissipation(self, integration='depth', depth_averaged=False):
         # > Get the vertical turbulent diffusivity
         kzz = self.kzz
