@@ -1,6 +1,6 @@
-# pySVA
+# pySVA: a Python-based toolbox for salinity variance budget computations on unstructured model output
 
-The pySVA toolbox is Python-based open-source software for the calculation of terms in a salinity variance budget that can be applied to model output from models with unstructured, staggered C-grid meshes such as [D-FLOW Flexible Mesh](https://content.oss.deltares.nl/delft3d/D-Flow_FM_User_Manual.pdf). 
+The pySVA toolbox is Python-based open-source toolbox for the calculation of terms in a salinity variance budget that can be applied to model output from models with unstructured, staggered C-grid meshes such as [D-FLOW Flexible Mesh](https://content.oss.deltares.nl/delft3d/D-Flow_FM_User_Manual.pdf). 
 
 ## The salinity variance budget
 Burchard et al. (2008) first described the total salinity variance equation. %to link physical and numerical mixing using an idealised model. 
@@ -99,6 +99,7 @@ The constructor accepts as input either a NetCDF file or an [xarray](https://doc
           │ • edge_length (pythagoras distance)    │
           │ • face_edge_weights, edge_face_weights │
           │ • face_coords, edge_coords, node_coords│
+          │ • cell_thickness, cell_area            │
           │ • edge_node_coords                     │
           └───────────────────┬────────────────────┘
                               │
@@ -110,6 +111,8 @@ The constructor accepts as input either a NetCDF file or an [xarray](https://doc
                │ • Hydrodynamic variables     │
                │ • Derived diagnostics        │
                │   (kzz, tracer variance)     │
+               │ • Terms in the salinity      │
+               |   variance budget            |
                └──────────────────────────────┘
 
 
@@ -121,6 +124,22 @@ This software is licensed under an MIT license. Details on the license can be fo
 ## Project status
 🚨🚨 The development of this package has been stalled. Issues can still be opened, but fixes might take longer.
 
+## How to cite
+When using this repository, cite as: 
+> Geraeds, M. (2025). pySVA: Python-based toolbox for salinity variance budget computations on unstructured model output. 4TU.ResearchData. Software. https://doi.org/10.4121/66de21de-b6b7-462d-8a50-dbcf4f858b64
+
+In BibTex format:
+```
+@misc{geraeds_pysva,
+    title     = {pySVA: Python-based toolbox for salinity variance budget computations on unstructured model output},
+    author    = {Geraeds, M.},
+    publisher = {4TU.ResearchData},
+    year      = {2026},
+    month     = {January},
+    version   = {1.0},
+    doi       = {10.4121/66de21de-b6b7-462d-8a50-dbcf4f858b64},
+}
+```
 ## References
 [1] Hans Burchard, Hannes Rennau, _Comparative quantification of physically and numerically induced mixing in ocean models_, Ocean Modelling, 20(3), 2008, Pages 293-311,ISSN 1463-5003, doi:10.1016/j.ocemod.2007.10.003.
 
