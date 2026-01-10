@@ -60,7 +60,7 @@ class constructorSVA:
             self.ds = input_file
         elif isinstance(input_file, xr.DataArray):
             self.ds = input_file
-        # else:
+        else:
             raise IOError("Please provide xr.Dataset, xu.core.wrap.UgridDataset, xr.DataArray, or a file path to a netCDF.")
 
         # self._setup(data=data_description)
