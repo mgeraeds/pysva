@@ -1,3 +1,9 @@
+"""Calculation module for pySVA containing functions for variance analysis.
+
+This module provides functions to compute tracer variance, advection, straining,
+and dissipation terms for salinity variance analysis.
+"""
+
 # Imports
 import numpy as np
 import xarray as xr
@@ -6,7 +12,21 @@ from dfm_tools.xugrid_helpers import get_vertical_dimensions
 from pySVA.sva_helpers import reconstruct_vector_form, calculate_unit_normal_vectors, compute_gradient_on_face, uda_to_edges
 
 def compute_tracer_variance(constructorSVA):
+    """Compute tracer variance (S'² = (S - S_mean)²).
 
+    Calculates the vertical mean tracer, perturbation from mean,
+    and squared perturbation (variance). Results are stored in the
+    constructorSVA.ds dataset.
+
+    Args:
+        constructorSVA (constructorSVA): Object containing dataset and tracer variable.
+
+    Returns:
+        xarray.DataArray: Squared tracer perturbation (variance).
+
+    Raises:
+        ValueError: If no tracer variable is defined in constructorSVA.
+    """
     # > Get dataset
     uds = constructorSVA.ds
     # > Derive dimension names from dataset
@@ -32,7 +52,23 @@ def compute_tracer_variance(constructorSVA):
         return tracer_variance
 
 def compute_advection(constructorSVA, gradient_function=None):
+    """Compute the advection term (∇·(uh·S'²)).
 
+    Calculates the flux of variance due to mean flow advection.
+    Integrates over depth and applies gradient operator to obtain
+    the divergence of advective flux.
+
+    Args:
+        constructorSVA (constructorSVA): Object containing dataset, velocities, and tracer variance.
+        gradient_function (callable, optional): Function to compute spatial gradients.
+            Defaults to compute_gradient_on_face from sva_helpers.
+
+    Returns:
+        xarray.DataArray: Divergence of advective variance flux.
+
+    Raises:
+        ValueError: If tracer, tracer variance, or horizontal velocities are not defined.
+    """
     # > Get dataset
     uds = constructorSVA.ds
     # > Derive dimension names from dataset
@@ -95,6 +131,22 @@ def compute_advection(constructorSVA, gradient_function=None):
             return advection
 
 def compute_straining(constructorSVA, gradient_function=None):
+    """Compute the straining/mixing term (-2·w'·S'·∇S̄).
+
+    Calculates the rate of variance production/destruction due to
+    vertical mixing by internal waves and shear. Integrates over depth.
+
+    Args:
+        constructorSVA (constructorSVA): Object containing dataset, vertical velocity, and mean tracer gradient.
+        gradient_function (callable, optional): Function to compute spatial gradients.
+            Defaults to compute_gradient_on_face from sva_helpers.
+
+    Returns:
+        xarray.DataArray: Depth-integrated straining term.
+
+    Raises:
+        ValueError: If tracer, tracer variance, or vertical velocity is not defined.
+    """
     # > Get dataset
     uds = constructorSVA.ds
     # > Derive dimension names from dataset
@@ -129,6 +181,20 @@ def compute_straining(constructorSVA, gradient_function=None):
     return straining_int
 
 def compute_dissipation(constructorSVA):
+    """Compute the diffusive dissipation term (2·κ_zz·(∂S/∂z)²).
+
+    Calculates the rate of variance dissipation by vertical diffusion
+    (turbulent mixing). Integrates over depth.
+
+    Args:
+        constructorSVA (constructorSVA): Object containing dataset, tracer, and vertical diffusivity (kzz).
+
+    Returns:
+        xarray.DataArray: Depth-integrated dissipation term.
+
+    Raises:
+        ValueError: If tracer, tracer variance, or vertical diffusivity (kzz) is not defined.
+    """
     # > Get dataset
     uds = constructorSVA.ds
     # > Derive dimension names from dataset

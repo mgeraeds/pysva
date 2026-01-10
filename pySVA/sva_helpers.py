@@ -1,3 +1,9 @@
+"""Helper functions for pySVA.
+
+This module contains utility functions for grid operations, coordinate calculations,
+and data transformations used in salinity variance analysis.
+"""
+
 import xugrid as xu
 import xarray as xr
 import warnings
@@ -6,23 +12,21 @@ import xarray_einstats
 
 
 def build_inverse_distance_weights(a, b):
+    """Calculate inverse distance weights using xarray.
 
-    """
-    Caculate inverse distance weights based and apply using xarray.
+    Computes weights for interpolation based on inverse distances
+    between coordinate sets a and b. Used for mapping data between
+    different grid locations (e.g., faces to edges).
 
-    Parameters
-    ----------
-    a : (xr.DataArray,xu.UgridDataArray)
-        Coordinates of faces (dimn_faces, 2)
-    
-    b : (xr.DataArray,xu.UgridDataArray)
-        Coordinates of edges per face (dimn_faces, dimn_face_nodes, 2)
+    Args:
+        a (xarray.DataArray): Reference coordinates (N, 2) with x and y components.
+        b (xarray.DataArray): Target coordinates per reference point (N, M, 2).
 
-    Returns
-    -------
-    weights : (xr.DataArray)
-        Weights for each of the edge parameters (dimn_faces, dimn_face_nodes)
+    Returns:
+        xarray.DataArray: Inverse distance weights (N, M) normalized to sum to 1.
 
+    Notes:
+        Weights sum to 1.0 along the second dimension for each reference point.
     """
     def weight_func(a, b):
         distance = np.linalg.norm(a[:, np.newaxis, :] - b, axis=-1)
@@ -36,6 +40,21 @@ def build_inverse_distance_weights(a, b):
 
 
 def build_edge_node_connectivity(constructorSVA):
+    """Build edge-node connectivity array from unstructured grid.
+
+    Extracts and formats the edge-node connectivity information from
+    an xugrid dataset, creating a properly dimensioned DataArray with
+    CF-compliant attributes.
+
+    Args:
+        constructorSVA (constructorSVA): Object containing UgridDataset.
+
+    Returns:
+        xarray.DataArray: Edge-node connectivity with dimensions (n_edges, max_edge_nodes).
+
+    Raises:
+        IOError: If dataset is not a UgridDataset.
+    """
 
     # First check if the provided dataset is a xu.core.wrap.UgridDataset
     uds = constructorSVA.ds

@@ -1,3 +1,10 @@
+"""Core module for pySVA containing the main constructorSVA class.
+
+This module defines the constructorSVA class which handles data loading,
+grid operations, and provides access to various hydrodynamic properties
+for salinity variance analysis.
+"""
+
 __all__ = ['constructorSVA']
 
 import xarray as xr
@@ -9,7 +16,38 @@ from functools import cached_property
 from pySVA.sva_helpers import build_inverse_distance_weights, integrate_trapz, calculate_distance_pythagoras, differentiate_over_3d_coord
 
 class constructorSVA:
-    def __init__(self, input_file, data_description, **kwargs): # removed data description data_description,
+    """Main class for Salinity Variance Analysis (SVA).
+
+    Loads and processes hydrodynamic data from D-Flow FM simulations,
+    providing access to grid properties, velocities, tracers, and
+    computed quantities needed for variance budget analysis.
+
+    The class handles multiple input formats (netCDF files, xarray Datasets,
+    or xugrid UgridDatasets) and automatically extracts grid topology and
+    coordinate systems.
+
+    Attributes:
+        ds (xarray.Dataset): The loaded hydrodynamic dataset.
+        grid: The unstructured grid object.
+        Various dimension names (dimn_edges, dimn_faces, etc.) and coordinates.
+    """
+
+    def __init__(self, input_file, data_description, **kwargs):
+        """Initialize the SVA analysis object.
+
+        Args:
+            input_file (str or xr.Dataset or xu.UgridDataset or xr.DataArray):
+                Path to netCDF file, pre-loaded xarray Dataset, UgridDataset,
+                or DataArray containing hydrodynamic data.
+            data_description (dict): Mapping of variable names to dataset keys.
+                Required keys: 'velx', 'vely', 'velz', 'viscosity', 'tracer', 'depth'.
+                Optional keys: 'horizontal_diffusivity', 'interfaces', 'bed_level',
+                'volume', 'flow_area'.
+            **kwargs: Additional arguments passed to dfmt.open_partitioned_dataset().
+
+        Raises:
+            IOError: If file cannot be read or input type is not supported.
+        """
 
         if isinstance(input_file, str):
             try:
@@ -94,6 +132,14 @@ class constructorSVA:
         self.tracer_variance = self.tracer_variance
 
     def _read(self, file_name, **kwargs):
+        """Read hydrodynamic dataset from file.
+
+        Loads a partitioned netCDF dataset using dfm_tools.
+
+        Args:
+            file_name (str): Path to the netCDF file.
+            **kwargs: Additional arguments passed to dfmt.open_partitioned_dataset().
+        """
         # self.ds = xr.open_dataset(file_name, use_cftime=True, **kwargs)
         self.ds = dfmt.open_partitioned_dataset(file_name, **kwargs)
             
@@ -179,6 +225,14 @@ class constructorSVA:
    
     @cached_property
     def face_area(self):
+        """Calculate face area for each grid edge.
+
+        Computes the area of grid faces by multiplying cell thickness
+        (interpolated to edges) by edge length.
+
+        Returns:
+            xarray.DataArray: Face area with dimensions matching edges.
+        """
         dimn_edges = self.dimn_edges
         
         # > Get general strings
@@ -203,6 +257,14 @@ class constructorSVA:
     
     @cached_property
     def water_depth(self):
+        """Calculate water depth at each grid face.
+
+        Computes depth as the difference between maximum interface elevation
+        (water surface) and bed level.
+
+        Returns:
+            xarray.DataArray: Water depth (positive downward) at each face.
+        """
         
         # > Get general strings
         gridname = self.gridname
@@ -222,7 +284,18 @@ class constructorSVA:
         
     @cached_property
     def bed_level(self):
-        
+        """Calculate bed level at each grid face.
+
+        Computes bed elevation as the minimum interface elevation,
+        averaged over time if available.
+
+        Returns:
+            xarray.DataArray: Bed elevation (positive downward) at each face.
+
+        Raises:
+            ValueError: If interfaces are not provided in data_description.
+        """
+
         # Get dimensions
         dimn_interface = self.dimn_interface
         
@@ -237,6 +310,14 @@ class constructorSVA:
         
     @cached_property
     def edge_length(self):
+        """Calculate the length of each grid edge.
+
+        Computes Euclidean distance between the two nodes of each edge
+        in the horizontal (x,y) coordinate system.
+
+        Returns:
+            xarray.DataArray: Edge length at each edge.
+        """
         
         # > Get properties
         edge_node_coords = self.edge_node_coords
