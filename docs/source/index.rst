@@ -34,6 +34,9 @@ Contents
    :maxdepth: 2
    :caption: Contents:
 
+   overview
+   theory
+   getting_started
    api
 
    overview
