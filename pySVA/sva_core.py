@@ -427,7 +427,15 @@ class constructorSVA:
 
     @cached_property
     def edge_node_coords(self):
-            
+        """
+        Retrieve the coordinates of nodes associated with each edge.
+
+        Maps the node coordinates to the corresponding edge-node connectivity,
+        returning a DataArray with NaNs where no node is connected (fill value).
+
+        :returns: DataArray of shape (num_edges, max_nodes_per_edge, 2) with node coordinates.
+        :rtype: xarray.DataArray
+        """
         # > Get dimension names
         fill_value = self.fill_value
         dimn_nodes = self.dimn_nodes
