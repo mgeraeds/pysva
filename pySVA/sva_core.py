@@ -981,6 +981,11 @@ class constructorSVA:
     
     @cached_property
     def cell_area(self):
+        # > Get the relevant dimensions
+        dimn_edges = self.dimn_edges
+        dimn_cart = self.dimn_cart
+        dimn_maxfn = self.dimn_maxfn
+
         # > Get the distance vectors first
         dv = self.distance_vectors
         dv = dv.reset_coords(drop=True)
@@ -1170,7 +1175,7 @@ class constructorSVA:
         # > interpolate it on the faces
         if self.dimn_edges in diu.dims:
             diu = self.uda_to_faces(diu)
-            ho
+            
         try:
             tracer_grad = self.compute_gradient_on_face(self.tracer, scalar=True)
             dsdx = tracer_grad.isel({dimn_cart:0}).transpose(*list(diu.dims)).reset_coords(drop=True)
