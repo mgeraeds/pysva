@@ -63,7 +63,6 @@ class constructorSVA:
         else:
             raise IOError("Please provide xr.Dataset, xu.core.wrap.UgridDataset, xr.DataArray, or a file path to a netCDF.")
 
-        # self._setup(data=data_description)
         # Dimension-related attributes
         self.grid = self.ds.grid
         self.gridname = self.ds.grid.name
@@ -244,6 +243,7 @@ class constructorSVA:
         edge_length = edge_length
         # > Get the cell thickness 
         cell_thickness = self.cell_thickness
+
         # > Interpolate the cell thickness on the edges 
         cell_thickness_edges = self.uda_to_edges(cell_thickness)
         
@@ -293,7 +293,7 @@ class constructorSVA:
             xarray.DataArray: Bed elevation (positive downward) at each face.
 
         Raises:
-            ValueError: If interfaces are not provided in data_description.
+            ValueError: If interfaces coordinate is not provided in data_description.
         """
 
         # Get dimensions
@@ -310,7 +310,7 @@ class constructorSVA:
         
     @cached_property
     def edge_length(self):
-        """Calculate the length of each grid edge.
+        """Calculate the length of each grid cell edge.
 
         Computes Euclidean distance between the two nodes of each edge
         in the horizontal (x,y) coordinate system.
