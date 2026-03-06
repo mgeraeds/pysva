@@ -327,6 +327,15 @@ class constructorSVA:
     
     @cached_property
     def face_edge_weights(self):
+        """
+        Compute the face-edge-weights for each face, based on inverse distance weighting from each face to each edge associated with the face.
+
+        This builds a face-to-edge weight matrix by mapping face coordinates to
+        their connected edges and computing inverse distance weights.
+
+        :returns: DataArray of shape (num_faces, num_edges_per_face) containing weights.
+        :rtype: xarray.DataArray
+        """
         
         # > Get dimension names
         dimn_edges = self.dimn_edges
@@ -348,7 +357,15 @@ class constructorSVA:
         
     @cached_property
     def edge_face_weights(self):
+        """
+        Compute edge-face-weights for each edge, based on inverse distance weighting from each edge to each associated face.
 
+        This builds an edge-to-face weight matrix by mapping edge coordinates to
+        their connected faces, computing inverse distance weights, and converting to a dask array.
+
+        :returns: DataArray of shape (num_edges, num_faces_per_edge) containing weights.
+        :rtype: xarray.DataArray
+        """
         # > Get dimension names
         dimn_faces = self.dimn_faces
         fill_value = self.fill_value
@@ -374,7 +391,13 @@ class constructorSVA:
         return edge_face_weights
 
     def get_all_coordinates(self):
+        """
+        Retrieve coordinates for all mesh elements: faces, edges, and nodes.
 
+        :returns: Tuple of (face_coords, edge_coords, node_coords), where each is an
+                xarray.DataArray with dimensions and coordinates corresponding to the mesh element.
+        :rtype: tuple[xarray.DataArray, xarray.DataArray, xarray.DataArray]
+        """
         uds = self.ds
 
         # > Get coordinate names
