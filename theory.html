@@ -1,0 +1,194 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Theory: Salinity Variance Budget &mdash; pySVA 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation &amp; Getting Started" href="getting_started.html" />
+    <link rel="prev" title="Overview" href="overview.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            pySVA
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Theory: Salinity Variance Budget</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#total-salinity-variance-equation">Total Salinity Variance Equation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#vertical-salinity-variance">Vertical Salinity Variance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#variance-decomposition">Variance Decomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#budget-terms">Budget Terms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Installation &amp; Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Theory: Salinity Variance Budget</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#total-salinity-variance-equation">Total Salinity Variance Equation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#vertical-salinity-variance">Vertical Salinity Variance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#variance-decomposition">Variance Decomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#budget-terms">Budget Terms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Installation &amp; Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">pySVA</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Theory: Salinity Variance Budget</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/theory.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="theory-salinity-variance-budget">
+<h1>Theory: Salinity Variance Budget<a class="headerlink" href="#theory-salinity-variance-budget" title="Link to this heading"></a></h1>
+<p>This chapter describes the theoretical framework underlying pySVA, based on the work of Burchard et al. (2008) and Li et al. (2018).</p>
+<section id="total-salinity-variance-equation">
+<h2>Total Salinity Variance Equation<a class="headerlink" href="#total-salinity-variance-equation" title="Link to this heading"></a></h2>
+<p>Burchard et al. (2008) derived the total salinity variance equation starting from the Reynolds-averaged salt conservation advection-diffusion equation in a three-dimensional domain:</p>
+<div class="math notranslate nohighlight">
+\[\frac{\partial S}{\partial t} + \mathbf{u} \cdot \nabla S - \nabla \cdot (\mathbf{K} \nabla S) = 0\]</div>
+<p>where:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(\mathbf{u} = (u, v, w)\)</span> is the three-dimensional velocity vector</p></li>
+<li><p><span class="math notranslate nohighlight">\(\mathbf{K} = (K_{xx} + K_{yy} + K_{zz})\)</span> is the diffusivity tensor</p></li>
+</ul>
+<p>Applying Reynolds decomposition, the total salinity and velocity can be decomposed into a volume mean and a varying part:</p>
+<div class="math notranslate nohighlight">
+\[S = [[S]] + S'_{tot}, \quad \mathbf{u} = [[\mathbf{u}]] + \mathbf{u}'\]</div>
+<p>where <span class="math notranslate nohighlight">\([[\cdot]]\)</span> denotes the volume average.</p>
+<p>Substituting this decomposition and manipulating the equations yields the salinity variance equation:</p>
+<div class="math notranslate nohighlight">
+\[\frac{\partial(S'_{tot})^2}{\partial t} + \nabla\cdot[\mathbf{u}(S'_{tot})^2 - \mathbf{K}\nabla(S'_{tot})^2] - 2S'[[\mathbf{u}' \cdot \nabla S'_{tot}]] = -2(\mathbf{K}\nabla S'_{tot}) \cdot (\nabla S'_{tot})\]</div>
+</section>
+<section id="vertical-salinity-variance">
+<h2>Vertical Salinity Variance<a class="headerlink" href="#vertical-salinity-variance" title="Link to this heading"></a></h2>
+<p>Li et al. (2018) extended this framework by decomposing the total salinity variance into horizontal and vertical contributions. For a single vertical water column, decomposing salinity and velocity as:</p>
+<div class="math notranslate nohighlight">
+\[S = \overline{S} + S'_v, \quad \mathbf{u} = \mathbf{\overline{u}} + \mathbf{u}'_v\]</div>
+<p>where the overline denotes depth averaging, the vertical salinity variance equation becomes:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{split}
+\underbrace{\frac{\partial}{\partial t}\int(S'_v)^2 \mathrm{d}z}_{\text{tendency}} = -&amp;\underbrace{\nabla_h \cdot \int \mathbf{u_h}(S'_v)^2 \mathrm{d}z}_{\text{advection}} + \underbrace{\int -2\mathbf{u'_v}S'_v \cdot \nabla\overline{S} \mathrm{d}z}_{\text{straining}} \\
+&amp;- \underbrace{\int 2\kappa_{zz}\bigg(\frac{\partial S}{\partial z}\bigg)^2 \mathrm{d}z}_{\text{dissipation}} - \underbrace{\int\mathcal{M}_{\mathrm{num}} \mathrm{d}z}_{\text{numerical mixing}}
+\end{split}\end{split}\]</div>
+</section>
+<section id="variance-decomposition">
+<h2>Variance Decomposition<a class="headerlink" href="#variance-decomposition" title="Link to this heading"></a></h2>
+<p>The total salinity variance can be decomposed into horizontal and vertical components:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}(S'_v)^2 &amp;= (S - \overline{S})^2 \quad \text{(vertical variance)} \\
+(S'_h)^2 &amp;= (\overline{S} - [[S]])^2 \quad \text{(horizontal variance)} \\
+(S'_{tot})^2 &amp;= (S - [[S]])^2 \quad \text{(total variance)}\end{split}\]</div>
+</section>
+<section id="budget-terms">
+<h2>Budget Terms<a class="headerlink" href="#budget-terms" title="Link to this heading"></a></h2>
+<p>The variance budget equation contains four main terms:</p>
+<ol class="arabic simple">
+<li><p><strong>Tendency</strong>: <span class="math notranslate nohighlight">\(\frac{\partial}{\partial t}\int(S'_v)^2 \mathrm{d}z\)</span>
+- Temporal change of variance
+- Left-hand side of the equation</p></li>
+<li><p><strong>Advection</strong>: <span class="math notranslate nohighlight">\(\nabla_h \cdot \int \mathbf{u_h}(S'_v)^2 \mathrm{d}z\)</span>
+- Transport of variance by mean flow
+- Quantifies horizontal redistribution of mixed water</p></li>
+<li><p><strong>Straining</strong>: <span class="math notranslate nohighlight">\(\int -2\mathbf{u'_v}S'_v \cdot \nabla\overline{S} \mathrm{d}z\)</span>
+- Variance production/destruction by vertical mixing and shear
+- Related to internal wave activity</p></li>
+<li><p><strong>Dissipation</strong>: <span class="math notranslate nohighlight">\(\int 2\kappa_{zz}(\partial S/\partial z)^2 \mathrm{d}z\)</span>
+- Variance reduction by turbulent diffusion
+- Related to molecular and turbulent mixing</p></li>
+</ol>
+<p>Understanding these terms enables researchers to identify which processes dominate stratification patterns in coastal-delta systems.</p>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="Link to this heading"></a></h2>
+<p>[1] Burchard, H., &amp; Rennau, H. (2008). Comparative quantification of physically and numerically induced mixing in ocean models. <em>Ocean Modelling</em>, 20(3), 293-311. <a class="reference external" href="https://doi.org/10.1016/j.ocemod.2007.10.003">https://doi.org/10.1016/j.ocemod.2007.10.003</a></p>
+<p>[2] Li, X., Geyer, W. R., Zhu, J., &amp; Wu, H. (2018). The Transformation of Salinity Variance: A New Approach to Quantifying the Influence of Straining and Mixing on Estuarine Stratification. <em>Journal of Physical Oceanography</em>, 48(3), 607-623. <a class="reference external" href="https://doi.org/10.1175/JPO-D-17-0189.1">https://doi.org/10.1175/JPO-D-17-0189.1</a></p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="overview.html" class="btn btn-neutral float-left" title="Overview" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="getting_started.html" class="btn btn-neutral float-right" title="Installation &amp; Getting Started" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, M. Geraeds.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

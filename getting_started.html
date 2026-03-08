@@ -1,0 +1,318 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Installation &amp; Getting Started &mdash; pySVA 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Reference" href="api.html" />
+    <link rel="prev" title="Theory: Salinity Variance Budget" href="theory.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            pySVA
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="theory.html">Theory: Salinity Variance Budget</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation &amp; Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#requirements">Requirements</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#usage-overview">Usage Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#core-architecture">Core Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#input-formats">Input Formats</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#data-description-dictionary">Data Description Dictionary</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#basic-example">Basic Example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#architecture-diagram">Architecture Diagram</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#more-examples">More Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#license">License</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#how-to-cite">How to Cite</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="theory.html">Theory: Salinity Variance Budget</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation &amp; Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#requirements">Requirements</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#usage-overview">Usage Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#core-architecture">Core Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#input-formats">Input Formats</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#data-description-dictionary">Data Description Dictionary</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#basic-example">Basic Example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#architecture-diagram">Architecture Diagram</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#more-examples">More Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#license">License</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#how-to-cite">How to Cite</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">pySVA</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Installation &amp; Getting Started</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/getting_started.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="installation-getting-started">
+<h1>Installation &amp; Getting Started<a class="headerlink" href="#installation-getting-started" title="Link to this heading"></a></h1>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
+<p>pySVA is currently under active development. The recommended way to install the most recent version is directly from GitHub:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/mgeraeds/pysva.git
+<span class="nb">cd</span><span class="w"> </span>pysva
+pip<span class="w"> </span>install<span class="w"> </span>.
+</pre></div>
+</div>
+<p>This will install the package in development mode, allowing you to use the latest features and contribute improvements.</p>
+<section id="requirements">
+<h3>Requirements<a class="headerlink" href="#requirements" title="Link to this heading"></a></h3>
+<p>The package depends on:</p>
+<ul class="simple">
+<li><p>Python 3.7+</p></li>
+<li><p>xarray</p></li>
+<li><p>xugrid</p></li>
+<li><p>dfm-tools</p></li>
+<li><p>numpy</p></li>
+<li><p>dask</p></li>
+<li><p>xarray-einstats</p></li>
+</ul>
+</section>
+</section>
+<section id="usage-overview">
+<h2>Usage Overview<a class="headerlink" href="#usage-overview" title="Link to this heading"></a></h2>
+<section id="core-architecture">
+<h3>Core Architecture<a class="headerlink" href="#core-architecture" title="Link to this heading"></a></h3>
+<p>The core of pySVA is built around the <strong>constructorSVA</strong> class, which:</p>
+<ol class="arabic simple">
+<li><p><strong>Initializes</strong> the analysis environment from either a file path or in-memory dataset</p></li>
+<li><p><strong>Extracts</strong> grid topology, coordinates, and dimensional metadata</p></li>
+<li><p><strong>Provides</strong> a standardized interface for variance budget computations</p></li>
+</ol>
+<p>This design ensures flexibility in handling different data sources while abstracting away dataset-specific details.</p>
+</section>
+<section id="input-formats">
+<h3>Input Formats<a class="headerlink" href="#input-formats" title="Link to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">constructorSVA</span></code> class accepts:</p>
+<ul class="simple">
+<li><p><strong>File paths</strong> to NetCDF files</p></li>
+<li><p><strong>xarray.Dataset</strong> objects</p></li>
+<li><p><strong>xarray.DataArray</strong> objects</p></li>
+<li><p><strong>xugrid.UgridDataset</strong> objects (UGRID-compliant data structures)</p></li>
+</ul>
+</section>
+<section id="data-description-dictionary">
+<h3>Data Description Dictionary<a class="headerlink" href="#data-description-dictionary" title="Link to this heading"></a></h3>
+<p>When initializing the class, you must provide a <code class="docutils literal notranslate"><span class="pre">data_description</span></code> dictionary that maps variable names to dataset keys.</p>
+<p><strong>Required keys:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">'velx'</span></code>: X-component of velocity</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'vely'</span></code>: Y-component of velocity</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'velz'</span></code>: Z-component of velocity</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'viscosity'</span></code>: Eddy viscosity</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'tracer'</span></code>: Tracer concentration (e.g., salinity)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'depth'</span></code>: Water depth</p></li>
+</ul>
+<p><strong>Optional keys:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">'horizontal_diffusivity'</span></code>: Horizontal diffusion coefficient</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'interfaces'</span></code>: Layer interface elevations</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'bed_level'</span></code>: Bed elevation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'volume'</span></code>: Cell volume</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'flow_area'</span></code>: Cross-sectional flow area</p></li>
+</ul>
+</section>
+<section id="basic-example">
+<h3>Basic Example<a class="headerlink" href="#basic-example" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pySVA.sva_core</span><span class="w"> </span><span class="kn">import</span> <span class="n">constructorSVA</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pySVA.sva_calc</span><span class="w"> </span><span class="kn">import</span> <span class="n">compute_tracer_variance</span><span class="p">,</span> <span class="n">compute_advection</span>
+
+<span class="c1"># Initialize the SVA object</span>
+<span class="n">data_desc</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;velx&#39;</span><span class="p">:</span> <span class="s1">&#39;mesh2d_u1_x&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;vely&#39;</span><span class="p">:</span> <span class="s1">&#39;mesh2d_u1_y&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;velz&#39;</span><span class="p">:</span> <span class="s1">&#39;mesh2d_w&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;viscosity&#39;</span><span class="p">:</span> <span class="s1">&#39;mesh2d_vicwwu&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;tracer&#39;</span><span class="p">:</span> <span class="s1">&#39;mesh2d_sa1&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;depth&#39;</span><span class="p">:</span> <span class="s1">&#39;mesh2d_flowelem_bl&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;interfaces&#39;</span><span class="p">:</span> <span class="s1">&#39;mesh2d_interface_zm&#39;</span>
+<span class="p">}</span>
+
+<span class="n">sva</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="p">(</span><span class="s1">&#39;path/to/file.nc&#39;</span><span class="p">,</span> <span class="n">data_desc</span><span class="p">)</span>
+
+<span class="c1"># Compute variance terms</span>
+<span class="n">tracer_variance</span> <span class="o">=</span> <span class="n">compute_tracer_variance</span><span class="p">(</span><span class="n">sva</span><span class="p">)</span>
+<span class="n">advection_term</span> <span class="o">=</span> <span class="n">compute_advection</span><span class="p">(</span><span class="n">sva</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="architecture-diagram">
+<h3>Architecture Diagram<a class="headerlink" href="#architecture-diagram" title="Link to this heading"></a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>┌──────────────────────────────┐
+│           Inputs             │
+│ ──────────────────────────── │
+│ • NetCDF file (path)         │
+│ • xarray.Dataset             │
+│ • xarray.DataArray           │
+│ • xu.UgridDataset            │
+│ • data_description (dict)    │
+└───────────────┬──────────────┘
+                │
+                ▼
+┌──────────────────────────────┐
+│          Constructor         │
+│  ─────────────────────────── │
+│ • Reads dataset              │
+│ • Extracts grid + dimensions │
+│ • Assigns core variables     │
+│   (velx, vely, velz, tracer, │
+│    viscosity, depth, etc.)   │
+│ • Sets optional vars         │
+│   (volume, flow_area, etc.)  │
+└───────────────┬──────────────┘
+                │
+                ▼
+┌──────────────────────────────┐
+│   Cached Geometry Properties │
+│ ──────────────────────────── │
+│ • flow_area                  │
+│ • face_area                  │
+│ • water_depth                │
+│ • bed_level                  │
+│ • edge_length                │
+│ • face_edge_weights          │
+│ • edge_face_weights          │
+│ • Coordinates &amp; connectivity │
+└───────────────┬──────────────┘
+                │
+                ▼
+┌──────────────────────────────┐
+│    Variance Budget Terms     │
+│ ──────────────────────────── │
+│ • Tracer variance            │
+│ • Advection                  │
+│ • Straining                  │
+│ • Dissipation                │
+└──────────────────────────────┘
+</pre></div>
+</div>
+</section>
+</section>
+<section id="more-examples">
+<h2>More Examples<a class="headerlink" href="#more-examples" title="Link to this heading"></a></h2>
+<p>For detailed examples and tutorials, see the <code class="docutils literal notranslate"><span class="pre">notebooks/</span></code> directory in the repository.</p>
+</section>
+<section id="license">
+<h2>License<a class="headerlink" href="#license" title="Link to this heading"></a></h2>
+<p>This software is licensed under the MIT License. See the LICENSE file for details.</p>
+</section>
+<section id="how-to-cite">
+<h2>How to Cite<a class="headerlink" href="#how-to-cite" title="Link to this heading"></a></h2>
+<p>When using pySVA in your research, please cite:</p>
+<blockquote>
+<div><p>Geraeds, M. (2025). pySVA: Python-based toolbox for salinity variance budget computations on unstructured model output. 4TU.ResearchData. Software. <a class="reference external" href="https://doi.org/10.4121/66de21de-b6b7-462d-8a50-dbcf4f858b64">https://doi.org/10.4121/66de21de-b6b7-462d-8a50-dbcf4f858b64</a></p>
+</div></blockquote>
+<p>BibTeX format:</p>
+<div class="highlight-bibtex notranslate"><div class="highlight"><pre><span></span><span class="nc">@misc</span><span class="p">{</span><span class="nl">geraeds_pysva</span><span class="p">,</span>
+<span class="w">    </span><span class="na">title</span><span class="w">     </span><span class="p">=</span><span class="w"> </span><span class="s">{pySVA: Python-based toolbox for salinity variance budget computations on unstructured model output}</span><span class="p">,</span>
+<span class="w">    </span><span class="na">author</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="s">{Geraeds, M.}</span><span class="p">,</span>
+<span class="w">    </span><span class="na">publisher</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{4TU.ResearchData}</span><span class="p">,</span>
+<span class="w">    </span><span class="na">year</span><span class="w">      </span><span class="p">=</span><span class="w"> </span><span class="s">{2025}</span><span class="p">,</span>
+<span class="w">    </span><span class="na">version</span><span class="w">   </span><span class="p">=</span><span class="w"> </span><span class="s">{1.0}</span><span class="p">,</span>
+<span class="w">    </span><span class="na">doi</span><span class="w">       </span><span class="p">=</span><span class="w"> </span><span class="s">{10.4121/66de21de-b6b7-462d-8a50-dbcf4f858b64}</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="theory.html" class="btn btn-neutral float-left" title="Theory: Salinity Variance Budget" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="api.html" class="btn btn-neutral float-right" title="API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, M. Geraeds.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

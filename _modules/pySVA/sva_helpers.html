@@ -1,0 +1,1336 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pySVA.sva_helpers &mdash; pySVA 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            pySVA
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../theory.html">Theory: Salinity Variance Budget</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started.html">Installation &amp; Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../theory.html">Theory: Salinity Variance Budget</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started.html">Installation &amp; Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">pySVA</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">pySVA.sva_helpers</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pySVA.sva_helpers</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Helper functions for pySVA.</span>
+
+<span class="sd">This module contains utility functions for grid operations, coordinate calculations,</span>
+<span class="sd">and data transformations used in salinity variance analysis.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">xugrid</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xu</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray_einstats</span>
+
+
+<div class="viewcode-block" id="build_inverse_distance_weights">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.build_inverse_distance_weights">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_inverse_distance_weights</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate inverse distance weights using xarray.</span>
+
+<span class="sd">    Computes weights for interpolation based on inverse distances</span>
+<span class="sd">    between coordinate sets a and b. Used for mapping data between</span>
+<span class="sd">    different grid locations (e.g., faces to edges).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        a (xarray.DataArray): Reference coordinates (N, 2) with x and y components.</span>
+<span class="sd">        b (xarray.DataArray): Target coordinates per reference point (N, M, 2).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        xarray.DataArray: Inverse distance weights (N, M) normalized to sum to 1.</span>
+
+<span class="sd">    Notes:</span>
+<span class="sd">        Weights sum to 1.0 along the second dimension for each reference point.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">weight_func</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+        <span class="n">distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">a</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">b</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">distance</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">distance</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="c1"># remove this if you only want the distance </span>
+        <span class="k">return</span> <span class="n">weights</span>
+    
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">apply_ufunc</span><span class="p">(</span><span class="n">weight_func</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span>
+                            <span class="n">input_core_dims</span><span class="o">=</span><span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">dims</span><span class="p">),</span> <span class="nb">list</span><span class="p">(</span><span class="n">b</span><span class="o">.</span><span class="n">dims</span><span class="p">)],</span>
+                            <span class="n">output_core_dims</span><span class="o">=</span><span class="p">[[</span><span class="n">a</span><span class="o">.</span><span class="n">dims</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">b</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">dims</span><span class="p">)))]])</span>
+    <span class="k">return</span> <span class="n">weights</span> </div>
+
+
+
+<div class="viewcode-block" id="build_edge_node_connectivity">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.build_edge_node_connectivity">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_edge_node_connectivity</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build edge-node connectivity array from unstructured grid.</span>
+
+<span class="sd">    Extracts and formats the edge-node connectivity information from</span>
+<span class="sd">    an xugrid dataset, creating a properly dimensioned DataArray with</span>
+<span class="sd">    CF-compliant attributes.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        constructorSVA (constructorSVA): Object containing UgridDataset.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        xarray.DataArray: Edge-node connectivity with dimensions (n_edges, max_edge_nodes).</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        IOError: If dataset is not a UgridDataset.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># First check if the provided dataset is a xu.core.wrap.UgridDataset</span>
+    <span class="n">uds</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">ds</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">uds</span><span class="p">,</span> <span class="n">xu</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">wrap</span><span class="o">.</span><span class="n">UgridDataset</span><span class="p">):</span>
+        <span class="c1"># &gt; Get fill value, grid name and dimensions</span>
+        <span class="n">fill_value</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">fill_value</span>
+        <span class="n">gridname</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">dimn_edges</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">edge_dimension</span>
+
+        <span class="c1"># &gt; Get coordinate names</span>
+        <span class="n">coord_edge_x</span><span class="p">,</span> <span class="n">coord_edge_y</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;node_coordinates&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;node&#39;</span><span class="p">,</span> <span class="s1">&#39;edge&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+
+        <span class="c1"># &gt; Determine dimension name</span>
+        <span class="n">dimn_maxen</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nMax_edge_nodes&#39;</span>
+
+        <span class="c1"># &gt; Get connectivity</span>
+        <span class="n">edge_nodes</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">edge_node_connectivity</span>
+
+        <span class="c1"># &gt; Make into xr.DataArray with correct sizes, dimensions, and coordinates</span>
+        <span class="n">edge_node_connectivity</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">edge_nodes</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="n">dimn_edges</span><span class="p">,</span> <span class="n">dimn_maxen</span><span class="p">],</span> <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_edge_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_edges</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_edge_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]),</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_edge_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_edges</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_edge_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">])},</span> <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;cf_role&#39;</span><span class="p">:</span> <span class="s1">&#39;edge_node_connectivity&#39;</span><span class="p">,</span> <span class="s1">&#39;start_index&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;_FillValue&#39;</span><span class="p">:</span><span class="n">fill_value</span><span class="p">},</span> <span class="n">name</span><span class="o">=</span><span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;edge_node_connectivity&#39;</span><span class="p">])</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s2">&quot;Please provide xu.core.wrap.UgridDataset to be able to automatically derive connectivities of the unstructured grid.&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">edge_node_connectivity</span></div>
+
+
+<div class="viewcode-block" id="build_face_edge_connectivity">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.build_face_edge_connectivity">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_face_edge_connectivity</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">):</span>
+    <span class="c1"># First check if the provided dataset is a xu.core.wrap.UgridDataset</span>
+    <span class="n">uds</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">ds</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">uds</span><span class="p">,</span> <span class="n">xu</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">wrap</span><span class="o">.</span><span class="n">UgridDataset</span><span class="p">):</span>
+        <span class="c1"># &gt; Get fill value, grid name, and dimensions</span>
+        <span class="n">fill_value</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">fill_value</span>
+        <span class="n">gridname</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">dimn_faces</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">face_dimension</span>
+        <span class="n">dimn_maxfn</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;max_face_nodes_dimension&#39;</span><span class="p">]</span>
+
+        <span class="c1"># &gt; Get voordinate names</span>
+        <span class="n">coord_face_x</span><span class="p">,</span> <span class="n">coord_face_y</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;node_coordinates&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;node&#39;</span><span class="p">,</span> <span class="s1">&#39;face&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+
+        <span class="c1"># &gt; Get connectivity</span>
+        <span class="n">face_edges</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">face_edge_connectivity</span>
+
+        <span class="c1"># &gt; Make into xr.DataArray with correct sizes, dimensions, and coordinates</span>
+        <span class="n">face_edge_connectivity</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">face_edges</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="n">dimn_faces</span><span class="p">,</span> <span class="n">dimn_maxfn</span><span class="p">],</span>
+                                              <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_face_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:</span> <span class="p">([</span><span class="n">dimn_faces</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_face_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]),</span>
+                                                      <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_face_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:</span> <span class="p">([</span><span class="n">dimn_faces</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_face_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">])},</span>
+                                              <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;cf_role&#39;</span><span class="p">:</span> <span class="s1">&#39;face_edge_connectivity&#39;</span><span class="p">,</span> <span class="s1">&#39;start_index&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                                                     <span class="s1">&#39;_FillValue&#39;</span><span class="p">:</span> <span class="n">fill_value</span><span class="p">},</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_face_edges&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s2">&quot;Please provide xu.core.wrap.UgridDataset to be able to automatically derive connectivities of the unstructured grid.&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">face_edge_connectivity</span></div>
+
+
+
+<div class="viewcode-block" id="get_all_coordinates">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.get_all_coordinates">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_all_coordinates</span><span class="p">(</span><span class="n">uds</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">uds</span><span class="p">,</span> <span class="n">xu</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">wrap</span><span class="o">.</span><span class="n">UgridDataset</span><span class="p">):</span>
+        <span class="c1"># &gt; Get coordinate names</span>
+        <span class="n">coord_face_x</span><span class="p">,</span> <span class="n">coord_face_y</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;node_coordinates&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;node&#39;</span><span class="p">,</span> <span class="s1">&#39;face&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="n">coord_edge_x</span><span class="p">,</span> <span class="n">coord_edge_y</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;node_coordinates&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;node&#39;</span><span class="p">,</span> <span class="s1">&#39;edge&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="n">coord_node_x</span><span class="p">,</span> <span class="n">coord_node_y</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;node_coordinates&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+
+        <span class="c1"># &gt; Get dimension names</span>
+        <span class="n">dimn_faces</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">face_dimension</span>
+        <span class="n">dimn_nodes</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">node_dimension</span>
+        <span class="n">dimn_edges</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">edge_dimension</span>
+
+        <span class="c1"># &gt; Get grid name</span>
+        <span class="n">gridname</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">name</span>
+
+        <span class="c1"># &gt; Get face coordinates</span>
+        <span class="n">face_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">uds</span><span class="o">.</span><span class="n">mesh2d_face_x</span><span class="p">,</span> <span class="n">uds</span><span class="o">.</span><span class="n">mesh2d_face_y</span><span class="p">]</span> <span class="c1"># is NOT equal to uds.grid.face_coordinates</span>
+        <span class="n">face_coords</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">face_array</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="n">dimn_faces</span><span class="p">,</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nCartesian_coords&#39;</span><span class="p">],</span> <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_face_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_faces</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_face_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]),</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_face_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_faces</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_face_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">])},</span> <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span><span class="s1">&#39;m&#39;</span><span class="p">,</span> <span class="s1">&#39;standard_name&#39;</span><span class="p">:</span> <span class="s1">&#39;projection_x_coordinate, projection_y_coordinate&#39;</span><span class="p">,</span> <span class="s1">&#39;long_name&#39;</span><span class="p">:</span><span class="s1">&#39;Characteristic coordinates of mesh face&#39;</span><span class="p">,</span> <span class="s1">&#39;bounds&#39;</span><span class="p">:</span> <span class="s1">&#39;mesh2d_face_x_bnd, mesh_face_y_bnd&#39;</span><span class="p">})</span>
+
+        <span class="c1"># &gt; Get edge coordaintes</span>
+        <span class="n">edge_array</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">edge_coordinates</span> <span class="c1"># np.c_[uds.mesh2d_edge_x, uds.mesh2d_edge_y]</span>
+        <span class="n">edge_coords</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">edge_array</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="n">dimn_edges</span><span class="p">,</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nCartesian_coords&#39;</span><span class="p">],</span> <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_edge_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_edges</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_edge_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]),</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_edge_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_edges</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_edge_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">])},</span> <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span><span class="s1">&#39;m&#39;</span><span class="p">,</span> <span class="s1">&#39;standard_name&#39;</span><span class="p">:</span> <span class="s1">&#39;projection_x_coordinate, projection_y_coordinate&#39;</span><span class="p">,</span> <span class="s1">&#39;long_name&#39;</span><span class="p">:</span><span class="s1">&#39;Characteristic coordinates of mesh face&#39;</span><span class="p">,</span> <span class="s1">&#39;bounds&#39;</span><span class="p">:</span> <span class="s1">&#39;mesh2d_face_x_bnd, mesh_face_y_bnd&#39;</span><span class="p">})</span>
+
+        <span class="c1"># &gt; Get node coordinates</span>
+        <span class="n">node_array</span> <span class="o">=</span>  <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">node_coordinates</span> <span class="c1"># np.c_[uds.mesh2d_node_x, uds.mesh2d_node_y]</span>
+        <span class="n">node_coords</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">node_array</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="n">dimn_nodes</span><span class="p">,</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nCartesian_coords&#39;</span><span class="p">],</span> <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_node_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_nodes</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_node_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]),</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_node_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_nodes</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_node_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">])},</span> <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span><span class="s1">&#39;m&#39;</span><span class="p">,</span> <span class="s1">&#39;standard_name&#39;</span><span class="p">:</span> <span class="s1">&#39;projection_x_coordinate, projection_y_coordinate&#39;</span><span class="p">,</span> <span class="s1">&#39;long_name&#39;</span><span class="p">:</span><span class="s1">&#39;Characteristic coordinates of mesh node&#39;</span><span class="p">,</span> <span class="s1">&#39;bounds&#39;</span><span class="p">:</span> <span class="s1">&#39;mesh2d_node_x_bnd, mesh_node_y_bnd&#39;</span><span class="p">})</span>
+    
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">uds</span><span class="p">,</span> <span class="n">xu</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">wrap</span><span class="o">.</span><span class="n">UgridDataArray</span><span class="p">):</span>
+        <span class="c1"># &gt; Get coordinate names</span>
+        <span class="n">coord_face_x</span><span class="p">,</span> <span class="n">coord_face_y</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;node_coordinates&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;node&#39;</span><span class="p">,</span> <span class="s1">&#39;face&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="n">coord_edge_x</span><span class="p">,</span> <span class="n">coord_edge_y</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;node_coordinates&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;node&#39;</span><span class="p">,</span> <span class="s1">&#39;edge&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="n">coord_node_x</span><span class="p">,</span> <span class="n">coord_node_y</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;node_coordinates&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+
+        <span class="c1"># &gt; Get dimension names</span>
+        <span class="n">dimn_faces</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">face_dimension</span>
+        <span class="n">dimn_nodes</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">node_dimension</span>
+        <span class="n">dimn_edges</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">edge_dimension</span>
+
+        <span class="c1"># &gt; Get grid name</span>
+        <span class="n">gridname</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">name</span>
+        
+        <span class="c1"># &gt; Get face coordinates</span>
+        <span class="n">face_array</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">face_coordinates</span>
+        <span class="n">face_coords</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">face_array</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="n">dimn_faces</span><span class="p">,</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nCartesian_coords&#39;</span><span class="p">],</span> <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_face_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_faces</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_face_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]),</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_face_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_faces</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_face_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">])},</span> <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span><span class="s1">&#39;m&#39;</span><span class="p">,</span> <span class="s1">&#39;standard_name&#39;</span><span class="p">:</span> <span class="s1">&#39;projection_x_coordinate, projection_y_coordinate&#39;</span><span class="p">,</span> <span class="s1">&#39;long_name&#39;</span><span class="p">:</span><span class="s1">&#39;Characteristic coordinates of mesh face&#39;</span><span class="p">,</span> <span class="s1">&#39;bounds&#39;</span><span class="p">:</span> <span class="s1">&#39;mesh2d_face_x_bnd, mesh_face_y_bnd&#39;</span><span class="p">})</span>
+
+        <span class="c1"># &gt; Get edge coordaintes</span>
+        <span class="n">edge_array</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">edge_coordinates</span> <span class="c1"># np.c_[uds.mesh2d_edge_x, uds.mesh2d_edge_y]</span>
+        <span class="n">edge_coords</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">edge_array</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="n">dimn_edges</span><span class="p">,</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nCartesian_coords&#39;</span><span class="p">],</span> <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_edge_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_edges</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_edge_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]),</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_edge_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_edges</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_edge_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">])},</span> <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span><span class="s1">&#39;m&#39;</span><span class="p">,</span> <span class="s1">&#39;standard_name&#39;</span><span class="p">:</span> <span class="s1">&#39;projection_x_coordinate, projection_y_coordinate&#39;</span><span class="p">,</span> <span class="s1">&#39;long_name&#39;</span><span class="p">:</span><span class="s1">&#39;Characteristic coordinates of mesh face&#39;</span><span class="p">,</span> <span class="s1">&#39;bounds&#39;</span><span class="p">:</span> <span class="s1">&#39;mesh2d_face_x_bnd, mesh_face_y_bnd&#39;</span><span class="p">})</span>
+
+        <span class="c1"># &gt; Get node coordinates</span>
+        <span class="n">node_array</span> <span class="o">=</span>  <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">node_coordinates</span> <span class="c1"># np.c_[uds.mesh2d_node_x, uds.mesh2d_node_y]</span>
+        <span class="n">node_coords</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">node_array</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="n">dimn_nodes</span><span class="p">,</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nCartesian_coords&#39;</span><span class="p">],</span> <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_node_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_nodes</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_node_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]),</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_node_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_nodes</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_node_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">])},</span> <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span><span class="s1">&#39;m&#39;</span><span class="p">,</span> <span class="s1">&#39;standard_name&#39;</span><span class="p">:</span> <span class="s1">&#39;projection_x_coordinate, projection_y_coordinate&#39;</span><span class="p">,</span> <span class="s1">&#39;long_name&#39;</span><span class="p">:</span><span class="s1">&#39;Characteristic coordinates of mesh node&#39;</span><span class="p">,</span> <span class="s1">&#39;bounds&#39;</span><span class="p">:</span> <span class="s1">&#39;mesh2d_node_x_bnd, mesh_node_y_bnd&#39;</span><span class="p">})</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s2">&quot;Please provide xu.core.wrap.UgridDataset to be able to automatically derive connectivities of the unstructured grid.&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">face_coords</span><span class="p">,</span> <span class="n">edge_coords</span><span class="p">,</span> <span class="n">node_coords</span></div>
+
+
+
+<div class="viewcode-block" id="calculate_unit_normal_vectors">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.calculate_unit_normal_vectors">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">calculate_unit_normal_vectors</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    
+    <span class="c1"># First check if the provided dataset is a xu.core.wrap.UgridDataset</span>
+    <span class="n">uds</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">ds</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">uds</span><span class="p">,</span> <span class="n">xu</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">wrap</span><span class="o">.</span><span class="n">UgridDataset</span><span class="p">):</span>
+        <span class="c1"># &gt; Get dimensions, gridname, and coordinates</span>
+        <span class="n">dimn_edges</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">edge_dimension</span>
+        <span class="n">dimn_nodes</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">node_dimension</span>
+        <span class="n">fill_value</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">fill_value</span>
+        <span class="n">gridname</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">dimn_maxen</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nMax_edge_nodes&#39;</span>
+        <span class="n">dimn_cart</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nCartesian_coords&#39;</span>
+
+        <span class="n">varname_unvs</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_unvs&#39;</span>
+
+        <span class="c1"># &gt; See if flow area is already in the variables</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">unvs</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">_unvs</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Unit normal vectors on edges already present Dataset in variable </span><span class="si">{</span><span class="n">unvs</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">varname_unvs</span> <span class="ow">in</span> <span class="n">uds</span><span class="o">.</span><span class="n">variables</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Unit normal vectors on edges already present Dataset in variable </span><span class="si">{</span><span class="n">varname_unvs</span><span class="si">}</span><span class="s1">.&#39;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">uds</span><span class="p">[</span><span class="n">varname_unvs</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># &gt; Get edge coordinate names</span>
+                <span class="n">coord_edge_x</span><span class="p">,</span> <span class="n">coord_edge_y</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;node_coordinates&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;node&#39;</span><span class="p">,</span> <span class="s1">&#39;edge&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+
+                <span class="c1"># &gt; Get kwargs</span>
+                <span class="n">edge_node_coords</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;edge_node_coords&#39;</span><span class="p">)</span>
+                <span class="c1"># face_edges = kwargs.get(&#39;face_edges&#39;)</span>
+
+                <span class="c1"># &gt; See if node-edge connectivity is given as a kwarg. If not, reconstruct it</span>
+                <span class="k">if</span> <span class="s1">&#39;edge_node_coords&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+                    <span class="k">pass</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># &gt; Get the node-edge connectivity</span>
+                    <span class="n">edge_nodes</span> <span class="o">=</span> <span class="n">build_edge_node_connectivity</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">)</span>
+
+                    <span class="c1"># &gt; Build the node_coords</span>
+                    <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">node_coords</span> <span class="o">=</span> <span class="n">get_all_coordinates</span><span class="p">(</span><span class="n">uds</span><span class="p">)</span>  <span class="c1"># just get the node_coords</span>
+
+                    <span class="c1"># &gt; Get the coordinates of all nodes belonging to an edge</span>
+                    <span class="n">edge_node_coords</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">edge_nodes</span> <span class="o">!=</span> <span class="n">fill_value</span><span class="p">,</span> <span class="n">node_coords</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_nodes</span><span class="p">:</span> <span class="n">edge_nodes</span><span class="p">}),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+
+                <span class="n">x1</span> <span class="o">=</span> <span class="n">edge_node_coords</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+                <span class="n">x2</span> <span class="o">=</span> <span class="n">edge_node_coords</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+                <span class="n">y1</span> <span class="o">=</span> <span class="n">edge_node_coords</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">y2</span> <span class="o">=</span> <span class="n">edge_node_coords</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">x2</span> <span class="o">-</span> <span class="n">x1</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="n">y2</span> <span class="o">-</span> <span class="n">y1</span>
+
+                <span class="n">nf</span> <span class="o">=</span> <span class="n">nf</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="o">-</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">],</span> <span class="n">dimn_cart</span><span class="p">)</span><span class="o">.</span><span class="n">T</span> <span class="c1">#np.dstack([-y, x])</span>
+                <span class="n">vm_nf</span> <span class="o">=</span> <span class="n">nf</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="n">dimn_cart</span><span class="p">)</span>
+
+                <span class="c1"># &gt; Calculate the norm and divide by the norm</span>
+                <span class="n">unvs</span> <span class="o">=</span> <span class="n">nf</span> <span class="o">/</span> <span class="n">vm_nf</span> 
+                <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">varname_unvs</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">_unvs</span> <span class="o">=</span> <span class="n">unvs</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">varname_unvs</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">unvs</span> <span class="o">=</span> <span class="kc">None</span>
+        
+    <span class="k">return</span> <span class="n">unvs</span></div>
+
+
+<div class="viewcode-block" id="reconstruct_vector_form_magnitude">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.reconstruct_vector_form_magnitude">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">reconstruct_vector_form_magnitude</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">,</span> <span class="n">varname</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Function to reconstruct the vector form of a magnitude variable on an unstructured grid that is defined on the edges</span>
+<span class="sd">    in the direction of the normal vector (like velocity magnitude)</span>
+
+<span class="sd">    :param uds:</span>
+<span class="sd">    :param varname:</span>
+<span class="sd">    :param kwargs:</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="c1"># First check if the provided dataset is a xu.core.wrap.UgridDataset</span>
+    <span class="n">uds</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">ds</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">uds</span><span class="p">,</span> <span class="n">xu</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">wrap</span><span class="o">.</span><span class="n">UgridDataset</span><span class="p">):</span>
+        <span class="c1"># 1. &gt;&gt; Get the basics</span>
+        <span class="n">gridname</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">dimn_faces</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">face_dimension</span>
+        <span class="n">dimn_edges</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">edge_dimension</span>
+        <span class="n">dimn_maxef</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nMax_edge_faces&#39;</span>
+
+        <span class="c1"># 1. &gt;&gt; Get the fill value</span>
+        <span class="n">fill_value</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">fill_value</span>
+
+        <span class="c1"># 2. &gt;&gt; Get basic connectivities first, if not provided in the kwargs</span>
+        <span class="c1"># 2.1 &gt; Get the face-edge connectivity</span>
+        <span class="k">if</span> <span class="s1">&#39;face_edges&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="n">face_edges</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;face_edges&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">face_edges</span> <span class="o">=</span> <span class="n">build_face_edge_connectivity</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">)</span>
+
+        <span class="c1"># &gt; 2.2 Get the edge-face connectivity</span>
+        <span class="k">if</span> <span class="s1">&#39;edge_faces&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="n">edge_faces</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;edge_faces&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">edge_faces</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">edge_face_connectivity</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="n">dimn_edges</span><span class="p">,</span> <span class="n">dimn_maxef</span><span class="p">))</span>
+
+        <span class="c1"># 3. &gt;&gt; Get the unit normal vectors, if not provided in the kwargs</span>
+        <span class="c1"># 3.1. &gt; Check if the kwargs indicate a varname for the unit normal vectors</span>
+        <span class="k">if</span> <span class="s1">&#39;varname_unvs&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="n">varname_unvs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;varname_unvs&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">varname_unvs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;unvs&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">varname_unvs</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_unvs&#39;</span>
+
+        <span class="c1"># 3.2. &gt; Calculate the unit normal vectors if not in the dataset already</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">unvs</span> <span class="o">=</span> <span class="n">uds</span><span class="p">[</span><span class="n">varname_unvs</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c1"># &gt; If not in the dataset, check if it&#39;s in the kwargs</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">unvs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;unvs&#39;</span><span class="p">]</span>
+            <span class="c1"># &gt; If not in the kwargs, then calculate it anew</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">unvs</span> <span class="o">=</span> <span class="n">calculate_unit_normal_vectors</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">)</span>
+
+        <span class="c1"># &gt; Fill the face-edges matrix with the varname</span>
+        <span class="n">magn_var</span> <span class="o">=</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">varname</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_edges</span><span class="p">:</span> <span class="n">face_edges</span><span class="p">})</span>
+
+        <span class="c1"># &gt;&gt; Determine if we&#39;re looking at a velocity value u1 or u0</span>
+        <span class="c1"># &gt; Because these are vector quantities in the direction of the normal vector,</span>
+        <span class="c1"># &gt; to get to the final vector, we have to multiply u1/u0 by the normal vector</span>
+        <span class="c1"># &gt; first.</span>
+        <span class="k">if</span> <span class="n">varname</span> <span class="o">==</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_u1&#39;</span> <span class="ow">or</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_u0&#39;</span><span class="p">:</span>
+            <span class="c1"># &gt; These two variables are the velocity on edges in the direction of the</span>
+            <span class="c1"># &gt; normal vector on the current timestep (u1) and the previous timestep</span>
+            <span class="c1"># &gt; (u0). These are magnitudes in the directions of the normal vector, but</span>
+            <span class="c1"># &gt; need to be multiplied with the unit normal vector to get to a vector</span>
+            <span class="c1"># &gt; quantity again.</span>
+
+            <span class="c1"># &gt;&gt; So, first we determine the sign of the velocities.</span>
+            <span class="c1"># &gt; For this we have to get the mesh2d_nFaces numbering of the 0th column</span>
+            <span class="c1"># &gt; in edge_faces (from column 0 -&gt; 1 is positive)</span>
+            <span class="n">pos_fe</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">face_edges</span> <span class="o">!=</span> <span class="n">fill_value</span><span class="p">,</span> <span class="n">edge_faces</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_maxef</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_edges</span><span class="p">:</span> <span class="n">face_edges</span><span class="p">}),</span>
+                              <span class="n">fill_value</span><span class="p">)</span>
+
+            <span class="c1"># &gt; If the number of the 0th column in edge_faces == mesh2d_nFaces, then the</span>
+            <span class="c1"># &gt; direction is already positive in the right direction.</span>
+            <span class="c1"># &gt; Otherwise, the direction needs to be flipped</span>
+            <span class="n">fe_multiplier</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">pos_fe</span> <span class="o">==</span> <span class="n">uds</span><span class="p">[</span><span class="n">dimn_faces</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="n">magn_var</span> <span class="o">=</span> <span class="n">magn_var</span> <span class="o">*</span> <span class="n">fe_multiplier</span>
+
+            <span class="c1"># &gt; Get the unit normal vectors (nf) also in the face-edges matrix</span>
+            <span class="n">fe_nfs</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">face_edges</span> <span class="o">!=</span> <span class="n">fill_value</span><span class="p">,</span> <span class="n">unvs</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_edges</span><span class="p">:</span> <span class="n">face_edges</span><span class="p">}),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+
+            <span class="c1"># &gt; Multiply by the unit normal vector to get to a vector quantity</span>
+            <span class="c1"># &gt; With the multiplication we intend to calculate the dot product</span>
+            <span class="n">vector_var</span> <span class="o">=</span> <span class="n">magn_var</span> <span class="o">*</span> <span class="n">fe_nfs</span>
+
+            <span class="c1"># &gt; Make a new variable in the dataset</span>
+            <span class="n">vector_name</span> <span class="o">=</span> <span class="n">varname</span> <span class="o">+</span> <span class="s1">&#39;c&#39;</span>
+            <span class="n">constructorSVA</span><span class="o">.</span><span class="n">ds</span><span class="p">[</span><span class="n">vector_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">veluc</span> <span class="o">=</span> <span class="n">vector_var</span>
+
+            <span class="k">return</span> <span class="n">vector_var</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s2">&quot;Please provide xu.core.wrap.UgridDataset to be able to automatically derive connectivities of the unstructured grid.&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="reconstruct_vector_form">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.reconstruct_vector_form">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">reconstruct_vector_form</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">,</span> <span class="n">vectors_list</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+    <span class="c1"># 1. &gt;&gt; Get the basics</span>
+    <span class="n">uds</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">ds</span>
+    <span class="n">gridname</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">name</span>
+    <span class="n">dimn_cartesian</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nCartesian_coords&#39;</span>
+
+    <span class="k">if</span> <span class="s1">&#39;vector_name&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="n">vector_name</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;vector_name&#39;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">vector_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_uc&#39;</span>
+
+    <span class="c1"># vectors_list = [uds[f&#39;{gridname}_ucx&#39;], uds[f&#39;{gridname}_ucy&#39;]] # example with velocities</span>
+
+    <span class="c1"># &gt;&gt; Case 1: if given strings in vector_list, then calculate vector notation based on the constructorSVA.ds dataset</span>
+    <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">vectors_list</span><span class="p">):</span>
+
+        <span class="c1"># &gt; Change the list to list of xu.core.wrap.UgridDataArray</span>
+        <span class="n">vectors_list_ds</span> <span class="o">=</span> <span class="p">[</span><span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">varname</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="n">vectors_list</span><span class="p">]</span>
+
+        <span class="c1"># &gt; Define the to-be-changed attributes</span>
+        <span class="n">attr_list</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;standard_name&#39;</span><span class="p">:</span> <span class="s1">&#39;sea_water_velocity&#39;</span><span class="p">,</span> <span class="s1">&#39;long_name&#39;</span><span class="p">:</span> <span class="s1">&#39;Flow element center velocity vector&#39;</span><span class="p">}</span>
+        <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">vector_name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">vector_data</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">vectors_list_ds</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">dimn_cartesian</span><span class="p">)</span><span class="o">.</span><span class="n">assign_attrs</span><span class="p">(</span>
+            <span class="n">attr_list</span><span class="p">)</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">vector_name</span><span class="p">)</span>
+
+        <span class="c1"># &gt; Get the names of the original vectors and drop these from the dataset</span>
+        <span class="n">original_vector_names</span> <span class="o">=</span> <span class="n">vectors_list</span>
+        <span class="n">uds</span><span class="o">.</span><span class="n">drop_vars</span><span class="p">(</span><span class="n">original_vector_names</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">xu</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">wrap</span><span class="o">.</span><span class="n">UgridDataArray</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">vectors_list</span><span class="p">):</span>
+
+        <span class="c1"># &gt; Define the to-be-changed attributes</span>
+        <span class="n">attr_list</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;standard_name&#39;</span><span class="p">:</span> <span class="s1">&#39;sea_water_velocity&#39;</span><span class="p">,</span> <span class="s1">&#39;long_name&#39;</span><span class="p">:</span> <span class="s1">&#39;Flow element center velocity vector&#39;</span><span class="p">}</span>
+        <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">vector_name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">vector_data</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">vectors_list</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">dimn_cartesian</span><span class="p">)</span><span class="o">.</span><span class="n">assign_attrs</span><span class="p">(</span>
+            <span class="n">attr_list</span><span class="p">)</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">vector_name</span><span class="p">)</span>
+
+        <span class="c1"># &gt; Get the names of the original vectors and drop these from the dataset</span>
+        <span class="n">original_vector_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vectors_list</span><span class="p">]</span>
+
+        <span class="n">uds</span><span class="o">.</span><span class="n">drop_vars</span><span class="p">(</span><span class="n">original_vector_names</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">vectors_list</span><span class="p">):</span>
+
+        <span class="c1"># &gt; Define the to-be-changed attributes</span>
+        <span class="n">attr_list</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;standard_name&#39;</span><span class="p">:</span> <span class="s1">&#39;sea_water_velocity&#39;</span><span class="p">,</span> <span class="s1">&#39;long_name&#39;</span><span class="p">:</span> <span class="s1">&#39;Flow element center velocity vector&#39;</span><span class="p">}</span>
+        <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">vector_name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">vector_data</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">vectors_list</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">dimn_cartesian</span><span class="p">)</span><span class="o">.</span><span class="n">assign_attrs</span><span class="p">(</span>
+            <span class="n">attr_list</span><span class="p">)</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">vector_name</span><span class="p">)</span>
+
+        <span class="c1"># &gt; Get the names of the original vectors and drop these from the dataset</span>
+        <span class="n">original_vector_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vectors_list</span><span class="p">]</span>
+
+        <span class="n">uds</span><span class="o">.</span><span class="n">drop_vars</span><span class="p">(</span><span class="n">original_vector_names</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Type of the provided vectors_list is not recognized. Check your inputs.&#39;</span><span class="p">,</span> <span class="ne">UserWarning</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="k">return</span> <span class="n">vector_data</span></div>
+
+
+<div class="viewcode-block" id="build_edge_face_weights">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.build_edge_face_weights">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_edge_face_weights</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+    <span class="n">uds</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">ds</span>
+
+	<span class="c1"># Get dimension names</span>
+    <span class="n">dimn_maxfn</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">ugrid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;max_face_nodes_dimension&#39;</span><span class="p">]</span>
+    <span class="n">dimn_faces</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">ugrid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">face_dimension</span>
+    <span class="n">dimn_edges</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">ugrid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">edge_dimension</span>
+    <span class="n">fill_value</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">ugrid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">fill_value</span>
+    <span class="n">gridname</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">ugrid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">name</span>
+    <span class="n">dimn_maxef</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nMax_edge_faces&#39;</span>
+	
+    <span class="c1"># &gt; Get the edge-face connectivity</span>
+    <span class="n">edge_faces</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">uds</span><span class="o">.</span><span class="n">ugrid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">edge_face_connectivity</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="n">dimn_edges</span><span class="p">,</span> <span class="n">dimn_maxef</span><span class="p">))</span>
+    
+    <span class="k">if</span> <span class="s1">&#39;coords&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="n">face_coords</span><span class="p">,</span> <span class="n">edge_coords</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;coords&#39;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># &gt; Get all relevant coordinates</span>
+        <span class="n">face_coords</span><span class="p">,</span> <span class="n">edge_coords</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">get_all_coordinates</span><span class="p">(</span><span class="n">uds</span><span class="p">)</span>
+
+	<span class="c1"># &gt; Fill edge-face-connectivity matrix with face coordinates</span>
+    <span class="n">edge_face_coords</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">edge_faces</span><span class="o">!=</span><span class="n">fill_value</span><span class="p">,</span> <span class="n">face_coords</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_faces</span><span class="p">:</span><span class="n">edge_faces</span><span class="p">}),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+    
+    <span class="c1"># &gt; Build the weights</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">build_inverse_distance_weights</span><span class="p">(</span><span class="n">edge_coords</span><span class="p">,</span> <span class="n">edge_face_coords</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">weights</span></div>
+
+
+<span class="c1"># def build_edge_face_weights(constructorSVA, **kwargs):</span>
+
+<span class="c1">#     uds = constructorSVA.ds</span>
+
+<span class="c1"># 	# Get dimension names</span>
+<span class="c1">#     dimn_maxfn = uds.ugrid.grid.to_dataset().mesh2d.attrs[&#39;max_face_nodes_dimension&#39;]</span>
+<span class="c1">#     dimn_faces = uds.ugrid.grid.face_dimension</span>
+<span class="c1">#     dimn_edges = uds.ugrid.grid.edge_dimension</span>
+<span class="c1">#     fill_value = uds.ugrid.grid.fill_value</span>
+<span class="c1">#     gridname = uds.ugrid.grid.name</span>
+<span class="c1">#     dimn_maxef = f&#39;{gridname}_nMax_edge_faces&#39;</span>
+	
+<span class="c1">#     # &gt; Get the edge-face connectivity</span>
+<span class="c1">#     edge_faces = xr.DataArray(uds.ugrid.grid.edge_face_connectivity, dims=(dimn_edges, dimn_maxef))</span>
+    
+<span class="c1">#     if &#39;coords&#39; in kwargs:</span>
+<span class="c1">#         face_coords, edge_coords, _ = kwargs[&#39;coords&#39;]</span>
+<span class="c1">#     else:</span>
+<span class="c1">#         # &gt; Get all relevant coordinates</span>
+<span class="c1">#         face_coords, edge_coords, _ = get_all_coordinates(uds)</span>
+
+<span class="c1"># 	# &gt; Fill edge-face-connectivity matrix with face coordinates</span>
+<span class="c1">#     edge_face_coords = xr.where(edge_faces!=fill_value, face_coords.isel({dimn_faces:edge_faces}), np.nan)</span>
+
+<span class="c1"># 	# &gt; Get variables for d1 (distance between neighbouring cell faces through edge)</span>
+<span class="c1"># 	# &gt; Obtain these from the edge_face_coords dataset</span>
+<span class="c1">#     x0 = edge_face_coords.isel({f&#39;{gridname}_nMax_edge_faces&#39;:0, f&#39;{gridname}_nCartesian_coords&#39;:0})</span>
+<span class="c1">#     x1 = edge_face_coords.isel({f&#39;{gridname}_nMax_edge_faces&#39;:1, f&#39;{gridname}_nCartesian_coords&#39;:0})</span>
+<span class="c1">#     y0 = edge_face_coords.isel({f&#39;{gridname}_nMax_edge_faces&#39;:0, f&#39;{gridname}_nCartesian_coords&#39;:1})</span>
+<span class="c1">#     y1 = edge_face_coords.isel({f&#39;{gridname}_nMax_edge_faces&#39;:1, f&#39;{gridname}_nCartesian_coords&#39;:1})</span>
+    
+<span class="c1">#     d1 = calculate_distance_pythagoras(x0, y0, x1, y1)</span>
+    
+<span class="c1">#     # &gt; Then get variables for d2 (distance from cell face in the first column to edge)</span>
+<span class="c1">#     x2 = edge_coords.isel({f&#39;{gridname}_nCartesian_coords&#39;:0})</span>
+<span class="c1">#     y2 = edge_coords.isel({f&#39;{gridname}_nCartesian_coords&#39;:1})</span>
+<span class="c1">#     d2 = calculate_distance_pythagoras(x0, y0, x2, y2)</span>
+    
+<span class="c1">#     # &gt; Calculate the weights per edge:</span>
+<span class="c1">#     w = 1 / (d2 / d1)</span>
+
+<span class="c1">#     # &gt; Fill everything that&#39;s NaN with 0:</span>
+<span class="c1">#     w = w.fillna(0)</span>
+<span class="c1">#     m_weights = xr.concat([w, 1 - w], dim=dimn_maxef)</span>
+    
+<span class="c1">#     return m_weights</span>
+
+<div class="viewcode-block" id="calculate_distance_haversine">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.calculate_distance_haversine">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">calculate_distance_haversine</span><span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">lat_or</span><span class="p">,</span> <span class="n">lon_or</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Function to calculate the shortest distance between two sets of coordinates.</span>
+<span class="sd">       The coordinates of Hoek van Holland have been previously filled in as a starting point</span>
+<span class="sd">       for all distance calculations.</span>
+
+<span class="sd">       Args:</span>
+<span class="sd">       - lon_or: Reference Longitude</span>
+<span class="sd">       - lat_or: Reference Latitude</span>
+<span class="sd">       - lon: Longitude</span>
+<span class="sd">       - lat: Latitude</span>
+
+<span class="sd">       Returns:</span>
+<span class="sd">       - distance: Distance [meters]</span>
+
+<span class="sd">       &#39;&#39;&#39;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">pyproj</span>
+
+    <span class="n">geodesic</span> <span class="o">=</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">Geod</span><span class="p">(</span><span class="n">ellps</span><span class="o">=</span><span class="s1">&#39;WGS84&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">lon</span><span class="p">)</span> <span class="o">==</span> <span class="n">pd</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">series</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+        <span class="n">lat_or_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">lat_or</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lat</span><span class="p">))]</span>
+        <span class="n">lon_or_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">lon_or</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lon</span><span class="p">))]</span>
+
+        <span class="n">fwd_azimuth</span><span class="p">,</span> <span class="n">back_azimuth</span><span class="p">,</span> <span class="n">distance</span> <span class="o">=</span> <span class="n">geodesic</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">lat</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">lon</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">lat_or_list</span><span class="p">,</span> <span class="n">lon_or_list</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">fwd_azimuth</span><span class="p">,</span> <span class="n">back_azimuth</span><span class="p">,</span> <span class="n">distance</span> <span class="o">=</span> <span class="n">geodesic</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">lat_or</span><span class="p">,</span> <span class="n">lon_or</span><span class="p">)</span>
+
+    <span class="c1">#     x = haversine(row.ix[0],row.ix[1],lat_or,lon_or) #starting point; approx. Botlek harbour</span>
+    <span class="k">return</span> <span class="n">distance</span>  <span class="c1"># pd.Series(distance)#(x)</span></div>
+
+
+<div class="viewcode-block" id="calculate_distance_pythagoras">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.calculate_distance_pythagoras">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">calculate_distance_pythagoras</span><span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="n">x2</span><span class="p">,</span> <span class="n">y2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Function to calculate the shortest distance between two sets of coordinates in a cartesian coordinate system.</span>
+
+<span class="sd">       :param x1: starting coordinate (x-direction)</span>
+<span class="sd">       :param y1: starting coordinate (y-direction)</span>
+<span class="sd">       :param x2: ending coordinate (x-direction)</span>
+<span class="sd">       :param y2: ending coordinate (y-direction)</span>
+
+<span class="sd">       :returns distance: Distance [meters]</span>
+<span class="sd">       :rtpye: np.float </span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="n">distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">x2</span> <span class="o">-</span> <span class="n">x1</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">y2</span> <span class="o">-</span> <span class="n">y1</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">distance</span></div>
+
+
+<div class="viewcode-block" id="compute_gradient_on_face">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.compute_gradient_on_face">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_gradient_on_face</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">,</span> <span class="n">uda</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">dfm_tools.xugrid_helpers</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_vertical_dimensions</span>
+    
+    <span class="c1"># &gt; Obtain uds from constructorSVA object</span>
+    <span class="n">uds</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">ds</span>
+
+    <span class="c1"># &gt; Get grid</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span>
+
+    <span class="c1"># &gt; Get dimension and grid names</span>
+    <span class="n">dimn_maxfn</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;max_face_nodes_dimension&#39;</span><span class="p">]</span>
+    <span class="n">dimn_faces</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">face_dimension</span>
+    <span class="n">dimn_edges</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">edge_dimension</span>
+    <span class="n">fill_value</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">fill_value</span>
+    <span class="n">gridname</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">name</span>
+    <span class="n">dimn_maxef</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nMax_edge_faces&#39;</span>
+    <span class="n">dimn_layer</span><span class="p">,</span> <span class="n">dimn_interfaces</span> <span class="o">=</span> <span class="n">get_vertical_dimensions</span><span class="p">(</span><span class="n">uds</span><span class="p">)</span>
+    <span class="n">dimn_cart</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nCartesian_coords&#39;</span>
+
+    <span class="c1"># &gt; Determine varname from the provided array\</span>
+    <span class="n">varname</span> <span class="o">=</span> <span class="n">uda</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="c1"># &gt; Calculate the unit normal vectors if not in the dataset already</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">unvs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;unvs&#39;</span><span class="p">]</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">unvs</span> <span class="o">=</span> <span class="n">calculate_unit_normal_vectors</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">)</span>
+    
+    <span class="c1"># &gt; Get the volume and flow area variables: check if they&#39;re in the </span>
+    <span class="c1"># &gt; constructor first, then check the dataset, else throw error</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">flow_area</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">flow_area</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">flow_area</span> <span class="o">=</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_au&#39;</span><span class="p">]</span> <span class="c1"># todo: extend to more arbitrary names in later stage</span>
+        <span class="k">except</span><span class="p">:</span> 
+            <span class="k">raise</span> <span class="ne">NameError</span><span class="p">(</span><span class="s1">&#39;Could not retrieve the flow area, which is necessary for the gradient </span><span class="se">\</span>
+<span class="s1">                             calculation. Please provide volume variable in the constructor or in the underlying dataset.&#39;</span><span class="p">)</span>
+    
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">volume</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">volume</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">volume</span> <span class="o">=</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_vol1&#39;</span><span class="p">]</span><span class="c1"># todo: extend to more arbitrary names in later stage</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NameError</span><span class="p">(</span><span class="s1">&#39;Could not retrieve the volume of the cells, which is necessary for the gradient </span><span class="se">\</span>
+<span class="s1">                             calculation. Please provide volume variable in the constructor or in the underlying dataset.&#39;</span><span class="p">)</span>
+
+    <span class="c1"># &gt; Get the edge-face connectivity and replace fill values with -1</span>
+    <span class="n">edge_faces</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">uds</span><span class="o">.</span><span class="n">ugrid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">edge_face_connectivity</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="n">dimn_edges</span><span class="p">,</span> <span class="n">dimn_maxef</span><span class="p">))</span>
+    <span class="n">edge_faces_validbool</span> <span class="o">=</span> <span class="n">edge_faces</span><span class="o">!=</span><span class="n">fill_value</span>
+    <span class="n">edge_faces</span> <span class="o">=</span> <span class="n">edge_faces</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">edge_faces_validbool</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        
+    <span class="c1"># &gt; Get the face-edge connectivity and replace fill values with -1</span>
+    <span class="n">face_edges</span> <span class="o">=</span> <span class="n">build_face_edge_connectivity</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">)</span>
+    <span class="n">face_edges_validbool</span> <span class="o">=</span> <span class="n">face_edges</span><span class="o">!=</span><span class="n">fill_value</span>
+    <span class="n">face_edges</span> <span class="o">=</span> <span class="n">face_edges</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">face_edges_validbool</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">face_edges_stacked</span> <span class="o">=</span> <span class="n">face_edges</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">__tmp_dim__</span><span class="o">=</span><span class="p">(</span><span class="n">dimn_faces</span><span class="p">,</span> <span class="n">dimn_maxfn</span><span class="p">))</span>
+
+    <span class="c1"># &gt; Get the unit normal vectors (nf) also in the face-edges matrix</span>
+    <span class="n">fe_nfs</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">face_edges_validbool</span><span class="p">,</span> <span class="n">unvs</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_edges</span><span class="p">:</span><span class="n">face_edges</span><span class="p">}),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+
+    <span class="c1"># // 2. See if the normal vectors are pointing out of the cell. If not, flip them.</span>
+    <span class="c1"># &gt; Calculate distance vectors</span>
+    <span class="n">dv</span> <span class="o">=</span> <span class="n">calculate_distance_vectors</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">)</span>
+    <span class="c1"># &gt; Calculate the dot product between the calculated normal vectors and the distance vector for each face</span>
+    <span class="n">i_nfs</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">fe_nfs</span><span class="p">,</span> <span class="n">dv</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="n">dimn_cart</span><span class="p">])</span>
+    <span class="c1"># &gt; if the product &lt; 1, multiply by -1 to get an outwards facing normal vector, and update the variable</span>
+    <span class="n">fe_nfs</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">i_nfs</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">fe_nfs</span><span class="p">,</span> <span class="n">fe_nfs</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+	<span class="c1"># &gt; Determine if we&#39;re looking at a velocity value u1 or u0</span>
+    <span class="c1"># &gt; Because these are vector quantities in the direction of the normal vector,</span>
+    <span class="c1"># &gt; to get to the final vector, we have to multiply u1/u0 by the normal vector</span>
+    <span class="c1"># &gt; first. Also, we need to check their sign for every edge.</span>
+    <span class="k">if</span> <span class="n">dimn_edges</span> <span class="ow">in</span> <span class="n">uda</span><span class="o">.</span><span class="n">dims</span><span class="p">:</span>
+        <span class="c1"># &gt; Make sure the edge dimension is not chunked, otherwise we will </span>
+        <span class="c1"># &gt; get &quot;PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks.&quot;</span>
+        <span class="n">chunks</span> <span class="o">=</span> <span class="p">{</span><span class="n">dimn_edges</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">}</span>
+        <span class="n">uda</span> <span class="o">=</span> <span class="n">uda</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span>
+
+        <span class="c1"># &gt; Fill the face-edges matrix with the varname</span>
+        <span class="c1"># &gt; Do this via stack and unstack since 2D indexing does not</span>
+        <span class="c1"># &gt; properly work in dask yet: https://github.com/dask/dask/pull/10237</span>
+        <span class="n">edge_var_stacked</span> <span class="o">=</span> <span class="n">uda</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_edges</span><span class="p">:</span> <span class="n">face_edges_stacked</span><span class="p">})</span>
+        <span class="n">edge_var</span> <span class="o">=</span> <span class="n">edge_var_stacked</span><span class="o">.</span><span class="n">unstack</span><span class="p">(</span><span class="s2">&quot;__tmp_dim__&quot;</span><span class="p">)</span>
+        <span class="c1"># &gt; Convert data-array back to an xu.UgridDataArray</span>
+        <span class="n">edge_var</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">UgridDataArray</span><span class="p">(</span><span class="n">edge_var</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">)</span>
+        <span class="c1"># &gt; Replace locations of the validbools with NaN&#39;s</span>
+        <span class="n">edge_var</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">face_edges_validbool</span><span class="p">,</span> <span class="n">edge_var</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+
+        <span class="c1"># &gt; Fill face_edge matrix with flow area data</span>
+        <span class="n">flow_area</span> <span class="o">=</span> <span class="n">flow_area</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span>
+        <span class="n">edge_au_stacked</span> <span class="o">=</span> <span class="n">flow_area</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_edges</span><span class="p">:</span><span class="n">face_edges_stacked</span><span class="p">})</span>
+        <span class="n">edge_au</span> <span class="o">=</span> <span class="n">edge_au_stacked</span><span class="o">.</span><span class="n">unstack</span><span class="p">(</span><span class="s2">&quot;__tmp_dim__&quot;</span><span class="p">)</span>
+
+        <span class="c1"># &gt; Multiply the variable with the edge area (flow area), multiply by the </span>
+        <span class="c1"># &gt; &quot;flipped boolean&quot; and the unit normal vector, and sum (dimension: faces)</span>
+        <span class="n">face_vars</span> <span class="o">=</span> <span class="p">(</span><span class="n">edge_var</span> <span class="o">*</span> <span class="n">edge_au</span> <span class="o">*</span> <span class="n">fe_nfs</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">dimn_maxfn</span><span class="p">,</span> <span class="n">keep_attrs</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="c1"># &gt; Multiply the total result with (1/cell volume) (dimension: faces)</span>
+        <span class="n">gradient</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="n">volume</span><span class="p">)</span> <span class="o">*</span> <span class="n">face_vars</span>
+        <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">varname</span><span class="si">}</span><span class="s1">_gradient&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gradient</span>
+        
+        <span class="k">return</span> <span class="n">gradient</span>
+
+    <span class="k">else</span><span class="p">:</span> 
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;This function only supports the calculation of gradients at face location, </span><span class="se">\</span>
+<span class="s1">                         based on data on edges. Please supply a variable that is located on the edges.&#39;</span><span class="p">)</span></div>
+
+
+	
+
+<div class="viewcode-block" id="compute_divergence_on_face">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.compute_divergence_on_face">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_divergence_on_face</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">,</span> <span class="n">uda</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="c1"># For this function, the vector on the edge needs to be in the direction of the normal vector!!</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">dfm_tools.xugrid_helpers</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_vertical_dimensions</span>
+    
+    <span class="c1"># &gt; Obtain uds from constructorSVA object</span>
+    <span class="n">uds</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">ds</span>
+
+    <span class="c1"># &gt; Get grid</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span>
+
+    <span class="c1"># &gt; Get dimension and grid names</span>
+    <span class="n">dimn_maxfn</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;max_face_nodes_dimension&#39;</span><span class="p">]</span>
+    <span class="n">dimn_faces</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">face_dimension</span>
+    <span class="n">dimn_edges</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">edge_dimension</span>
+    <span class="n">fill_value</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">fill_value</span>
+    <span class="n">gridname</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">name</span>
+    <span class="n">dimn_maxef</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nMax_edge_faces&#39;</span>
+    <span class="n">dimn_layer</span><span class="p">,</span> <span class="n">dimn_interfaces</span> <span class="o">=</span> <span class="n">get_vertical_dimensions</span><span class="p">(</span><span class="n">uds</span><span class="p">)</span>
+    <span class="n">dimn_cart</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nCartesian_coords&#39;</span>
+
+    <span class="c1"># &gt; Determine varname from the provided array</span>
+    <span class="n">varname</span> <span class="o">=</span> <span class="n">uda</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="c1"># &gt; Calculate the unit normal vectors if not in the dataset already</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">unvs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;unvs&#39;</span><span class="p">]</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">unvs</span> <span class="o">=</span> <span class="n">calculate_unit_normal_vectors</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">)</span>
+    
+    <span class="c1"># &gt; Get the volume and flow area variables: check if they&#39;re in the </span>
+    <span class="c1"># &gt; constructor first, then check the dataset, else throw error</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">flow_area</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">flow_area</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">flow_area</span> <span class="o">=</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_au&#39;</span><span class="p">]</span> <span class="c1"># todo: extend to more arbitrary names in later stage</span>
+        <span class="k">except</span><span class="p">:</span> 
+            <span class="k">raise</span> <span class="ne">NameError</span><span class="p">(</span><span class="s1">&#39;Could not retrieve the flow area, which is necessary for the gradient </span><span class="se">\</span>
+<span class="s1">                             calculation. Please provide volume variable in the constructor or in the underlying dataset.&#39;</span><span class="p">)</span>
+    
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">volume</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">volume</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">volume</span> <span class="o">=</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_vol1&#39;</span><span class="p">]</span><span class="c1"># todo: extend to more arbitrary names in later stage</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NameError</span><span class="p">(</span><span class="s1">&#39;Could not retrieve the volume of the cells, which is necessary for the gradient </span><span class="se">\</span>
+<span class="s1">                             calculation. Please provide volume variable in the constructor or in the underlying dataset.&#39;</span><span class="p">)</span>
+
+    <span class="c1"># &gt; Get the edge-face connectivity and replace fill values with -1</span>
+    <span class="n">edge_faces</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">uds</span><span class="o">.</span><span class="n">ugrid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">edge_face_connectivity</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="n">dimn_edges</span><span class="p">,</span> <span class="n">dimn_maxef</span><span class="p">))</span>
+    <span class="n">edge_faces_validbool</span> <span class="o">=</span> <span class="n">edge_faces</span><span class="o">!=</span><span class="n">fill_value</span>
+    <span class="n">edge_faces</span> <span class="o">=</span> <span class="n">edge_faces</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">edge_faces_validbool</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        
+    <span class="c1"># &gt; Get the face-edge connectivity and replace fill values with -1</span>
+    <span class="n">face_edges</span> <span class="o">=</span> <span class="n">build_face_edge_connectivity</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">)</span>
+    <span class="n">face_edges_validbool</span> <span class="o">=</span> <span class="n">face_edges</span><span class="o">!=</span><span class="n">fill_value</span>
+    <span class="n">face_edges</span> <span class="o">=</span> <span class="n">face_edges</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">face_edges_validbool</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">face_edges_stacked</span> <span class="o">=</span> <span class="n">face_edges</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">__tmp_dim__</span><span class="o">=</span><span class="p">(</span><span class="n">dimn_faces</span><span class="p">,</span> <span class="n">dimn_maxfn</span><span class="p">))</span>
+
+    <span class="c1"># &gt; Get the unit normal vectors (nf) also in the face-edges matrix</span>
+    <span class="n">fe_nfs</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">face_edges</span><span class="o">!=</span><span class="n">fill_value</span><span class="p">,</span> <span class="n">unvs</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_edges</span><span class="p">:</span><span class="n">face_edges</span><span class="p">}),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+
+    <span class="c1"># // 2. See if the normal vectors are pointing out of the cell. If not, flip them.</span>
+    <span class="c1"># &gt; Calculate distance vectors</span>
+    <span class="n">dv</span> <span class="o">=</span> <span class="n">calculate_distance_vectors</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">)</span>
+    <span class="c1"># &gt; Calculate the dot product between the calculated normal vectors and the distance vector for each face</span>
+    <span class="n">i_nfs</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">fe_nfs</span><span class="p">,</span> <span class="n">dv</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="n">dimn_cart</span><span class="p">])</span>
+    <span class="c1"># &gt; if the product &lt; 1, multiply by -1 to get an outwards facing normal vector, and update the variable</span>
+    <span class="n">fe_nfs</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">i_nfs</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">fe_nfs</span><span class="p">,</span> <span class="n">fe_nfs</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+	<span class="c1"># &gt; Determine if we&#39;re looking at a velocity value u1 or u0</span>
+    <span class="c1"># &gt; Because these are vector quantities in the direction of the normal vector,</span>
+    <span class="c1"># &gt; to get to the final vector, we have to multiply u1/u0 by the normal vector</span>
+    <span class="c1"># &gt; first. Also, we need to check their sign for every edge.</span>
+    <span class="k">if</span> <span class="n">dimn_edges</span> <span class="ow">in</span> <span class="n">uda</span><span class="o">.</span><span class="n">dims</span><span class="p">:</span>
+        <span class="c1"># &gt; Make sure the edge dimension is not chunked, otherwise we will </span>
+        <span class="c1"># &gt; get &quot;PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks.&quot;</span>
+        <span class="n">chunks</span> <span class="o">=</span> <span class="p">{</span><span class="n">dimn_edges</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">}</span>
+        <span class="n">uda</span> <span class="o">=</span> <span class="n">uda</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span>
+
+        <span class="c1"># &gt; Fill the face-edges matrix with the varname</span>
+        <span class="c1"># &gt; Do this via stack and unstack since 2D indexing does not</span>
+        <span class="c1"># &gt; properly work in dask yet: https://github.com/dask/dask/pull/10237</span>
+        <span class="n">edge_var_stacked</span> <span class="o">=</span> <span class="n">uda</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_edges</span><span class="p">:</span> <span class="n">face_edges_stacked</span><span class="p">})</span>
+        <span class="n">edge_var</span> <span class="o">=</span> <span class="n">edge_var_stacked</span><span class="o">.</span><span class="n">unstack</span><span class="p">(</span><span class="s2">&quot;__tmp_dim__&quot;</span><span class="p">)</span>
+        <span class="c1"># &gt; Convert data-array back to an xu.UgridDataArray</span>
+        <span class="n">edge_var</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">UgridDataArray</span><span class="p">(</span><span class="n">edge_var</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">)</span>
+
+		<span class="c1"># &gt;&gt; We have to determine the sign of the velocity </span>
+		<span class="c1"># &gt;&gt; Determine whether the u1 value is positive or negative</span>
+		<span class="c1"># &gt; Get the mesh2d_nFaces numbering of the 0th column in edge_faces (from</span>
+        <span class="c1"># &gt;  0 -&gt; 1 is positive)</span>
+        <span class="n">pos_fe</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">face_edges</span><span class="o">!=</span><span class="n">fill_value</span><span class="p">,</span> <span class="n">edge_faces</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_maxef</span><span class="p">:</span><span class="mi">0</span><span class="p">})</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_edges</span><span class="p">:</span><span class="n">face_edges</span><span class="p">}),</span> <span class="n">fill_value</span><span class="p">)</span>
+        <span class="n">pos_fe</span> <span class="o">=</span> <span class="n">pos_fe</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">face_edges_validbool</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+		<span class="c1"># &gt; If the number of the 0th column in edge_faces == mesh2d_nFaces, then the </span>
+        <span class="c1"># &gt; direction is already positive in the right direction.</span>
+		<span class="c1"># &gt; Otherwise, the direction needs to be flipped</span>
+        <span class="n">fe_multiplier</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">pos_fe</span><span class="o">==</span><span class="n">uds</span><span class="p">[</span><span class="n">dimn_faces</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">edge_var</span> <span class="o">=</span> <span class="n">edge_var</span> <span class="o">*</span> <span class="n">fe_multiplier</span>
+
+        <span class="c1"># &gt; Calculate the dot product of the vector quantity with the unit normal vectors</span>
+        <span class="n">edge_var</span> <span class="o">=</span> <span class="n">edge_var</span> <span class="o">*</span> <span class="n">fe_nfs</span> 
+
+        <span class="c1"># &gt; Fill face_edge matrix with flow area data</span>
+        <span class="n">flow_area</span> <span class="o">=</span> <span class="n">flow_area</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span>
+        <span class="n">edge_au_stacked</span> <span class="o">=</span> <span class="n">flow_area</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_edges</span><span class="p">:</span><span class="n">face_edges_stacked</span><span class="p">})</span>
+        <span class="n">edge_au</span> <span class="o">=</span> <span class="n">edge_au_stacked</span><span class="o">.</span><span class="n">unstack</span><span class="p">(</span><span class="s2">&quot;__tmp_dim__&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># &gt; Multiply the variable with the edge area (flow area), multiply by the </span>
+        <span class="c1"># &gt; &quot;flipped boolean&quot; and the unit normal vector, and sum (dimension: faces)</span>
+        <span class="n">face_vars</span> <span class="o">=</span> <span class="p">(</span><span class="n">edge_var</span> <span class="o">*</span> <span class="n">edge_au</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">dimn_maxfn</span><span class="p">,</span> <span class="n">keep_attrs</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="c1"># &gt; Multiply the total result with (1/cell volume) (dimension: faces)</span>
+        <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">varname</span><span class="si">}</span><span class="s1">_divergence&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">divergence</span> <span class="o">=</span> <span class="p">((</span><span class="mi">1</span><span class="o">/</span><span class="n">volume</span><span class="p">)</span> <span class="o">*</span> <span class="n">face_vars</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">dimn_cart</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">divergence</span>
+
+    <span class="k">else</span><span class="p">:</span> 
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;This function only supports the calculation of the divergence at face location, </span><span class="se">\</span>
+<span class="s1">                         based on data on edges. Please supply a variable that is located on the edges.&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="compute_derivatives_on_face">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.compute_derivatives_on_face">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_derivatives_on_face</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">,</span> <span class="n">uda</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">dfm_tools.xugrid_helpers</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_vertical_dimensions</span>
+
+    <span class="c1"># &gt; Obtain uds from constructorSVA object</span>
+    <span class="n">uds</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">ds</span>
+
+    <span class="c1"># &gt; Get grid</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span>
+
+    <span class="c1"># &gt; Get dimension and grid names</span>
+    <span class="n">dimn_maxfn</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;max_face_nodes_dimension&#39;</span><span class="p">]</span>
+    <span class="n">dimn_faces</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">face_dimension</span>
+    <span class="n">dimn_edges</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">edge_dimension</span>
+    <span class="n">fill_value</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">fill_value</span>
+    <span class="n">gridname</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">name</span>
+    <span class="n">dimn_maxef</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nMax_edge_faces&#39;</span>
+    <span class="n">dimn_layer</span><span class="p">,</span> <span class="n">dimn_interfaces</span> <span class="o">=</span> <span class="n">get_vertical_dimensions</span><span class="p">(</span><span class="n">uds</span><span class="p">)</span>
+    <span class="n">dimn_cart</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nCartesian_coords&#39;</span>
+
+    <span class="c1"># &gt; Determine varname from the provided array</span>
+    <span class="n">varname</span> <span class="o">=</span> <span class="n">uda</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="c1"># &gt; Calculate the unit normal vectors if not in the dataset already</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">unvs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;unvs&#39;</span><span class="p">]</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">unvs</span> <span class="o">=</span> <span class="n">calculate_unit_normal_vectors</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">)</span>
+    
+    <span class="c1"># &gt; Get the volume and flow area variables: check if they&#39;re in the </span>
+    <span class="c1"># &gt; constructor first, then check the dataset, else throw error</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">flow_area</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">flow_area</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">flow_area</span> <span class="o">=</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_au&#39;</span><span class="p">]</span> <span class="c1"># todo: extend to more arbitrary names in later stage</span>
+        <span class="k">except</span><span class="p">:</span> 
+            <span class="k">raise</span> <span class="ne">NameError</span><span class="p">(</span><span class="s1">&#39;Could not retrieve the flow area, which is necessary for the gradient </span><span class="se">\</span>
+<span class="s1">                             calculation. Please provide volume variable in the constructor or in the underlying dataset.&#39;</span><span class="p">)</span>
+    
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">volume</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">volume</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">volume</span> <span class="o">=</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_vol1&#39;</span><span class="p">]</span><span class="c1"># todo: extend to more arbitrary names in later stage</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NameError</span><span class="p">(</span><span class="s1">&#39;Could not retrieve the volume of the cells, which is necessary for the gradient </span><span class="se">\</span>
+<span class="s1">                             calculation. Please provide volume variable in the constructor or in the underlying dataset.&#39;</span><span class="p">)</span>
+
+
+    <span class="c1"># &gt; Get the edge-face connectivity and replace fill values with -1</span>
+    <span class="n">edge_faces</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">uds</span><span class="o">.</span><span class="n">ugrid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">edge_face_connectivity</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="n">dimn_edges</span><span class="p">,</span> <span class="n">dimn_maxef</span><span class="p">))</span>
+    <span class="n">edge_faces_validbool</span> <span class="o">=</span> <span class="n">edge_faces</span><span class="o">!=</span><span class="n">fill_value</span>
+    <span class="n">edge_faces</span> <span class="o">=</span> <span class="n">edge_faces</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">edge_faces_validbool</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        
+    <span class="c1"># &gt; Get the face-edge connectivity and replace fill values with -1</span>
+    <span class="n">face_edges</span> <span class="o">=</span> <span class="n">build_face_edge_connectivity</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">)</span>
+    <span class="n">face_edges_validbool</span> <span class="o">=</span> <span class="n">face_edges</span><span class="o">!=</span><span class="n">fill_value</span>
+    <span class="n">face_edges</span> <span class="o">=</span> <span class="n">face_edges</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">face_edges_validbool</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">face_edges_stacked</span> <span class="o">=</span> <span class="n">face_edges</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">__tmp_dim__</span><span class="o">=</span><span class="p">(</span><span class="n">dimn_faces</span><span class="p">,</span> <span class="n">dimn_maxfn</span><span class="p">))</span>
+
+    <span class="c1"># &gt; Get the unit normal vectors (nf) also in the face-edges matrix</span>
+    <span class="n">fe_nfs</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">face_edges</span><span class="o">!=</span><span class="n">fill_value</span><span class="p">,</span> <span class="n">unvs</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_edges</span><span class="p">:</span><span class="n">face_edges</span><span class="p">}),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+
+    <span class="c1"># // 2. See if the normal vectors are pointing out of the cell. If not, flip them.</span>
+    <span class="c1"># &gt; Calculate distance vectors</span>
+    <span class="n">dv</span> <span class="o">=</span> <span class="n">calculate_distance_vectors</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">)</span>
+    <span class="c1"># &gt; Calculate the dot product between the calculated unit normal vectors and the distance vector for each face</span>
+    <span class="n">i_nfs</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">fe_nfs</span><span class="p">,</span> <span class="n">dv</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="n">dimn_cart</span><span class="p">])</span>
+    <span class="c1"># &gt; if the product &lt; 1, multiply by -1 to get an outwards facing unit normal vector, and update the variable</span>
+    <span class="n">fe_nfs</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">i_nfs</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">fe_nfs</span><span class="p">,</span> <span class="n">fe_nfs</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c1"># &gt; Get only the x-part and y-part of the unit normal vectors</span>
+    <span class="n">x_fe_nfs</span> <span class="o">=</span> <span class="n">fe_nfs</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dimn_cart</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">})</span>
+    <span class="n">y_fe_nfs</span> <span class="o">=</span> <span class="n">fe_nfs</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dimn_cart</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">})</span>
+
+	<span class="c1"># &gt; Determine if we&#39;re looking at a velocity value u1 or u0</span>
+    <span class="c1"># &gt; Because these are vector quantities in the direction of the normal vector,</span>
+    <span class="c1"># &gt; to get to the final vector, we have to multiply u1/u0 by the normal vector</span>
+    <span class="c1"># &gt; first. Also, we need to check their sign for every edge.</span>
+    <span class="k">if</span> <span class="n">dimn_edges</span> <span class="ow">in</span> <span class="n">uda</span><span class="o">.</span><span class="n">dims</span><span class="p">:</span>
+        <span class="c1"># &gt; Make sure the edge dimension is not chunked, otherwise we will </span>
+        <span class="c1"># &gt; get &quot;PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks.&quot;</span>
+        <span class="n">chunks</span> <span class="o">=</span> <span class="p">{</span><span class="n">dimn_edges</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">}</span>
+        <span class="n">uda</span> <span class="o">=</span> <span class="n">uda</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span>
+
+        <span class="c1"># &gt; Fill the face-edges matrix with the varname</span>
+        <span class="c1"># &gt; Do this via stack and unstack since 2D indexing does not</span>
+        <span class="c1"># &gt; properly work in dask yet: https://github.com/dask/dask/pull/10237</span>
+        <span class="n">edge_var_stacked</span> <span class="o">=</span> <span class="n">uda</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_edges</span><span class="p">:</span> <span class="n">face_edges_stacked</span><span class="p">})</span>
+        <span class="n">edge_var</span> <span class="o">=</span> <span class="n">edge_var_stacked</span><span class="o">.</span><span class="n">unstack</span><span class="p">(</span><span class="s2">&quot;__tmp_dim__&quot;</span><span class="p">)</span>
+        <span class="c1"># &gt; Convert data-array back to an xu.UgridDataArray</span>
+        <span class="n">edge_var</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">UgridDataArray</span><span class="p">(</span><span class="n">edge_var</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">)</span>
+
+		<span class="c1"># &gt;&gt; We have to determine the sign of the velocity </span>
+		<span class="c1"># &gt;&gt; Determine whether the u1 value is positive or negative</span>
+		<span class="c1"># &gt; Get the mesh2d_nFaces numbering of the 0th column in edge_faces (from</span>
+        <span class="c1"># &gt;  0 -&gt; 1 is positive)</span>
+        <span class="n">pos_fe</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">face_edges</span><span class="o">!=</span><span class="n">fill_value</span><span class="p">,</span> <span class="n">edge_faces</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_maxef</span><span class="p">:</span><span class="mi">0</span><span class="p">})</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_edges</span><span class="p">:</span><span class="n">face_edges</span><span class="p">}),</span> <span class="n">fill_value</span><span class="p">)</span>
+        <span class="n">pos_fe</span> <span class="o">=</span> <span class="n">pos_fe</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">face_edges_validbool</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+		<span class="c1"># &gt; If the number of the 0th column in edge_faces == mesh2d_nFaces, then the </span>
+        <span class="c1"># &gt; direction is already positive in the right direction.</span>
+		<span class="c1"># &gt; Otherwise, the direction needs to be flipped</span>
+        <span class="n">fe_multiplier</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">pos_fe</span><span class="o">==</span><span class="n">uds</span><span class="p">[</span><span class="n">dimn_faces</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># fe_multiplier = xr.where(edge_faces.isel({dimn_maxef:1}).isel({dimn_edges:face_edges}) &gt; edge_faces.isel({dimn_maxef:0}).isel({dimn_edges:face_edges}), -1, 1)</span>
+        <span class="n">edge_var</span> <span class="o">=</span> <span class="n">edge_var</span> <span class="o">*</span> <span class="n">fe_multiplier</span>
+
+        <span class="c1"># &gt; Calculate the dot product of the vector quantity with the unit normal vectors</span>
+        <span class="c1"># &gt; Then sum over all of the edges</span>
+        <span class="c1"># &gt; And finally divide by the volume, to get the final product.</span>
+        <span class="n">du_dx</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="n">volume</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">edge_var</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dimn_cart</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">})</span> <span class="o">*</span> <span class="n">x_fe_nfs</span> <span class="o">*</span> <span class="n">flow_area</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">dimn_maxfn</span><span class="p">,</span> <span class="n">keep_attrs</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">du_dy</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="n">volume</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">edge_var</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dimn_cart</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">})</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">y_fe_nfs</span> <span class="o">*</span> <span class="n">flow_area</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">dimn_maxfn</span><span class="p">,</span> <span class="n">keep_attrs</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">dv_dx</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="n">volume</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">edge_var</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dimn_cart</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">})</span> <span class="o">*</span> <span class="n">x_fe_nfs</span> <span class="o">*</span> <span class="n">flow_area</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">dimn_maxfn</span><span class="p">,</span> <span class="n">keep_attrs</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">dv_dy</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="n">volume</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">edge_var</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dimn_cart</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">})</span> <span class="o">*</span> <span class="n">y_fe_nfs</span> <span class="o">*</span> <span class="n">flow_area</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">dimn_maxfn</span><span class="p">,</span> <span class="n">keep_attrs</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+<span class="c1"># old version</span>
+<span class="c1"># def compute_gradient_on_face(constructorSVA, varname, **kwargs):</span>
+
+<span class="c1">#     from dfm_tools.xugrid_helpers import get_vertical_dimensions</span>
+
+<span class="c1">#     # &gt; Obtain uds from constructorSVA object</span>
+<span class="c1">#     uds = constructorSVA.ds</span>
+
+<span class="c1">#     # &gt; Get grid</span>
+<span class="c1">#     grid = uds.grid</span>
+
+<span class="c1">#     # &gt; Get dimension and grid names</span>
+<span class="c1">#     dimn_maxfn = grid.to_dataset().mesh2d.attrs[&#39;max_face_nodes_dimension&#39;]</span>
+<span class="c1">#     dimn_faces = grid.face_dimension</span>
+<span class="c1">#     dimn_edges = grid.edge_dimension</span>
+<span class="c1">#     fill_value = grid.fill_value</span>
+<span class="c1">#     gridname = grid.name</span>
+<span class="c1">#     dimn_maxef = f&#39;{gridname}_nMax_edge_faces&#39;</span>
+<span class="c1">#     dimn_layer, dimn_interfaces = get_vertical_dimensions(uds)</span>
+
+<span class="c1">#     # &gt; Check kwargs</span>
+<span class="c1">#     if &#39;varname_unvs&#39; in kwargs:</span>
+<span class="c1">#         varname_unvs = kwargs[&#39;varname_unvs&#39;] </span>
+<span class="c1">#     else:</span>
+<span class="c1">#         varname_unvs = f&#39;{gridname}_unvs&#39;</span>
+
+<span class="c1">#     # &gt; Calculate the unit normal vectors if not in the dataset already</span>
+<span class="c1">#     try:</span>
+<span class="c1">#         unvs = uds[varname_unvs]</span>
+<span class="c1">#     except:</span>
+<span class="c1">#         # &gt; And if not in the kwargs</span>
+<span class="c1">#         try:</span>
+<span class="c1">#             unvs = kwargs[&#39;unvs&#39;]</span>
+<span class="c1">#         except:</span>
+<span class="c1">#             unvs = calculate_unit_normal_vectors(uds)</span>
+        
+<span class="c1">#     # &gt; Get the edge-face connectivity and replace fill values with -1</span>
+<span class="c1">#     edge_faces = xr.DataArray(uds.ugrid.grid.edge_face_connectivity, dims=(dimn_edges, dimn_maxef))</span>
+<span class="c1">#     edge_faces_validbool = edge_faces!=fill_value</span>
+<span class="c1">#     edge_faces = edge_faces.where(edge_faces_validbool, -1)</span>
+
+<span class="c1">#     # &gt; Get the face-edge connectivity and replace fill values with -1</span>
+<span class="c1">#     face_edges = build_face_edge_connectivity(uds)</span>
+<span class="c1">#     face_edges_validbool = face_edges!=fill_value</span>
+<span class="c1">#     face_edges = face_edges.where(face_edges_validbool, -1)</span>
+
+<span class="c1">#     # &gt; Get the unit normal vectors (nf) also in the face-edges matrix</span>
+<span class="c1">#     fe_nfs = xr.where(face_edges!=fill_value, unvs.isel({dimn_edges:face_edges}), np.nan)</span>
+
+<span class="c1">#     # &gt; Select only data-array of the to-be-used variable</span>
+<span class="c1">#     uda = uds[f&#39;{varname}&#39;]</span>
+
+<span class="c1"># 	# &gt; Determine if we&#39;re looking at a velocity value u1 or u0</span>
+<span class="c1">#     # &gt; Because these are vector quantities in the direction of the normal vector,</span>
+<span class="c1">#     # &gt; to get to the final vector, we have to multiply u1/u0 by the normal vector</span>
+<span class="c1">#     # &gt; first. Also, we need to check their sign for every edge.</span>
+<span class="c1">#     if dimn_edges in uda.dims:</span>
+
+<span class="c1">#         # &gt; Make sure the edge dimension is not chunked, otherwise we will </span>
+<span class="c1">#         # &gt; get &quot;PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks.&quot;</span>
+<span class="c1">#         chunks = {dimn_edges:-1}</span>
+<span class="c1">#         uda = uda.chunk(chunks)</span>
+
+<span class="c1">#         # &gt; Fill the face-edges matrix with the varname</span>
+<span class="c1">#         # &gt; Do this via stack and unstack since 2D indexing does not</span>
+<span class="c1">#         # &gt; properly work in dask yet: https://github.com/dask/dask/pull/10237</span>
+<span class="c1">#         face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))</span>
+<span class="c1">#         edge_var_stacked = uda.isel({dimn_edges: face_edges_stacked})</span>
+<span class="c1">#         edge_var = edge_var_stacked.unstack(&quot;__tmp_dim__&quot;)</span>
+<span class="c1">#         # &gt; Convert data-array back to an xu.UgridDataArray</span>
+<span class="c1">#         edge_var = xu.UgridDataArray(edge_var, grid=grid)</span>
+
+<span class="c1"># 		# &gt;&gt; We have to determine the sign of the velocity </span>
+<span class="c1"># 		# &gt;&gt; Determine whether the u1 value is positive or negative</span>
+<span class="c1"># 		# &gt; Get the mesh2d_nFaces numbering of the 0th column in edge_faces (from</span>
+<span class="c1">#         # &gt;  0 -&gt; 1 is positive)</span>
+<span class="c1">#         pos_fe = xr.where(face_edges!=fill_value, edge_faces.isel({dimn_maxef:0}).isel({dimn_edges:face_edges}), fill_value)</span>
+
+<span class="c1"># 		# &gt; If the number of the 0th column in edge_faces == mesh2d_nFaces, then the </span>
+<span class="c1">#         # &gt; direction is already positive in the right direction.</span>
+<span class="c1"># 		# &gt; Otherwise, the direction needs to be flipped</span>
+<span class="c1">#         fe_multiplier = xr.where(pos_fe==uds[dimn_faces], 1, -1)</span>
+<span class="c1">#         edge_var = edge_var * fe_multiplier</span>
+
+<span class="c1">#         # &gt; Multiply by the unit normal vector to get to a vector quantity </span>
+<span class="c1">#         # &gt; With the multiplication we intend to calculate the dot product</span>
+<span class="c1">#         edge_var = edge_var * fe_nfs</span>
+    
+<span class="c1">#     else: </span>
+<span class="c1">#         raise ValueError(&#39;This function only supports the calculation of gradients at face location, \</span>
+<span class="c1">#                          based on data on edges. Please supply a variable that is located on the edges.&#39;)</span>
+
+<span class="c1"># 	# &gt; Fill face_edge matrix with flow area data</span>
+<span class="c1">#     edge_au = uds[f&#39;{gridname}_au&#39;].isel({dimn_edges:face_edges})</span>
+	
+<span class="c1"># 	# &gt; Multiply the variable with the edge area (flow area), multiply by the </span>
+<span class="c1">#     # &gt; &quot;flipped boolean&quot; and the unit normal vector, and sum (dimension: faces)</span>
+<span class="c1">#     face_vars = (edge_var * edge_au * fe_nfs).sum(dim=dimn_maxfn, keep_attrs=True)</span>
+	
+<span class="c1"># 	# &gt; Multiply the total result with (1/cell volume) (dimension: faces)</span>
+<span class="c1">#     gradient = (1/uds[f&#39;{gridname}_vol1&#39;]) * face_vars</span>
+<span class="c1">#     uds[f&#39;{varname}_div&#39;] = gradient</span>
+    
+<span class="c1">#     return gradient</span>
+
+<div class="viewcode-block" id="uda_to_edges">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.uda_to_edges">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">uda_to_edges</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">,</span> <span class="n">uda</span><span class="p">):</span>
+
+    <span class="n">uds</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">ds</span>
+
+    <span class="c1"># &gt; Get grid</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">uda</span><span class="o">.</span><span class="n">grid</span>
+
+    <span class="c1"># &gt; Get dimension and grid names</span>
+    <span class="n">dimn_maxfn</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;max_face_nodes_dimension&#39;</span><span class="p">]</span>
+    <span class="n">dimn_faces</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">face_dimension</span>
+    <span class="n">dimn_edges</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">edge_dimension</span>
+    <span class="n">fill_value</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">fill_value</span>
+    <span class="n">gridname</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">name</span>
+    <span class="n">dimn_maxef</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nMax_edge_faces&#39;</span>
+
+    <span class="c1"># &gt; Get the edge-face connectivity and replace fill values with -1</span>
+    <span class="n">edge_faces</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">uda</span><span class="o">.</span><span class="n">ugrid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">edge_face_connectivity</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="n">dimn_edges</span><span class="p">,</span> <span class="n">dimn_maxef</span><span class="p">))</span>
+    <span class="n">edge_faces_validbool</span> <span class="o">=</span> <span class="n">edge_faces</span><span class="o">!=</span><span class="n">fill_value</span>
+    <span class="n">edge_faces</span> <span class="o">=</span> <span class="n">edge_faces</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">edge_faces_validbool</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># &gt; Make sure the face dimension is not chunked, otherwise we will </span>
+    <span class="c1"># &gt; get &quot;PerformanceWarning: Slicing with an out-of-order index is generating x times more chunks.&quot;</span>
+    <span class="n">chunks</span> <span class="o">=</span> <span class="p">{</span><span class="n">dimn_faces</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">}</span>
+    <span class="n">uda</span> <span class="o">=</span> <span class="n">uda</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span>
+
+    <span class="c1"># &gt; Select the varname on faces in the edge-face connetivity matrix</span>
+    <span class="n">edge_faces_stacked</span> <span class="o">=</span> <span class="n">edge_faces</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">__tmp_dim__</span><span class="o">=</span><span class="p">(</span><span class="n">dimn_edges</span><span class="p">,</span> <span class="n">dimn_maxef</span><span class="p">))</span>
+    <span class="n">edge_var_stacked</span> <span class="o">=</span> <span class="n">uda</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_faces</span><span class="p">:</span> <span class="n">edge_faces_stacked</span><span class="p">})</span>
+    <span class="n">edge_var</span> <span class="o">=</span> <span class="n">edge_var_stacked</span><span class="o">.</span><span class="n">unstack</span><span class="p">(</span><span class="s2">&quot;__tmp_dim__&quot;</span><span class="p">)</span>
+    <span class="c1"># &gt; Convert data-array back to an xu.UgridDataArray</span>
+    <span class="n">edge_var</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">UgridDataArray</span><span class="p">(</span><span class="n">edge_var</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">)</span>
+
+    <span class="c1"># &gt; Set fill values to nan-values</span>
+    <span class="n">edge_var</span> <span class="o">=</span> <span class="n">edge_var</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">edge_faces_validbool</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+
+    <span class="c1"># &gt; Calculate the variable on the edges, based on the face_weights</span>
+    <span class="n">face_weights</span> <span class="o">=</span> <span class="n">build_edge_face_weights</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">)</span>
+    <span class="n">edge_var</span> <span class="o">=</span> <span class="p">(</span><span class="n">edge_var</span> <span class="o">*</span> <span class="n">face_weights</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">dimn_maxef</span><span class="p">)</span>
+    <span class="c1"># edge_var = edge_var.mean(dim=dimn_maxef)</span>
+    <span class="c1"># Give name and attributes</span>
+    <span class="n">attr_list</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;location&#39;</span><span class="p">:</span> <span class="s1">&#39;edge&#39;</span><span class="p">,</span> <span class="s1">&#39;cell_methods&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dimn_faces</span><span class="si">}</span><span class="s1">: inverse distance weighted mean&#39;</span><span class="p">}</span>
+    <span class="n">edge_var</span> <span class="o">=</span> <span class="n">edge_var</span><span class="o">.</span><span class="n">assign_attrs</span><span class="p">(</span>
+            <span class="n">attr_list</span><span class="p">)</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">uda</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">edge_var</span></div>
+
+
+<div class="viewcode-block" id="calculate_distance_vectors">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.calculate_distance_vectors">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">calculate_distance_vectors</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+    <span class="n">uds</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">ds</span>
+
+    <span class="c1"># &gt; Get dimensions, fill_value, and varname</span>
+    <span class="n">gridname</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">name</span>
+    <span class="n">fill_value</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">fill_value</span>
+    <span class="n">dimn_edges</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">edge_dimension</span>
+
+    <span class="c1"># Get  coordinate names</span>
+    <span class="n">coord_edge_x</span><span class="p">,</span> <span class="n">coord_edge_y</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;node_coordinates&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;node&#39;</span><span class="p">,</span> <span class="s1">&#39;edge&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+    <span class="c1"># coord_node_x, coord_node_y = uds.grid.to_dataset().mesh2d.attrs[&#39;node_coordinates&#39;].split()</span>
+    <span class="n">coord_face_x</span><span class="p">,</span> <span class="n">coord_face_y</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">to_dataset</span><span class="p">()</span><span class="o">.</span><span class="n">mesh2d</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;node_coordinates&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;node&#39;</span><span class="p">,</span> <span class="s1">&#39;face&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+
+    <span class="c1"># &gt; Get kwargs</span>
+    <span class="n">face_edges</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;face_edges&#39;</span><span class="p">)</span>
+
+    <span class="c1"># &gt; Check if face-edge-connectivity is given</span>
+    <span class="k">if</span> <span class="s1">&#39;face_edges&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">face_edges</span> <span class="o">=</span> <span class="n">build_face_edge_connectivity</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">)</span>
+
+    <span class="c1"># &gt; Get dimension names</span>
+    <span class="n">dimn_faces</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">face_dimension</span>
+
+    <span class="c1"># &gt; Get the cell centroid coordinates</span>
+    <span class="n">centroid_array</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">face_coordinates</span>
+    <span class="n">centroid_coords</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">centroid_array</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="n">dimn_faces</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nCartesian_coords&#39;</span><span class="p">],</span> <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_face_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_faces</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_face_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]),</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_face_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_faces</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_face_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">])},</span> <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span><span class="s1">&#39;m&#39;</span><span class="p">,</span> <span class="s1">&#39;standard_name&#39;</span><span class="p">:</span> <span class="s1">&#39;projection_x_coordinate, projection_y_coordinate&#39;</span><span class="p">,</span> <span class="s1">&#39;long_name&#39;</span><span class="p">:</span><span class="s1">&#39;Characteristic coordinates of mesh centroids&#39;</span><span class="p">,</span> <span class="s1">&#39;bounds&#39;</span><span class="p">:</span> <span class="s1">&#39;mesh2d_face_x_bnd, mesh_face_y_bnd&#39;</span><span class="p">})</span>   
+
+    <span class="c1"># &gt;&gt; 1. Get the distance vector</span>
+    <span class="c1"># &gt; Get the edge coordinates</span>
+    <span class="n">edge_array</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">edge_coordinates</span> <span class="c1"># np.c_[uds.mesh2d_edge_x, uds.mesh2d_edge_y]</span>
+    <span class="n">edge_coords</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">edge_array</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="n">dimn_edges</span><span class="p">,</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_nCartesian_coords&#39;</span><span class="p">],</span> <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_edge_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_edges</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_edge_x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]),</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_edge_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:([</span><span class="n">dimn_edges</span><span class="p">],</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coord_edge_y</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">])},</span> <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span><span class="s1">&#39;m&#39;</span><span class="p">,</span> <span class="s1">&#39;standard_name&#39;</span><span class="p">:</span> <span class="s1">&#39;projection_x_coordinate, projection_y_coordinate&#39;</span><span class="p">,</span> <span class="s1">&#39;long_name&#39;</span><span class="p">:</span><span class="s1">&#39;Characteristic coordinates of mesh face&#39;</span><span class="p">,</span> <span class="s1">&#39;bounds&#39;</span><span class="p">:</span> <span class="s1">&#39;mesh2d_face_x_bnd, mesh_face_y_bnd&#39;</span><span class="p">})</span>   
+
+    <span class="c1"># &gt; Put edge coordinates into face-edge connectivity matrix</span>
+    <span class="n">face_edge_coords</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">face_edges</span><span class="o">!=</span><span class="n">fill_value</span><span class="p">,</span> <span class="n">edge_coords</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dimn_edges</span><span class="p">:</span><span class="n">face_edges</span><span class="p">}),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+
+    <span class="c1"># &gt; Subtract the face coordinates from each of the edge coordinates in the connectivity matrix</span>
+    <span class="n">distance_vectors</span> <span class="o">=</span> <span class="n">face_edge_coords</span> <span class="o">-</span> <span class="n">centroid_coords</span>
+
+    <span class="k">return</span> <span class="n">distance_vectors</span></div>
+
+
+<div class="viewcode-block" id="compute_kzz">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.compute_kzz">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_kzz</span><span class="p">(</span><span class="n">uds</span><span class="p">,</span> <span class="n">dicoww</span><span class="o">=</span><span class="mf">5e-5</span><span class="p">,</span> <span class="n">prandtl_schmidt</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>  <span class="n">tracer</span><span class="o">=</span><span class="s1">&#39;mesh2d_sa1&#39;</span><span class="p">):</span>
+
+    <span class="n">gridname</span> <span class="o">=</span> <span class="n">uds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="n">vicwwu</span> <span class="o">=</span> <span class="n">uds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_vicwwu&#39;</span><span class="p">]</span>
+    <span class="n">dicwwu</span> <span class="o">=</span> <span class="n">vicwwu</span> <span class="o">/</span> <span class="n">prandtl_schmidt</span>
+    
+    <span class="k">if</span> <span class="n">tracer</span> <span class="o">==</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_sa1&#39;</span><span class="p">:</span>
+        <span class="n">k_l</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="mi">700</span><span class="p">)</span> <span class="o">*</span> <span class="mf">10e-6</span>
+    <span class="k">elif</span> <span class="n">tracer</span> <span class="o">==</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_tem1&#39;</span><span class="p">:</span> 
+        <span class="n">k_l</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="mf">6.7</span><span class="p">)</span> <span class="o">*</span> <span class="mf">10e-6</span>
+
+    <span class="n">uds</span><span class="p">[</span><span class="s1">&#39;mesh2d_dicwwu&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dicwwu</span> <span class="o">+</span> <span class="n">dicoww</span> <span class="o">+</span> <span class="n">k_l</span>
+
+    <span class="k">return</span> <span class="n">uds</span></div>
+
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+
+<div class="viewcode-block" id="integrate_trapz">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.integrate_trapz">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">integrate_trapz</span><span class="p">(</span><span class="n">y</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Perform trapezoidal integration along a specified dimension.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        y (xr.DataArray): The values to integrate.</span>
+<span class="sd">        x (xr.DataArray): The coordinate values along which to integrate.</span>
+<span class="sd">        dim (str, optional): The dimension along which to integrate. If None, the operation</span>
+<span class="sd">                             is applied along all dimensions.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        xr.DataArray: The result of the trapezoidal integration.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># First drop the x coordinate (the one to integrate over), as this will cause conflicts</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">drop_vars</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">drop_vars</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    
+    <span class="n">desired_order</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">*</span><span class="n">desired_order</span><span class="p">)</span>
+    
+    <span class="c1"># Calculate dx and average y</span>
+    <span class="n">dx</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dim</span><span class="p">:</span> <span class="nb">slice</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="kc">None</span><span class="p">)})</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dim</span><span class="p">:</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)})</span>
+    <span class="n">avg_y</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dim</span><span class="p">:</span> <span class="nb">slice</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="kc">None</span><span class="p">)})</span> <span class="o">+</span> <span class="n">y</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dim</span><span class="p">:</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)}))</span> <span class="o">/</span> <span class="mi">2</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="p">(</span><span class="n">dx</span> <span class="o">*</span> <span class="n">avg_y</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">dim</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="depth_int2volume_int">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.depth_int2volume_int">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">depth_int2volume_int</span><span class="p">(</span><span class="n">uda</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span> <span class="n">cell_area</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span> <span class="n">dimn_faces</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert a depth-integrated DataArray to a volume-integrated DataArray.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    ----------</span>
+<span class="sd">    uda : xr.DataArray</span>
+<span class="sd">        The input DataArray representing depth-integrated values.</span>
+<span class="sd">    cell_area : xr.DataArray</span>
+<span class="sd">        A 2D DataArray representing the cell area for each spatial grid point.</span>
+<span class="sd">    dimn_faces : str</span>
+<span class="sd">        The name of the faces dimension to integrate over.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    -------</span>
+<span class="sd">    xr.DataArray</span>
+<span class="sd">        The volume-integrated DataArray.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">volume_int</span> <span class="o">=</span> <span class="p">(</span><span class="n">uda</span> <span class="o">*</span> <span class="n">cell_area</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="p">[</span><span class="n">dimn_faces</span><span class="p">])</span>
+    
+    <span class="k">return</span> <span class="n">volume_int</span></div>
+
+
+<div class="viewcode-block" id="differentiate_over_3d_coord">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.differentiate_over_3d_coord">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">differentiate_over_3d_coord</span><span class="p">(</span><span class="n">uda</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span> <span class="n">coord_var</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Differentiate a Dask-backed xarray DataArray over a 3D coordinate variable.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    ----------</span>
+<span class="sd">    uda : xr.DataArray</span>
+<span class="sd">        The input DataArray to differentiate.</span>
+<span class="sd">    coord_var : str</span>
+<span class="sd">        The name of the 3D coordinate variable.</span>
+<span class="sd">    axis : int, optional</span>
+<span class="sd">        The axis number of the coordinate dimension to differentiate over. Defaults to -1.</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">    -------</span>
+<span class="sd">    xr.DataArray</span>
+<span class="sd">        Differentiated DataArray over the given coordinate.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Deduce name of depth dimension</span>
+    <span class="n">depth_dim</span> <span class="o">=</span> <span class="n">uda</span><span class="p">[</span><span class="n">coord_var</span><span class="p">]</span><span class="o">.</span><span class="n">dims</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+    
+    <span class="c1"># Calculate central difference with .diff() to reduce shifts</span>
+    <span class="c1"># data_diff = uda.diff(depth_dim)</span>
+    <span class="c1"># coord_diff = uda[coord_var].diff(depth_dim)</span>
+    
+    <span class="c1"># Calculate the derivative and re-align dimensions with padding</span>
+    <span class="c1"># differentiated = data_diff / coord_diff</span>
+    <span class="n">differentiated</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">apply_ufunc</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">depth_dim</span><span class="p">)</span> <span class="o">/</span> <span class="n">y</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">depth_dim</span><span class="p">),</span>
+        <span class="n">uda</span><span class="p">,</span> <span class="n">uda</span><span class="p">[</span><span class="n">coord_var</span><span class="p">],</span>
+        <span class="n">dask</span><span class="o">=</span><span class="s2">&quot;parallelized&quot;</span><span class="p">,</span>
+        <span class="n">output_dtypes</span><span class="o">=</span><span class="p">[</span><span class="n">uda</span><span class="o">.</span><span class="n">dtype</span><span class="p">],</span>
+        <span class="n">join</span><span class="o">=</span><span class="s2">&quot;override&quot;</span>
+    <span class="p">)</span>
+
+    <span class="n">differentiated</span> <span class="o">=</span> <span class="n">differentiated</span><span class="o">.</span><span class="n">pad</span><span class="p">({</span><span class="n">depth_dim</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)},</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;edge&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">differentiated</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, M. Geraeds.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
