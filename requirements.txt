@@ -2,3 +2,4 @@ numpy
 setuptools
 xarray
 xugrid
+xarray-einstats

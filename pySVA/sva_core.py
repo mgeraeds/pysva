@@ -1,3 +1,10 @@
+"""Core module for pySVA containing the main constructorSVA class.
+
+This module defines the constructorSVA class which handles data loading,
+grid operations, and provides access to various hydrodynamic properties
+for salinity variance analysis.
+"""
+
 __all__ = ['constructorSVA']
 
 import xarray as xr
@@ -9,7 +16,38 @@ from functools import cached_property
 from pySVA.sva_helpers import build_inverse_distance_weights, integrate_trapz, calculate_distance_pythagoras, differentiate_over_3d_coord
 
 class constructorSVA:
-    def __init__(self, input_file, data_description, **kwargs): # removed data description data_description,
+    """Main class for Salinity Variance Analysis (SVA).
+
+    Loads and processes hydrodynamic data from D-Flow FM simulations,
+    providing access to grid properties, velocities, tracers, and
+    computed quantities needed for variance budget analysis.
+
+    The class handles multiple input formats (netCDF files, xarray Datasets,
+    or xugrid UgridDatasets) and automatically extracts grid topology and
+    coordinate systems.
+
+    Attributes:
+        ds (xarray.Dataset): The loaded hydrodynamic dataset.
+        grid: The unstructured grid object.
+        Various dimension names (dimn_edges, dimn_faces, etc.) and coordinates.
+    """
+
+    def __init__(self, input_file, data_description, **kwargs):
+        """Initialize the SVA analysis object.
+
+        Args:
+            input_file (str or xr.Dataset or xu.UgridDataset or xr.DataArray):
+                Path to netCDF file, pre-loaded xarray Dataset, UgridDataset,
+                or DataArray containing hydrodynamic data.
+            data_description (dict): Mapping of variable names to dataset keys.
+                Required keys: 'velx', 'vely', 'velz', 'viscosity', 'tracer', 'depth'.
+                Optional keys: 'horizontal_diffusivity', 'interfaces', 'bed_level',
+                'volume', 'flow_area'.
+            **kwargs: Additional arguments passed to dfmt.open_partitioned_dataset().
+
+        Raises:
+            IOError: If file cannot be read or input type is not supported.
+        """
 
         if isinstance(input_file, str):
             try:
@@ -22,10 +60,9 @@ class constructorSVA:
             self.ds = input_file
         elif isinstance(input_file, xr.DataArray):
             self.ds = input_file
-        # else:
+        else:
             raise IOError("Please provide xr.Dataset, xu.core.wrap.UgridDataset, xr.DataArray, or a file path to a netCDF.")
 
-        # self._setup(data=data_description)
         # Dimension-related attributes
         self.grid = self.ds.grid
         self.gridname = self.ds.grid.name
@@ -94,6 +131,14 @@ class constructorSVA:
         self.tracer_variance = self.tracer_variance
 
     def _read(self, file_name, **kwargs):
+        """Read hydrodynamic dataset from file.
+
+        Loads a partitioned netCDF dataset using dfm_tools.
+
+        Args:
+            file_name (str): Path to the netCDF file.
+            **kwargs: Additional arguments passed to dfmt.open_partitioned_dataset().
+        """
         # self.ds = xr.open_dataset(file_name, use_cftime=True, **kwargs)
         self.ds = dfmt.open_partitioned_dataset(file_name, **kwargs)
             
@@ -179,6 +224,14 @@ class constructorSVA:
    
     @cached_property
     def face_area(self):
+        """Calculate face area for each grid edge.
+
+        Computes the area of grid faces by multiplying cell thickness
+        (interpolated to edges) by edge length.
+
+        Returns:
+            xarray.DataArray: Face area with dimensions matching edges.
+        """
         dimn_edges = self.dimn_edges
         
         # > Get general strings
@@ -190,6 +243,7 @@ class constructorSVA:
         edge_length = edge_length
         # > Get the cell thickness 
         cell_thickness = self.cell_thickness
+
         # > Interpolate the cell thickness on the edges 
         cell_thickness_edges = self.uda_to_edges(cell_thickness)
         
@@ -203,6 +257,14 @@ class constructorSVA:
     
     @cached_property
     def water_depth(self):
+        """Calculate water depth at each grid face.
+
+        Computes depth as the difference between maximum interface elevation
+        (water surface) and bed level.
+
+        Returns:
+            xarray.DataArray: Water depth (positive downward) at each face.
+        """
         
         # > Get general strings
         gridname = self.gridname
@@ -222,7 +284,18 @@ class constructorSVA:
         
     @cached_property
     def bed_level(self):
-        
+        """Calculate bed level at each grid face.
+
+        Computes bed elevation as the minimum interface elevation,
+        averaged over time if available.
+
+        Returns:
+            xarray.DataArray: Bed elevation (positive downward) at each face.
+
+        Raises:
+            ValueError: If interfaces coordinate is not provided in data_description.
+        """
+
         # Get dimensions
         dimn_interface = self.dimn_interface
         
@@ -237,6 +310,14 @@ class constructorSVA:
         
     @cached_property
     def edge_length(self):
+        """Calculate the length of each grid cell edge.
+
+        Computes Euclidean distance between the two nodes of each edge
+        in the horizontal (x,y) coordinate system.
+
+        Returns:
+            xarray.DataArray: Edge length at each edge.
+        """
         
         # > Get properties
         edge_node_coords = self.edge_node_coords
@@ -246,6 +327,15 @@ class constructorSVA:
     
     @cached_property
     def face_edge_weights(self):
+        """
+        Compute the face-edge-weights for each face, based on inverse distance weighting from each face to each edge associated with the face.
+
+        This builds a face-to-edge weight matrix by mapping face coordinates to
+        their connected edges and computing inverse distance weights.
+
+        :returns: DataArray of shape (num_faces, num_edges_per_face) containing weights.
+        :rtype: xarray.DataArray
+        """
         
         # > Get dimension names
         dimn_edges = self.dimn_edges
@@ -267,7 +357,15 @@ class constructorSVA:
         
     @cached_property
     def edge_face_weights(self):
+        """
+        Compute edge-face-weights for each edge, based on inverse distance weighting from each edge to each associated face.
 
+        This builds an edge-to-face weight matrix by mapping edge coordinates to
+        their connected faces, computing inverse distance weights, and converting to a dask array.
+
+        :returns: DataArray of shape (num_edges, num_faces_per_edge) containing weights.
+        :rtype: xarray.DataArray
+        """
         # > Get dimension names
         dimn_faces = self.dimn_faces
         fill_value = self.fill_value
@@ -293,7 +391,13 @@ class constructorSVA:
         return edge_face_weights
 
     def get_all_coordinates(self):
+        """
+        Retrieve coordinates for all mesh elements: faces, edges, and nodes.
 
+        :returns: Tuple of (face_coords, edge_coords, node_coords), where each is an
+                xarray.DataArray with dimensions and coordinates corresponding to the mesh element.
+        :rtype: tuple[xarray.DataArray, xarray.DataArray, xarray.DataArray]
+        """
         uds = self.ds
 
         # > Get coordinate names
@@ -323,7 +427,15 @@ class constructorSVA:
 
     @cached_property
     def edge_node_coords(self):
-            
+        """
+        Retrieve the coordinates of nodes associated with each edge.
+
+        Maps the node coordinates to the corresponding edge-node connectivity,
+        returning a DataArray with NaNs where no node is connected (fill value).
+
+        :returns: DataArray of shape (num_edges, max_nodes_per_edge, 2) with node coordinates.
+        :rtype: xarray.DataArray
+        """
         # > Get dimension names
         fill_value = self.fill_value
         dimn_nodes = self.dimn_nodes
@@ -869,6 +981,11 @@ class constructorSVA:
     
     @cached_property
     def cell_area(self):
+        # > Get the relevant dimensions
+        dimn_edges = self.dimn_edges
+        dimn_cart = self.dimn_cart
+        dimn_maxfn = self.dimn_maxfn
+
         # > Get the distance vectors first
         dv = self.distance_vectors
         dv = dv.reset_coords(drop=True)
@@ -1058,7 +1175,7 @@ class constructorSVA:
         # > interpolate it on the faces
         if self.dimn_edges in diu.dims:
             diu = self.uda_to_faces(diu)
-            ho
+            
         try:
             tracer_grad = self.compute_gradient_on_face(self.tracer, scalar=True)
             dsdx = tracer_grad.isel({dimn_cart:0}).transpose(*list(diu.dims)).reset_coords(drop=True)
