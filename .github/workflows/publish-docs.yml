@@ -1,0 +1,41 @@
+name: Build and publish docs
+
+on:
+  push:
+    branches:
+      - main
+      
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # needed for gh-pages publishing
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install sphinx sphinx-rtd-theme
+          # install project if needed for autodoc
+          pip install -e .
+
+      - name: Build Sphinx documentation
+        working-directory: docs
+        run: |
+          sphinx-build -b html source _build/html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/_build/html
+          publish_branch: gh-pages
+          # keep gh-pages branch history
+          keep_history: true
