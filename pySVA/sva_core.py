@@ -454,7 +454,42 @@ class constructorSVA:
     
     @cached_property
     def kzz(self, dicoww=5e-5, prandtl_schmidt=0.7):
-        
+        """
+        Compute the vertical turbulent eddy diffusivity.
+
+        The vertical diffusivity :math:`K_{zz}` is calculated as the sum of
+        molecular diffusivity, background diffusivity, and a tracer-dependent
+        laminar contribution.
+
+        .. math::
+
+            K_{zz} = \\frac{\\nu}{Pr} + D_{0} + k_l
+
+        where :math:`\\nu` is the kinematic viscosity, :math:`Pr` is the
+        Prandtl/Schmidt number, :math:`D_{0}` is a constant background
+        diffusivity, and :math:`k_l` is a tracer-dependent laminar component.
+
+        Parameters
+        ----------
+        dicoww : float, optional
+            Background vertical diffusivity (:math:`m^2 s^{-1}`).
+            Default is ``5e-5``.
+        prandtl_schmidt : float, optional
+            Prandtl/Schmidt number used to convert viscosity to diffusivity.
+            Default is ``0.7``.
+
+        Returns
+        -------
+        xarray.DataArray
+            Vertical turbulent eddy diffusivity defined on grid edges.
+
+        Notes
+        -----
+        The computed diffusivity is added to the dataset as
+        ``{gridname}_dicwws`` and contains CF-style metadata describing the
+        grid location and units.
+        """
+
         # > Get properties
         tracer = self.tracer.name
         gridname = self.gridname
@@ -480,12 +515,29 @@ class constructorSVA:
                             'grid_mapping': 'projected_coordinate_system'}).rename(f'{gridname}_dicwwu')
         
         # > Add calculated diffusivity to dataset
-        self.ds[f'{gridname}_dicwwu'] = (kzz.dims, kzz.data)
+        self.ds[f'{gridname}_dicwws'] = (kzz.dims, kzz.data)
 
         return kzz
     
     @cached_property
     def edge_faces(self):
+        """
+        Return the edge-to-face connectivity matrix.
+
+        This property exposes the UGRID edge-face connectivity stored in the
+        dataset as an :class:`xarray.DataArray`.
+
+        Returns
+        -------
+        xarray.DataArray
+            Connectivity array with dimensions ``(edges, max_edge_faces)``
+            mapping each edge to its adjacent faces.
+
+        Notes
+        -----
+        The array contains integer indices referencing faces in the grid.
+        Missing neighbors are indicated using the dataset's fill value.
+        """
 
         # > Get dimensions and fill value
         fill_value = self.fill_value
@@ -498,7 +550,27 @@ class constructorSVA:
 
     @cached_property
     def edge_nodes(self):
+        """
+        Return the edge-to-node connectivity matrix.
 
+        Constructs an :class:`xarray.DataArray` describing which nodes define
+        each edge of the unstructured grid.
+
+        Returns
+        -------
+        xarray.DataArray
+            Edge-node connectivity array with dimensions
+            ``(edges, max_edge_nodes)``.
+
+        Notes
+        -----
+        The returned array contains CF-UGRID compliant metadata including:
+
+        * ``cf_role = "edge_node_connectivity"``
+        * ``start_index = 0``
+
+        Missing entries are filled using the dataset's configured fill value.
+        """
         # > Get fill value, grid name and dimensions
         fill_value = self.fill_value
         dimn_edges = self.dimn_edges
@@ -519,6 +591,22 @@ class constructorSVA:
         
     @cached_property
     def face_edges(self):
+        """
+        Return the face-to-edge connectivity matrix.
+
+        Constructs an :class:`xarray.DataArray` describing which edges bound
+        each face of the unstructured grid.
+
+        Returns
+        -------
+        xarray.DataArray
+            Connectivity array with dimensions ``(faces, max_face_edges)``.
+
+        Notes
+        -----
+        The returned object follows CF-UGRID conventions with
+        ``cf_role = "face_edge_connectivity"``.
+        """
 
         # > Get fill value, grid name, and dimensions
         fill_value = self.fill_value
@@ -543,7 +631,27 @@ class constructorSVA:
         
     @cached_property
     def unvs(self):
-            
+        """
+        Compute unit normal vectors for all grid edges.
+
+        The normal vectors are defined perpendicular to each edge and
+        normalized to unit length. If the dataset uses geographic
+        coordinates (WGS84), coordinates are first projected to the
+        Dutch RD stereographic coordinate system before vector
+        calculation.
+
+        Returns
+        -------
+        xarray.DataArray
+            Unit normal vectors with dimensions ``(edges, cartesian_dim)``.
+
+        Notes
+        -----
+        The vectors are oriented outward relative to adjacent cells.
+        The resulting array is stored in the dataset under the variable
+        ``{gridname}_unvs``.
+        """
+
         from pyproj import Transformer
 
         # First check if the provided dataset is a xu.core.wrap.UgridDataset
@@ -596,69 +704,36 @@ class constructorSVA:
         uds[f'{varname_unvs}'] = (unvs.dims, unvs.data)
                 
         return unvs
-    
-#     def update_connectivities(self, boolean):
-        
-#         dimn_faces = self.dimn_faces
-#         dimn_edges = self.dimn_edges
-#         fill_value = self.fill_value
-#         gridname = self.grid_name
-        
-#         if dimn_faces in boolean.dims:
-            
-#             # > Get voordinate names
-#             coord_face_x, coord_face_y = self.ds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'face').split()
-#             coord_edge_x, coord_edge_y = self.ds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'edge').split()  
-            
-#             # > Get dimensions
-#             dimn_maxfn = self.dimn_maxfn
-#             dimn_maxef = self.dimn_maxef
-            
-#             # > Start with chunking the boolean correctly
-#             chunks = {dimn_faces:-1}
-#             boolean = boolean.chunk(chunks)
-            
-#             # 1. The edge_faces parameter
-#             # > Get edge_faces
-#             edge_faces = self.edge_faces
-            
-#             # > Select the boolean on faces in the edge-face connectivity matrix
-#             edge_faces_stacked = edge_faces.stack(__tmp_dim__=(dimn_edges, dimn_maxef))
-#             boolean_ef_stacked = boolean.isel({dimn_faces: edge_faces_stacked})
-#             boolean_ef = boolean_ef_stacked.unstack("__tmp_dim__")
 
-#             # > Make into xr.DataArray with correct sizes, dimensions, and coordinates
-#             # > Make the new face_edges 
-#             edge_faces = xr.DataArray(edge_faces.where(boolean_ef, -999).values, dims=(dimn_edges, dimn_maxef))
-            
-#             # > Set the cached_property anew
-#             self.edge_faces = edge_faces
-            
-#             # Get the boolean for whether the edges are valid (dim: meshd_nEdges)
-#             nan_bool = (edge_faces == fill_value).all(dim=dimn_maxef)
-            
-#             # 2. The face_edges parameter
-#             # > Get face_edges
-#             face_edges = self.face_edges
-            
-#             # > Select the varname on faces in the edge-face connectivity matrix
-#             face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
-#             boolean_fn_stacked = nan_bool.isel({dimn_edges: face_edges_stacked})
-#             boolean_fn = boolean_fn_stacked.unstack("__tmp_dim__")
-            
-#             face_edges = face_edges.where(boolean_fn, -999)
-            
-#             face_edges = xr.DataArray(face_edges, dims=[dimn_faces, dimn_maxfn],
-#                                             coords={f'{coord_face_x}': ([dimn_faces], self.ds[f'{coord_face_x}']),
-#                                                     f'{coord_face_y}': ([dimn_faces], self.ds[f'{coord_face_y}'])},
-#                                             attrs={'cf_role': 'face_edge_connectivity', 'start_index': 0,
-#                                                     '_FillValue': fill_value}, name=f'{gridname}_face_edges')
-            
-#             self.face_edges = face_edges
-            
-#             return            
                  
     def uda_to_edges(self, uda):
+        """
+        Interpolate a face-centered variable to grid edges.
+
+        The interpolation uses inverse-distance weights derived from the
+        adjacent faces connected to each edge.
+
+        Parameters
+        ----------
+        uda : xu.UgridDataArray
+            Face-centered variable defined on the grid.
+
+        Returns
+        -------
+        xu.UgridDataArray
+            Edge-centered variable obtained through weighted interpolation.
+
+        Raises
+        ------
+        ValueError
+            If the provided variable does not contain the face dimension.
+
+        Notes
+        -----
+        Boundary edges with only one valid neighboring face inherit the
+        value of that face.
+        """
+
         # > Define the to-be-interpolated tracer DataArray and grid
         varname = uda.name
         grid = self.ds.grid
@@ -734,7 +809,28 @@ class constructorSVA:
             raise ValueError(f'Variable {varname} does not contain dimension faces, so cannot be transformed from faces to edges.')
     
     def uda_to_faces(self, uda):
-              
+        """
+        Interpolate an edge-centered variable to grid faces.
+
+        The interpolation averages values from the edges that bound each
+        face using predefined edge weights.
+
+        Parameters
+        ----------
+        uda : xu.UgridDataArray
+            Edge-centered variable.
+
+        Returns
+        -------
+        xu.UgridDataArray
+            Face-centered variable.
+
+        Raises
+        ------
+        ValueError
+            If the provided variable does not contain the edge dimension.
+        """
+
         # > Define the to-be-interpolated tracer DataArray and grid
         varname = uda.name
         grid = self.ds.grid
@@ -799,6 +895,30 @@ class constructorSVA:
 
     
     def compute_gradient_on_face(self, uda, scalar=False, add_to_dataset=False, mode_depth=None):
+        """
+        Compute the horizontal gradient of a variable on grid faces.
+
+        The gradient is evaluated using Gauss' divergence theorem by summing
+        flux contributions across edges surrounding each face.
+
+        Parameters
+        ----------
+        uda : xu.UgridDataArray
+            Variable for which the gradient is computed.
+        scalar : bool, optional
+            If ``True``, treat the variable as scalar and use face areas
+            instead of flow areas. Default is ``False``.
+        add_to_dataset : bool, optional
+            If ``True``, store the resulting gradient in the dataset.
+        mode_depth : {"sum", "mean", None}, optional
+            Controls how vertical layers are treated when computing the
+            gradient.
+
+        Returns
+        -------
+        xarray.DataArray
+            Gradient vector with dimensions ``(faces, cartesian_dim)``.
+        """
 
         # > Obtain uds and grid from constructorSVA object
         uds = self.ds
@@ -919,7 +1039,18 @@ class constructorSVA:
 
     @cached_property
     def distance_vectors(self):
+        """
+        Compute vectors from face centroids to edge midpoints.
 
+        These vectors are used in gradient and geometric calculations
+        involving the unstructured mesh.
+
+        Returns
+        -------
+        xarray.DataArray
+            Distance vectors with dimensions
+            ``(faces, max_face_edges, cartesian_dim)``.
+        """
         # > Get dimensions, fill_value, and varname
         fill_value = self.fill_value
         dimn_edges = self.dimn_edges
