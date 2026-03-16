@@ -1135,10 +1135,6 @@ class constructorSVA:
         v_sv2 = v_sv2.drop_vars([n for n,v in v_sv2.coords.items() if f"{self.dimn_layer}" in v.dims])
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
 
-        # > Integrate terms in x and y direction
-        # u_sv2_int = integrate_trapz(u_sv2, depth, dim=self.dimn_layer).rename(f"{self.gridname}_{self.tracer.name}_adv_x")
-        # v_sv2_int = integrate_trapz(v_sv2, depth, dim=self.dimn_layer).rename(f"{self.gridname}_{self.tracer.name}_adv_y")
-
         # > Calculate gradient
         grad_usv2 = self.compute_gradient_on_face(u_sv2) 
         grad_vsv2 =  self.compute_gradient_on_face(v_sv2)
@@ -1207,7 +1203,7 @@ class constructorSVA:
         except:
             return None
         
-    def dissipation(self, integration='depth', depth_averaged=False):
+    def vertical_dissipation(self, integration='depth', depth_averaged=False):
         # > Get the vertical turbulent diffusivity
         kzz = self.kzz
         
@@ -1232,37 +1228,16 @@ class constructorSVA:
         # > Integrate the total term and multiply with -1 
         if integration.lower() == 'depth':
             # > Integrate dissipation over depth (trapezoidal rule)
-            dissipation = integrate_trapz(dsdz_sq, depth, self.dimn_layer)
+            vertical_dissipation = integrate_trapz(dsdz_sq, depth, self.dimn_layer)
         elif integration.lower() == 'volume':
             # > Multiply with volume per cell and sum over all cells
-            dissipation = ((dsdz_sq * self.volume).sum(dim=[f'{self.dimn_layer}', f'{self.dimn_faces}']))
+            vertical_dissipation = ((dsdz_sq * self.volume).sum(dim=[f'{self.dimn_layer}', f'{self.dimn_faces}']))
         elif integration.lower() == 'none':
-            dissipation = dsdz_sq
+            vertical_dissipation = dsdz_sq
         else:
             raise ValueError(f"Could not derive what to do with integration={integration} keyword.")
         
         if depth_averaged:
-            dissipation = dissipation * (1/self.water_depth)
+            vertical_dissipation = vertical_dissipation * (1/self.water_depth)
             
-        return dissipation.rename(f"{integration}_integrated_{self.tracer.name}_dissipation")
-               
-    
-    # def _setup(self, data):
-    #     """Iterates over keys in dictionary. Handles 4d-data, if one argument is left empty, dummy dimension will be created.
-    #     Args:
-    #         data (dict): Dictionary that describes geospatial dimensions of the dataset.
-    #     """
-    #     for dimension in data.keys():
-    #         if data[dimension] is None:
-    #             self.ds = self.ds.expand_dims(dimension)
-    #         else:
-    #             self.ds = self.ds.rename({data[dimension]: dimension})
-
-    #     self.ds = self.ds.transpose("time",
-    #                                 "depth",
-    #                                 "nfaces",
-    #                                 "nedges",
-    #                                 "nnodes",
-    #                                 ...)
-        
-        # removed the nfaces and nedges dimnesion, as they are derived by the xugrid package
+        return vertical_dissipation.rename(f"{integration}_integrated_{self.tracer.name}_dissipation")
