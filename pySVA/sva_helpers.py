@@ -484,7 +484,7 @@ def build_edge_face_weights(constructorSVA, **kwargs):
     - Weights are computed using inverse-distance weighting.
     - Fill values in connectivity arrays are masked before computation.
     """
-    
+
     uds = constructorSVA.ds
 
 	# Get dimension names
@@ -511,53 +511,6 @@ def build_edge_face_weights(constructorSVA, **kwargs):
     weights = build_inverse_distance_weights(edge_coords, edge_face_coords)
     
     return weights
-
-# def build_edge_face_weights(constructorSVA, **kwargs):
-
-#     uds = constructorSVA.ds
-
-# 	# Get dimension names
-#     dimn_maxfn = uds.ugrid.grid.to_dataset().mesh2d.attrs['max_face_nodes_dimension']
-#     dimn_faces = uds.ugrid.grid.face_dimension
-#     dimn_edges = uds.ugrid.grid.edge_dimension
-#     fill_value = uds.ugrid.grid.fill_value
-#     gridname = uds.ugrid.grid.name
-#     dimn_maxef = f'{gridname}_nMax_edge_faces'
-	
-#     # > Get the edge-face connectivity
-#     edge_faces = xr.DataArray(uds.ugrid.grid.edge_face_connectivity, dims=(dimn_edges, dimn_maxef))
-    
-#     if 'coords' in kwargs:
-#         face_coords, edge_coords, _ = kwargs['coords']
-#     else:
-#         # > Get all relevant coordinates
-#         face_coords, edge_coords, _ = get_all_coordinates(uds)
-
-# 	# > Fill edge-face-connectivity matrix with face coordinates
-#     edge_face_coords = xr.where(edge_faces!=fill_value, face_coords.isel({dimn_faces:edge_faces}), np.nan)
-
-# 	# > Get variables for d1 (distance between neighbouring cell faces through edge)
-# 	# > Obtain these from the edge_face_coords dataset
-#     x0 = edge_face_coords.isel({f'{gridname}_nMax_edge_faces':0, f'{gridname}_nCartesian_coords':0})
-#     x1 = edge_face_coords.isel({f'{gridname}_nMax_edge_faces':1, f'{gridname}_nCartesian_coords':0})
-#     y0 = edge_face_coords.isel({f'{gridname}_nMax_edge_faces':0, f'{gridname}_nCartesian_coords':1})
-#     y1 = edge_face_coords.isel({f'{gridname}_nMax_edge_faces':1, f'{gridname}_nCartesian_coords':1})
-    
-#     d1 = calculate_distance_pythagoras(x0, y0, x1, y1)
-    
-#     # > Then get variables for d2 (distance from cell face in the first column to edge)
-#     x2 = edge_coords.isel({f'{gridname}_nCartesian_coords':0})
-#     y2 = edge_coords.isel({f'{gridname}_nCartesian_coords':1})
-#     d2 = calculate_distance_pythagoras(x0, y0, x2, y2)
-    
-#     # > Calculate the weights per edge:
-#     w = 1 / (d2 / d1)
-
-#     # > Fill everything that's NaN with 0:
-#     w = w.fillna(0)
-#     m_weights = xr.concat([w, 1 - w], dim=dimn_maxef)
-    
-#     return m_weights
 
 def calculate_distance_haversine(lat, lon, lat_or, lon_or):
     '''Function to calculate the shortest distance between two sets of coordinates.
