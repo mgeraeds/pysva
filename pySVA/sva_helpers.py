@@ -394,7 +394,7 @@ def reconstruct_vector_form(constructorSVA, vectors_list, **kwargs):
     - Original component variables are removed from the dataset.
     - The Cartesian dimension is defined as ``{gridname}_nCartesian_coords``.
     """
-    
+
     # 1. >> Get the basics
     uds = constructorSVA.ds
     gridname = uds.grid.name
@@ -453,7 +453,38 @@ def reconstruct_vector_form(constructorSVA, vectors_list, **kwargs):
     return vector_data
 
 def build_edge_face_weights(constructorSVA, **kwargs):
+    """
+    Compute inverse-distance interpolation weights from faces to edges.
 
+    This function constructs weights for interpolating face-centered variables
+    onto edges using inverse-distance weighting based on geometric distances
+    between edge centers and neighboring face centroids.
+
+    Parameters
+    ----------
+    constructorSVA : object
+        Constructor object containing the UGRID dataset.
+    **kwargs : dict, optional
+        Optional keyword arguments.
+
+        coords : tuple of xr.DataArray, optional
+            Tuple ``(face_coords, edge_coords, node_coords)`` containing
+            precomputed coordinate arrays. If not provided, coordinates are
+            derived from the dataset.
+
+    Returns
+    -------
+    xr.DataArray
+        Weights for edge-face interpolation with dimensions
+        ``(n_edges, nMax_edge_faces)``.
+
+    Notes
+    -----
+    - Uses edge-face connectivity to associate edges with neighboring faces.
+    - Weights are computed using inverse-distance weighting.
+    - Fill values in connectivity arrays are masked before computation.
+    """
+    
     uds = constructorSVA.ds
 
 	# Get dimension names
