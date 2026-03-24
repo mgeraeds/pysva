@@ -1221,20 +1221,19 @@ class constructorSVA:
     
     def straining(self, integration='depth', depth_averaged=False):
         """
-        Compute the straining term from the salinity variance budget.
+        Compute the straining term from the tracer variance budget.
 
         Parameters
         ----------
         integration : {"depth", "volume", "none"}, optional
             Integration method applied to the resulting field.
         depth_averaged : bool, optional
-            If ``True``, divide the result by the local water depth to
-            obtain the depth-averaged value.
+            If ``True``, return the depth-averaged straining term.
 
         Returns
         -------
         xarray.DataArray
-            Straining term for tracer variance.
+            Straining term from tracer variance budget.
         """
         # > Get the tracer variance
         tracer_variance = self.tracer_variance
@@ -1280,7 +1279,22 @@ class constructorSVA:
         return straining.rename(f"{integration}_integrated_{self.tracer.name}_straining")
     
     def tendency(self, integration='depth', depth_averaged=False):
-        
+        """
+        Compute the temporal tendency of tracer variance in the tracer variance budget.
+
+        Parameters
+        ----------
+        integration : {"depth", "volume", "none"}, optional
+            Integration method for the tracer variance prior to
+            differentiation.
+        depth_averaged : bool, optional
+            If ``True``, return depth-averaged tendency.
+
+        Returns
+        -------
+        xarray.DataArray
+            Tendency term in the tracer variance budget.
+        """
         # > Get tracer variance
         tracer_variance = self.tracer_variance
 
