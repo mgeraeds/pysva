@@ -996,7 +996,32 @@ def uda_to_edges(constructorSVA, uda):
     return edge_var
 
 def calculate_distance_vectors(constructorSVA, **kwargs):
+    """
+    Compute distance vectors from face centroids to edge centers.
 
+    Parameters
+    ----------
+    constructorSVA : object
+        Constructor object containing the UGRID dataset.
+    **kwargs : dict, optional
+        Optional keyword arguments.
+
+        face_edges : xr.DataArray, optional
+            Precomputed face-edge connectivity.
+
+    Returns
+    -------
+    xr.DataArray
+        Distance vectors with dimensions
+        ``(n_faces, nMax_face_nodes, nCartesian_coords)``.
+
+    Notes
+    -----
+    - Distance vectors are defined as:
+      edge coordinate minus face centroid coordinate.
+    - Used for orientation of normal vectors and flux computations.
+    """
+    
     uds = constructorSVA.ds
 
     # > Get dimensions, fill_value, and varname
