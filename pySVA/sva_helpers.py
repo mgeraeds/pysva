@@ -946,6 +946,10 @@ def uda_to_edges(constructorSVA, uda):
     - Uses weights from :func:`build_edge_face_weights`.
     - Missing neighbors are handled via NaN masking.
     - Result is assigned location attribute ``'edge'``.
+
+    .. deprecated:: 1.0.0
+       This function will be removed in version 1.2.0.
+       Use :meth: constructorSVA.uda_to_edges()` instead.
     """
     uds = constructorSVA.ds
 
