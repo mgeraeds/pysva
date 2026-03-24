@@ -917,8 +917,36 @@ def compute_divergence_on_face(constructorSVA, uda, **kwargs):
         raise ValueError('This function only supports the calculation of the divergence at face location, \
                          based on data on edges. Please supply a variable that is located on the edges.')
 
+@deprecated(
+    reason="Compute from constructorSVA.compute_gradient_on_face() instead.",
+    version="1.0.0",
+    removal="1.2.0",
+)
 def uda_to_edges(constructorSVA, uda):
+    """
+    Interpolate a face-centered variable to edges.
 
+    Performs inverse-distance weighted interpolation using edge-face
+    connectivity.
+
+    Parameters
+    ----------
+    constructorSVA : object
+        Constructor object containing the UGRID dataset.
+    uda : xu.UgridDataArray
+        Input variable defined on faces.
+
+    Returns
+    -------
+    xu.UgridDataArray
+        Interpolated variable on edges.
+
+    Notes
+    -----
+    - Uses weights from :func:`build_edge_face_weights`.
+    - Missing neighbors are handled via NaN masking.
+    - Result is assigned location attribute ``'edge'``.
+    """
     uds = constructorSVA.ds
 
     # > Get grid
