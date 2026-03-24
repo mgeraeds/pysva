@@ -513,20 +513,31 @@ def build_edge_face_weights(constructorSVA, **kwargs):
     return weights
 
 def calculate_distance_haversine(lat, lon, lat_or, lon_or):
-    '''Function to calculate the shortest distance between two sets of coordinates.
-       The coordinates of Hoek van Holland have been previously filled in as a starting point
-       for all distance calculations.
+    """
+    Compute geodesic distance between coordinates using the WGS84 ellipsoid.
 
-       Args:
-       - lon_or: Reference Longitude
-       - lat_or: Reference Latitude
-       - lon: Longitude
-       - lat: Latitude
+    Parameters
+    ----------
+    lat : float or pandas.Series
+        Latitude(s) of target location(s) in degrees.
+    lon : float or pandas.Series
+        Longitude(s) of target location(s) in degrees.
+    lat_or : float
+        Reference latitude in degrees.
+    lon_or : float
+        Reference longitude in degrees.
 
-       Returns:
-       - distance: Distance [meters]
+    Returns
+    -------
+    float or ndarray
+        Geodesic distance(s) in meters.
 
-       '''
+    Notes
+    -----
+    - Uses ``pyproj.Geod.inv`` for accurate ellipsoidal distance computation.
+    - Supports both scalar inputs and pandas Series.
+    """
+
     import pandas as pd
     import pyproj
 
@@ -545,17 +556,26 @@ def calculate_distance_haversine(lat, lon, lat_or, lon_or):
     return distance  # pd.Series(distance)#(x)
 
 def calculate_distance_pythagoras(x1, y1, x2, y2):
-    '''Function to calculate the shortest distance between two sets of coordinates in a cartesian coordinate system.
+    """
+    Compute Euclidean distance in a Cartesian coordinate system.
 
-       :param x1: starting coordinate (x-direction)
-       :param y1: starting coordinate (y-direction)
-       :param x2: ending coordinate (x-direction)
-       :param y2: ending coordinate (y-direction)
+    Parameters
+    ----------
+    x1, y1 : float or array-like
+        Coordinates of the starting point.
+    x2, y2 : float or array-like
+        Coordinates of the ending point.
 
-       :returns distance: Distance [meters]
-       :rtpye: np.float 
+    Returns
+    -------
+    float or ndarray
+        Euclidean distance(s) in meters.
 
-    '''
+    Notes
+    -----
+    - Assumes planar (projected) coordinates.
+    - Equivalent to the L2 norm of the coordinate difference.
+    """
 
     distance = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
