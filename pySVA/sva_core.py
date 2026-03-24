@@ -1439,6 +1439,21 @@ class constructorSVA:
             return None
         
     def vertical_dissipation(self, integration='depth', depth_averaged=False):
+        """
+        Compute vertical dissipation in the tracer variance budget.
+
+        Parameters
+        ----------
+        integration : {"depth", "volume", "none"}, optional
+            Integration method applied to the dissipation field.
+        depth_averaged : bool, optional
+            If ``True``, return the depth-averaged vertical dissipation.
+
+        Returns
+        -------
+        xarray.DataArray
+            Vertical dissipation term in the tracer variance budget.
+        """
         # > Get the vertical turbulent diffusivity
         kzz = self.kzz
         
