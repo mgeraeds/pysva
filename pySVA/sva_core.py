@@ -1200,6 +1200,14 @@ class constructorSVA:
     
     @cached_property
     def volume(self):
+        """
+        Compute the volume of each grid cell.
+
+        Returns
+        -------
+        xarray.DataArray
+            Cell volume calculated as cell_area times the cell_thickness. 
+        """
         # > Get strings
         gridname = self.gridname
         
