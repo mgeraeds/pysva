@@ -1109,17 +1109,28 @@ from typing import Optional
 
 def integrate_trapz(y: xr.DataArray, x: xr.DataArray, dim: Optional[str] = None) -> xr.DataArray:
     """
-    Perform trapezoidal integration along a specified dimension.
+    Integrate a DataArray using the trapezoidal rule.
 
-    Parameters:
-        y (xr.DataArray): The values to integrate.
-        x (xr.DataArray): The coordinate values along which to integrate.
-        dim (str, optional): The dimension along which to integrate. If None, the operation
-                             is applied along all dimensions.
+    Parameters
+    ----------
+    y : xr.DataArray
+        Values to integrate.
+    x : xr.DataArray
+        Coordinate values along the integration dimension.
+    dim : str, optional
+        Dimension along which to integrate.
 
-    Returns:
-        xr.DataArray: The result of the trapezoidal integration.
+    Returns
+    -------
+    xr.DataArray
+        Integrated result.
+
+    Notes
+    -----
+    - Assumes ``x`` is monotonically increasing.
+    - Drops coordinate variables to avoid alignment conflicts.
     """
+    
     # First drop the x coordinate (the one to integrate over), as this will cause conflicts
     y = y.drop_vars(x.name)
     x = x.drop_vars(x.name)
