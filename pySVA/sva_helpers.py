@@ -1021,7 +1021,7 @@ def calculate_distance_vectors(constructorSVA, **kwargs):
       edge coordinate minus face centroid coordinate.
     - Used for orientation of normal vectors and flux computations.
     """
-    
+
     uds = constructorSVA.ds
 
     # > Get dimensions, fill_value, and varname
@@ -1064,6 +1064,31 @@ def calculate_distance_vectors(constructorSVA, **kwargs):
     return distance_vectors
 
 def compute_kzz(uds, dicoww=5e-5, prandtl_schmidt=0.7,  tracer='mesh2d_sa1'):
+    """
+    Compute vertical turbulent diffusivity (kzz).
+
+    Parameters
+    ----------
+    uds : xu.UgridDataset
+        Input dataset containing viscosity field.
+    dicoww : float, optional
+        Background diffusivity [m² s⁻¹].
+    prandtl_schmidt : float, optional
+        Turbulent Prandtl/Schmidt number.
+    tracer : str, optional
+        Tracer name used to determine molecular diffusivity.
+
+    Returns
+    -------
+    xu.UgridDataset
+        Dataset with added variable ``mesh2d_dicwwu``.
+
+    Notes
+    -----
+    - Combines turbulent and molecular diffusivity contributions.
+    - Molecular diffusivity depends on tracer type (salinity or temperature).
+    - Settings based on the standard settings in D-FLOW FM.
+    """
 
     gridname = uds.grid.name
 
