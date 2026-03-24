@@ -918,7 +918,7 @@ def compute_divergence_on_face(constructorSVA, uda, **kwargs):
                          based on data on edges. Please supply a variable that is located on the edges.')
 
 @deprecated(
-    reason="Compute from constructorSVA.compute_gradient_on_face() instead.",
+    reason="Compute from constructorSVA.uda_to_edges() instead.",
     version="1.0.0",
     removal="1.2.0",
 )
