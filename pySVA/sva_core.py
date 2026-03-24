@@ -1083,6 +1083,15 @@ class constructorSVA:
     
     @cached_property
     def tracer_variance(self):
+        """
+        Compute the variance of the tracer field over depth.
+
+        Returns
+        -------
+        xarray.DataArray
+            Squared tracer perturbation relative to the depth-mean tracer
+            concentration.
+        """
         # > Get properties
         tracer = self.tracer
         # > Calculate mean
@@ -1095,6 +1104,16 @@ class constructorSVA:
     
     @cached_property
     def depth_integrated_tracer_variance(self):
+        """
+        Compute the depth-integrated tracer variance.
+
+        The integration is performed using the trapezoidal rule.
+
+        Returns
+        -------
+        xarray.DataArray
+            Depth-integrated tracer variance.
+        """
         # > Get properties
         tracer_variance = self.tracer_variance
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
@@ -1104,7 +1123,14 @@ class constructorSVA:
      
     @cached_property
     def cell_thickness(self):
+        """
+        Compute vertical thickness of grid cells.
 
+        Returns
+        -------
+        xarray.DataArray
+            Cell thickness for each vertical layer.
+        """
         cell_thickness = self.ds.mesh2d_flowelem_zw.diff(dim=self.dimn_interface).rename({f'{self.dimn_interface}':self.dimn_layer}).rename(f'{self.gridname}_cell_thickness')
         cell_thickness = cell_thickness.reset_coords(drop=True)
 
@@ -1112,6 +1138,17 @@ class constructorSVA:
     
     @cached_property
     def cell_area(self):
+        """
+        Compute horizontal area of each grid cell.
+
+        The area is derived from edge geometry using distance vectors
+        and outward unit normal vectors.
+
+        Returns
+        -------
+        xarray.DataArray
+            Horizontal cell area defined on faces.
+        """
         # > Get the relevant dimensions
         dimn_edges = self.dimn_edges
         dimn_cart = self.dimn_cart
