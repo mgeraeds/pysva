@@ -1220,7 +1220,22 @@ class constructorSVA:
         return volume
     
     def straining(self, integration='depth', depth_averaged=False):
-        
+        """
+        Compute the straining term from the salinity variance budget.
+
+        Parameters
+        ----------
+        integration : {"depth", "volume", "none"}, optional
+            Integration method applied to the resulting field.
+        depth_averaged : bool, optional
+            If ``True``, divide the result by the local water depth to
+            obtain the depth-averaged value.
+
+        Returns
+        -------
+        xarray.DataArray
+            Straining term for tracer variance.
+        """
         # > Get the tracer variance
         tracer_variance = self.tracer_variance
 
