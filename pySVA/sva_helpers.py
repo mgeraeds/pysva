@@ -83,6 +83,21 @@ def build_edge_node_connectivity(constructorSVA):
     return edge_node_connectivity
 
 def build_face_edge_connectivity(constructorSVA):
+    """Build face-edge connectivity array from unstructured grid.
+
+    Extracts and formats the face-edge connectivity information from
+    an xugrid dataset, creating a properly dimensioned DataArray with
+    CF-compliant attributes.
+
+    Args:
+        constructorSVA (constructorSVA): Object containing UgridDataset.
+
+    Returns:
+        xarray.DataArray: face_edge connectivity with dimensions (n_faces, 2).
+
+    Raises:
+        IOError: If dataset is not a UgridDataset.
+    """
     # First check if the provided dataset is a xu.core.wrap.UgridDataset
     uds = constructorSVA.ds
 
@@ -336,7 +351,50 @@ def reconstruct_vector_form_magnitude(constructorSVA, varname, **kwargs):
 
 
 def reconstruct_vector_form(constructorSVA, vectors_list, **kwargs):
+    """
+    Reconstruct a vector field from its Cartesian components.
 
+    This function concatenates scalar component fields (e.g., ``u`` and ``v``)
+    into a single vector-valued DataArray along the Cartesian dimension.
+    The resulting vector is stored in the underlying dataset and the original
+    component variables are removed.
+
+    Parameters
+    ----------
+    constructorSVA : object
+        Constructor object containing the underlying UGRID dataset (``.ds``).
+    vectors_list : list of str or xr.DataArray or xu.UgridDataArray
+        List of vector components. Can be:
+        
+        - List of variable names (str) in the dataset
+        - List of ``xarray.DataArray`` objects
+        - List of ``xu.UgridDataArray`` objects
+
+        All elements must be of the same type.
+    **kwargs : dict, optional
+        Additional keyword arguments.
+
+        vector_name : str, optional
+            Name of the reconstructed vector variable. Defaults to
+            ``{gridname}_uc``.
+
+    Returns
+    -------
+    xr.DataArray or xu.UgridDataArray
+        Reconstructed vector field with an added Cartesian dimension.
+
+    Raises
+    ------
+    UserWarning
+        If the type of ``vectors_list`` is not recognized.
+
+    Notes
+    -----
+    - The resulting vector is stored in ``constructorSVA.ds``.
+    - Original component variables are removed from the dataset.
+    - The Cartesian dimension is defined as ``{gridname}_nCartesian_coords``.
+    """
+    
     # 1. >> Get the basics
     uds = constructorSVA.ds
     gridname = uds.grid.name
