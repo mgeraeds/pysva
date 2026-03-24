@@ -1168,29 +1168,35 @@ def depth_int2volume_int(uda: xr.DataArray, cell_area: xr.DataArray, dimn_faces:
     -----
     - Performs horizontal integration after depth integration.
     """
-    
+
     volume_int = (uda * cell_area).sum(dim=[dimn_faces])
     
     return volume_int
 
 def differentiate_over_3d_coord(uda: xr.DataArray, coord_var: str, axis: int = -1) -> xr.DataArray:
     """
-    Differentiate a Dask-backed xarray DataArray over a 3D coordinate variable.
+    Differentiate a DataArray along a 3D coordinate.
 
-    Parameters:
+    Parameters
     ----------
     uda : xr.DataArray
-        The input DataArray to differentiate.
+        Input variable.
     coord_var : str
-        The name of the 3D coordinate variable.
+        Name of the coordinate variable.
     axis : int, optional
-        The axis number of the coordinate dimension to differentiate over. Defaults to -1.
-        
-    Returns:
+        Axis corresponding to the coordinate dimension.
+
+    Returns
     -------
     xr.DataArray
-        Differentiated DataArray over the given coordinate.
+        Differentiated variable.
+
+    Notes
+    -----
+    - Uses finite differences with Dask-compatible operations.
+    - Pads result to preserve original array shape.
     """
+    
     # Deduce name of depth dimension
     depth_dim = uda[coord_var].dims[axis]
     
