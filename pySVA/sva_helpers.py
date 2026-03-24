@@ -595,6 +595,11 @@ def calculate_distance_pythagoras(x1, y1, x2, y2):
 
     return distance
 
+@deprecated(
+    reason="Use constructorSVA.compute_gradient_on_face instead.",
+    version="1.0.0",
+    removal="1.2.0",
+)
 def compute_gradient_on_face(constructorSVA, uda, **kwargs):
     """
     Compute the gradient of a scalar field on mesh faces.
@@ -632,15 +637,12 @@ def compute_gradient_on_face(constructorSVA, uda, **kwargs):
     - Uses face-edge connectivity and unit normal vectors.
     - Ensures outward-pointing normals via dot-product sign correction.
     - Result is stored in the dataset as ``{varname}_gradient``.
+
+    .. deprecated:: 1.0.0
+       This function will be removed in version 1.2.0.
+       Use :meth: constructorSVA.compute_gradient_on_face` instead.
+    
     """
-    warnings.warn(
-        (
-            "compute_gradient_on_face is deprecated and will be removed in v2.0.0. "
-            "Use `constructorSVA.compute_gradient_on_face` instead."
-        ),
-        category=DeprecationWarning,
-        stacklevel=2,
-    )
 
     from dfm_tools.xugrid_helpers import get_vertical_dimensions
     
@@ -750,7 +752,11 @@ def compute_gradient_on_face(constructorSVA, uda, **kwargs):
         raise ValueError('This function only supports the calculation of gradients at face location, \
                          based on data on edges. Please supply a variable that is located on the edges.')
 
-
+@deprecated(
+    reason="Compute from constructorSVA.compute_gradient_on_face() instead.",
+    version="1.0.0",
+    removal="1.2.0",
+)
 def compute_divergence_on_face(constructorSVA, uda, **kwargs):
     """
     Compute the divergence of a vector field on mesh faces.
@@ -784,6 +790,10 @@ def compute_divergence_on_face(constructorSVA, uda, **kwargs):
     -----
     - Accounts for edge orientation using connectivity-based sign correction.
     - Result is stored in the dataset as ``{varname}_divergence``.
+
+    .. deprecated:: 1.0.0
+       This function will be removed in version 1.2.0.
+       Use :meth: constructorSVA.compute_gradient_on_face` instead.
     """
     # For this function, the vector on the edge needs to be in the direction of the normal vector!!
     from dfm_tools.xugrid_helpers import get_vertical_dimensions
