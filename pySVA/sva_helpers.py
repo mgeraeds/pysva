@@ -1130,7 +1130,7 @@ def integrate_trapz(y: xr.DataArray, x: xr.DataArray, dim: Optional[str] = None)
     - Assumes ``x`` is monotonically increasing.
     - Drops coordinate variables to avoid alignment conflicts.
     """
-    
+
     # First drop the x coordinate (the one to integrate over), as this will cause conflicts
     y = y.drop_vars(x.name)
     x = x.drop_vars(x.name)
@@ -1148,22 +1148,27 @@ def integrate_trapz(y: xr.DataArray, x: xr.DataArray, dim: Optional[str] = None)
 
 def depth_int2volume_int(uda: xr.DataArray, cell_area: xr.DataArray, dimn_faces: str) -> xr.DataArray:
     """
-    Convert a depth-integrated DataArray to a volume-integrated DataArray.
+    Convert depth-integrated values to volume-integrated values.
 
-    Parameters:
+    Parameters
     ----------
     uda : xr.DataArray
-        The input DataArray representing depth-integrated values.
+        Depth-integrated variable.
     cell_area : xr.DataArray
-        A 2D DataArray representing the cell area for each spatial grid point.
+        Horizontal cell area.
     dimn_faces : str
-        The name of the faces dimension to integrate over.
+        Face dimension name.
 
-    Returns:
+    Returns
     -------
     xr.DataArray
-        The volume-integrated DataArray.
+        Volume-integrated variable.
+
+    Notes
+    -----
+    - Performs horizontal integration after depth integration.
     """
+    
     volume_int = (uda * cell_area).sum(dim=[dimn_faces])
     
     return volume_int
