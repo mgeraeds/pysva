@@ -9,7 +9,21 @@ import xarray as xr
 import warnings
 import numpy as np
 import xarray_einstats
+from functools import wraps
 
+def deprecated(reason, version, removal):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            warnings.warn(
+                f"{func.__name__} is deprecated since {version} "
+                f"and will be removed in {removal}. {reason}",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 def build_inverse_distance_weights(a, b):
     """Calculate inverse distance weights using xarray.
@@ -582,6 +596,51 @@ def calculate_distance_pythagoras(x1, y1, x2, y2):
     return distance
 
 def compute_gradient_on_face(constructorSVA, uda, **kwargs):
+    """
+    Compute the gradient of a scalar field on mesh faces.
+
+    The gradient is computed using a finite-volume formulation by integrating
+    fluxes across edges and normalizing by cell volume.
+
+    Parameters
+    ----------
+    constructorSVA : object
+        Constructor object containing the UGRID dataset.
+    uda : xr.DataArray or xu.UgridDataArray
+        Input scalar field defined on edges.
+    **kwargs : dict, optional
+        Optional keyword arguments.
+
+        unvs : xr.DataArray, optional
+            Precomputed unit normal vectors on edges. If not provided,
+            they are calculated internally.
+
+    Returns
+    -------
+    xr.DataArray
+        Gradient field on faces with an additional Cartesian dimension.
+
+    Raises
+    ------
+    ValueError
+        If the input variable is not defined on edges.
+    NameError
+        If required variables (flow area or volume) are missing.
+
+    Notes
+    -----
+    - Uses face-edge connectivity and unit normal vectors.
+    - Ensures outward-pointing normals via dot-product sign correction.
+    - Result is stored in the dataset as ``{varname}_gradient``.
+    """
+    warnings.warn(
+        (
+            "compute_gradient_on_face is deprecated and will be removed in v2.0.0. "
+            "Use `constructorSVA.compute_gradient_on_face` instead."
+        ),
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
 
     from dfm_tools.xugrid_helpers import get_vertical_dimensions
     
@@ -693,6 +752,39 @@ def compute_gradient_on_face(constructorSVA, uda, **kwargs):
 
 
 def compute_divergence_on_face(constructorSVA, uda, **kwargs):
+    """
+    Compute the divergence of a vector field on mesh faces.
+
+    The divergence is calculated using a finite-volume formulation by summing
+    fluxes across edges and normalizing by cell volume.
+
+    Parameters
+    ----------
+    constructorSVA : object
+        Constructor object containing the UGRID dataset.
+    uda : xr.DataArray or xu.UgridDataArray
+        Vector field defined on edges. Must be aligned with edge-normal directions.
+    **kwargs : dict, optional
+        Optional keyword arguments.
+
+        unvs : xr.DataArray, optional
+            Precomputed unit normal vectors.
+
+    Returns
+    -------
+    xr.DataArray
+        Divergence field on faces.
+
+    Raises
+    ------
+    ValueError
+        If the input variable is not defined on edges.
+
+    Notes
+    -----
+    - Accounts for edge orientation using connectivity-based sign correction.
+    - Result is stored in the dataset as ``{varname}_divergence``.
+    """
     # For this function, the vector on the edge needs to be in the direction of the normal vector!!
     from dfm_tools.xugrid_helpers import get_vertical_dimensions
     
