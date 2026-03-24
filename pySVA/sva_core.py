@@ -1330,7 +1330,21 @@ class constructorSVA:
         return tendency
        
     def advection(self, integration='depth',  depth_averaged=False):
+        """
+            Compute the advection term in the tracer variance budget.
 
+            Parameters
+            ----------
+            integration : {"depth", "volume", "none"}, optional
+                Integration method applied to the computed advection field.
+            depth_averaged : bool, optional
+                If ``True``, return the depth-averaged advection.
+
+            Returns
+            -------
+            xarray.DataArray
+                Advection term in the tracer variance budget.
+            """
         # > First calculate (S')^2 * u and (S')^2 * v
         u_sv2 = self.velx * self.tracer_variance
         v_sv2 = self.vely * self.tracer_variance
@@ -1367,6 +1381,22 @@ class constructorSVA:
         return advection.rename(f"{integration}_integrated_{self.tracer.name}_advection")
     
     def horizontal_dissipation(self, integration='depth', depth_averaged=False):
+        """
+        Compute horizontal dissipation in the tracer variance budget.
+
+        Parameters
+        ----------
+        integration : {"depth", "volume", "none"}, optional
+            Integration method applied to the dissipation field.
+        depth_averaged : bool, optional
+            If ``True``, return the depth-averaged horizontal dissipation.
+
+        Returns
+        -------
+        xarray.DataArray or None
+            Horizontal dissipation term in the tracer variance, or ``None`` if the calculation
+            cannot be performed.
+        """
         # > Get the dimensions
         dimn_cart = self.dimn_cart
         # > Get the horizontal diffusion
