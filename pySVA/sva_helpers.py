@@ -200,6 +200,44 @@ def get_all_coordinates(uds):
 
 
 def calculate_unit_normal_vectors(constructorSVA, **kwargs):
+    """
+    Compute unit normal vectors for all edges in the unstructured grid.
+
+    The normal vectors are constructed perpendicular to each edge using
+    node coordinates and normalized to unit length. The resulting vectors
+    are oriented consistently with the edge definition.
+
+    Parameters
+    ----------
+    constructorSVA : object
+        Object containing the UGRID dataset (``.ds`` attribute).
+    **kwargs : dict, optional
+        Optional keyword arguments.
+
+        edge_node_coords : xr.DataArray, optional
+            Precomputed coordinates of nodes belonging to each edge with
+            dimensions ``(n_edges, 2, nCartesian_coords)``. If not provided,
+            they are reconstructed from node connectivity.
+
+    Returns
+    -------
+    xr.DataArray or None
+        Unit normal vectors with dimensions ``(n_edges, nCartesian_coords)``.
+        Returns ``None`` if the input dataset is not a UGRID dataset.
+
+    Notes
+    -----
+    - The normal vector is defined as:
+
+      .. math::
+
+          \\mathbf{n} = \\frac{(-\\Delta y, \\Delta x)}{\\|(-\\Delta y, \\Delta x)\\|}
+
+      where :math:`\\Delta x` and :math:`\\Delta y` are edge direction components.
+    - The result is stored in the dataset as ``{gridname}_unvs``.
+    - If already present, the existing variable is reused.
+    - Missing connectivity entries (fill values) are masked before computation.
+    """
     
     # First check if the provided dataset is a xu.core.wrap.UgridDataset
     uds = constructorSVA.ds
@@ -1196,7 +1234,7 @@ def differentiate_over_3d_coord(uda: xr.DataArray, coord_var: str, axis: int = -
     - Uses finite differences with Dask-compatible operations.
     - Pads result to preserve original array shape.
     """
-    
+
     # Deduce name of depth dimension
     depth_dim = uda[coord_var].dims[axis]
     
