@@ -465,14 +465,23 @@ class constructorSVA:
     @cached_property
     def edge_face_weights(self):
         """
-        Compute edge-face-weights for each edge, based on inverse distance weighting from each edge to each associated face.
+        Compute interpolation weights from edges to faces.
 
-        This builds an edge-to-face weight matrix by mapping edge coordinates to
-        their connected faces, computing inverse distance weights, and converting to a dask array.
+        For each edge, weights are computed for all connected faces
+        using distance-based weighting.
 
-        :returns: DataArray of shape (num_edges, num_faces_per_edge) containing weights.
-        :rtype: xarray.DataArray
+        Returns
+        -------
+        xr.DataArray
+            Weights with dimensions ``(n_edges, nMax_edge_faces)``.
+
+        Notes
+        -----
+        - Based on distances between edge midpoints and face centroids.
+        - Weights are normalized per edge.
+        - Returned as a Dask-backed array for scalability.
         """
+        
         # > Get dimension names
         dimn_faces = self.dimn_faces
         fill_value = self.fill_value
