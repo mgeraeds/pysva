@@ -573,7 +573,7 @@ class constructorSVA:
         - Missing nodes (fill values) are replaced with NaN.
         - Used for geometric calculations such as edge length and normals.
         """
-        
+
         # > Get dimension names
         fill_value = self.fill_value
         dimn_nodes = self.dimn_nodes
@@ -709,6 +709,7 @@ class constructorSVA:
 
         Missing entries are filled using the dataset's configured fill value.
         """
+
         # > Get fill value, grid name and dimensions
         fill_value = self.fill_value
         dimn_edges = self.dimn_edges
@@ -1189,6 +1190,7 @@ class constructorSVA:
             Distance vectors with dimensions
             ``(faces, max_face_edges, cartesian_dim)``.
         """
+
         # > Get dimensions, fill_value, and varname
         fill_value = self.fill_value
         dimn_edges = self.dimn_edges
@@ -1222,14 +1224,32 @@ class constructorSVA:
     @cached_property
     def tracer_variance(self):
         """
-        Compute the variance of the tracer field over depth.
+        Compute tracer variance.
+
+        The tracer variance is defined as the squared deviation of the tracer
+        from its depth-averaged value.
 
         Returns
         -------
-        xarray.DataArray
-            Squared tracer perturbation relative to the depth-mean tracer
-            concentration.
+        xr.DataArray
+            Tracer variance with the same dimensions as the input tracer field
+            (typically including vertical layers and horizontal grid dimensions).
+
+        Notes
+        -----
+        - The variance is computed as:
+
+        .. math::
+
+            s'^2 = (s - \\overline{s})^2
+
+        where :math:`s` is the tracer concentration and
+        :math:`\\overline{s}` is the depth-averaged tracer.
+
+        - The depth-average is taken over the vertical coordinate
+        (layer or interface dimension).
         """
+
         # > Get properties
         tracer = self.tracer
         # > Calculate mean
@@ -1252,6 +1272,7 @@ class constructorSVA:
         xarray.DataArray
             Depth-integrated tracer variance.
         """
+
         # > Get properties
         tracer_variance = self.tracer_variance
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
@@ -1264,11 +1285,35 @@ class constructorSVA:
         """
         Compute vertical thickness of grid cells.
 
+        The cell thickness is defined as the vertical distance between
+        consecutive interfaces in the water column.
+
         Returns
         -------
-        xarray.DataArray
-            Cell thickness for each vertical layer.
+        xr.DataArray
+            Cell thickness with dimensions including the vertical layer
+            coordinate (typically ``n_layers`` or equivalent) and the
+            horizontal grid dimension (e.g., faces or edges).
+
+        Notes
+        -----
+        - The thickness is computed as:
+
+        .. math::
+
+            \\Delta z_k = z_{k+1} - z_k
+
+        where :math:`z_k` and :math:`z_{k+1}` are consecutive interface
+        elevations.
+
+        - The result represents layer thickness in physical space
+        (typically meters).
+
+        - The sign convention follows the vertical coordinate system of
+        the input dataset (usually positive upward for interfaces,
+        resulting in positive layer thickness).
         """
+
         cell_thickness = self.ds.mesh2d_flowelem_zw.diff(dim=self.dimn_interface).rename({f'{self.dimn_interface}':self.dimn_layer}).rename(f'{self.gridname}_cell_thickness')
         cell_thickness = cell_thickness.reset_coords(drop=True)
 
@@ -1287,6 +1332,7 @@ class constructorSVA:
         xarray.DataArray
             Horizontal cell area defined on faces.
         """
+
         # > Get the relevant dimensions
         dimn_edges = self.dimn_edges
         dimn_cart = self.dimn_cart
