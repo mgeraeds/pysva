@@ -72,9 +72,12 @@ def build_inverse_distance_weights(a, b):
     - Implemented using :func:`xarray.apply_ufunc` for vectorized operation.
     """
 
-    def weight_func(a, b):
+    def weight_func(a, b, p=2):
+        
         distance = np.linalg.norm(a[:, np.newaxis, :] - b, axis=-1)
-        weights = distance / np.nansum(distance, axis=1)[:, np.newaxis] # remove this if you only want the distance 
+        weights = 1.0 / distance**p
+        weights = weights / np.nansum(weights, axis=1)[:, np.newaxis]
+
         return weights
     
     weights = xr.apply_ufunc(weight_func, a, b,
