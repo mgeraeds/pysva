@@ -356,16 +356,31 @@ class constructorSVA:
         
     @cached_property
     def bed_level(self):
-        """Calculate bed level at each grid face.
+        """
+        Compute bed level at each grid face.
 
-        Computes bed elevation as the minimum interface elevation,
-        averaged over time if available.
+        The bed level is derived from the minimum interface elevation,
+        optionally averaged over time.
 
-        Returns:
-            xarray.DataArray: Bed elevation (positive downward) at each face.
+        Returns
+        -------
+        xr.DataArray
+            Bed elevation with dimensions ``(n_faces, ...)``.
 
-        Raises:
-            ValueError: If interfaces coordinate is not provided in data_description.
+        Raises
+        ------
+        ValueError
+            If interface data is not available.
+
+        Notes
+        -----
+        - Computed as:
+
+        .. math::
+
+            z_b = \\min(\\text{interfaces})
+
+        - If time-dependent, the result is averaged over time.
         """
 
         # Get dimensions
