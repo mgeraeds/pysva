@@ -1713,20 +1713,29 @@ class constructorSVA:
         
     def vertical_dissipation(self, integration='depth', depth_averaged=False):
         """
-        Compute vertical dissipation in the tracer variance budget.
+        Compute the vertical dissipation term in the tracer variance budget.
+
+        Vertical dissipation is calculated using the vertical eddy diffusivity
+        and squared vertical gradients of the tracer:
+
+        .. math::
+            \\text{D}_v = 2 K_{zz} \\left(\\frac{\\partial c}{\\partial z}\\right)^2
 
         Parameters
         ----------
         integration : {"depth", "volume", "none"}, optional
             Integration method applied to the dissipation field.
+            Default is "depth".
         depth_averaged : bool, optional
-            If ``True``, return the depth-averaged vertical dissipation.
+            If True, return depth-averaged vertical dissipation.
 
         Returns
         -------
         xarray.DataArray
             Vertical dissipation term in the tracer variance budget.
+            Units are :math:`c^2\\, s^{-1}`.
         """
+        
         # > Get the vertical turbulent diffusivity
         kzz = self.kzz
         
