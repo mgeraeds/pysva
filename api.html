@@ -279,38 +279,28 @@ structure and coordinate systems following UGRID conventions.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.advection">
 <span class="sig-name descname"><span class="pre">advection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">integration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'depth'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth_averaged</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.advection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.advection" title="Link to this definition"></a></dt>
-<dd><p>Compute the advection term in the tracer variance budget.</p>
-<p>The horizontal advection is computed as the divergence of
-<span class="math notranslate nohighlight">\(\mathbf{u} (c')^2\)</span>, where <span class="math notranslate nohighlight">\(c'\)</span> is the tracer perturbation
-relative to the mean. Integration over depth or volume is optional.</p>
+<dd><p>Compute the advection term in the tracer variance budget, computed as:</p>
+<div class="math notranslate nohighlight">
+\[\text{advection} = \nabla_h \cdot (\mathbf{u} (c')^2)\]</div>
+<p>where:
+- <span class="math notranslate nohighlight">\(c' = c - \bar{c}\)</span> is the tracer perturbation relative to the depth-averaged tracer;
+- <span class="math notranslate nohighlight">\(\nabla_h\)</span> indicates the horizontal divergence;
+- <span class="math notranslate nohighlight">\(\mathbf{u}=(u,v)\)</span> represents the full velocity vector.</p>
+<p>Integration over depth or volume is optional.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>integration</strong> (<em>{&quot;depth&quot;</em><em>, </em><em>&quot;volume&quot;</em><em>, </em><em>&quot;none&quot;}</em><em>, </em><em>optional</em>) – Integration method applied to the computed advection field.
 Default is “depth”.</p></li>
 <li><p><strong>depth_averaged</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, return depth-averaged advection.</p></li>
-<li><p><strong>integration</strong> – Integration method applied to the computed advection field.
-Default is “depth”.</p></li>
-<li><p><strong>depth_averaged</strong> – If True, return depth-averaged advection.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><ul class="simple">
-<li><p><em>xarray.DataArray</em> – Advection term <span class="math notranslate nohighlight">\(-\nabla_h \cdot (\mathbf{u} (c')^2)\)</span> in the
-tracer variance budget. Units are <span class="math notranslate nohighlight">\(c^2\, s^{-1}\)</span>.</p></li>
-<li><p><em>Compute the advection term in the tracer variance budget.</em></p></li>
-<li><p><em>The horizontal advection is computed as the divergence of</em></p></li>
-<li><p><span class="math notranslate nohighlight">\(\mathbf{u} (c')^2\)</span>, where <span class="math notranslate nohighlight">\(c'\)</span> is the tracer perturbation</p></li>
-<li><p><em>relative to the mean. Integration over depth or volume is optional.</em></p></li>
-</ul>
-</p>
-</dd>
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Advection term <span class="math notranslate nohighlight">\(-\nabla_h \cdot (\mathbf{u} (c')^2)\)</span> in the
+<dd class="field-even"><p>Advection term in the
 tracer variance budget. Units are <span class="math notranslate nohighlight">\(c^2\, s^{-1}\)</span>.</p>
 </dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>xarray.DataArray</p>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xarray.DataArray</p>
 </dd>
 </dl>
 </dd></dl>
@@ -684,8 +674,11 @@ each face of the unstructured grid.</p>
 <p>Horizontal dissipation is calculated using the horizontal diffusivity and
 squared horizontal gradients of the tracer:</p>
 <div class="math notranslate nohighlight">
-\[\text{D}_h = 2 D_h \left[\left(\frac{\partial c}{\partial x}\right)^2
+\[\text{horizontal dissipation} = 2 D_h \left[\left(\frac{\partial c}{\partial x}\right)^2
 + \left(\frac{\partial c}{\partial y}\right)^2\right]\]</div>
+<p>where:
+- <span class="math notranslate nohighlight">\(c\)</span> is the tracer;
+- <span class="math notranslate nohighlight">\(D_h\)</span> is the horizontal diffusivity.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -742,47 +735,47 @@ grid location and units.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.straining">
 <span class="sig-name descname"><span class="pre">straining</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">integration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'depth'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth_averaged</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.straining"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.straining" title="Link to this definition"></a></dt>
-<dd><blockquote>
-<div><p>Compute the straining term from the tracer variance budget.</p>
+<dd><p>Compute the straining term from the tracer variance budget.</p>
 <p>The straining term is defined as</p>
 <div class="math notranslate nohighlight">
-\[S = -2 \, c' \, \mathbf{u}' \cdot\]</div>
-</div></blockquote>
-<p>abla ar{c}</p>
-<blockquote>
-<div><p>where</p>
+\[\text{straining} = -2 \, c' \, \mathbf{u}' \cdot \nabla_h \bar{c}\]</div>
+<p>where</p>
 <ul class="simple">
-<li><p><span class="math notranslate nohighlight">\(c' = c - ar{c}\)</span> is the tracer perturbation relative to the depth-averaged tracer,</p></li>
-<li><p><span class="math notranslate nohighlight">\(\mathbf{u}' = \mathbf{u} - ar{\mathbf{u}}\)</span> is the velocity perturbation relative to the depth-averaged velocity,</p></li>
-<li><p><span class="math notranslate nohighlight">\(ar{c}\)</span> indicates a <strong>depth-averaged</strong> quantity,</p></li>
-<li><p>:math:<a href="#id1"><span class="problematic" id="id2">`</span></a></p></li>
+<li><p><span class="math notranslate nohighlight">\(c' = c - \bar{c}\)</span> is the tracer perturbation relative to the depth-averaged tracer;</p></li>
+<li><p><span class="math notranslate nohighlight">\(\mathbf{u}' = \mathbf{u} - \bar{\mathbf{u}}\)</span> is the velocity perturbation relative to the depth-averaged velocity;</p></li>
+<li><p><span class="math notranslate nohighlight">\(\bar{c}\)</span> indicates a <strong>depth-averaged</strong> quantity;</p></li>
+<li><p><span class="math notranslate nohighlight">\(\nabla_h\)</span> denotes the horizontal gradient operator.</p></li>
 </ul>
-</div></blockquote>
-<p>abla` denotes the horizontal gradient operator.</p>
-<blockquote>
-<div><dl class="simple">
-<dt>integration<span class="classifier">{“depth”, “volume”, “none”}, optional</span></dt><dd><p>If “depth”, integrate the straining term over the vertical layers.
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>integration</strong> (<em>{&quot;depth&quot;</em><em>, </em><em>&quot;volume&quot;</em><em>, </em><em>&quot;none&quot;}</em><em>, </em><em>optional</em>) – If “depth”, integrate the straining term over the vertical layers.
 If “volume”, integrate over the total volume (not yet implemented).
-If “none”, no integration is performed.</p>
+If “none”, no integration is performed.</p></li>
+<li><p><strong>depth_averaged</strong> (<em>bool</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, return the term already averaged over depth layers.
+Otherwise, return the full 3D field.</p></li>
+</ul>
 </dd>
-<dt>depth_averaged<span class="classifier">bool, optional</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, return the term already averaged over depth layers.
-Otherwise, return the full 3D field.</p>
-</dd>
-</dl>
-<dl class="simple">
-<dt>xarray.DataArray</dt><dd><p>Straining term from the tracer variance budget, with units consistent
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Straining term from the tracer variance budget, with units consistent
 with <span class="math notranslate nohighlight">\(c^2\,s^{-1}\)</span> (tracer squared per second).</p>
 </dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xarray.DataArray</p>
+</dd>
 </dl>
-</div></blockquote>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.tendency">
 <span class="sig-name descname"><span class="pre">tendency</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">integration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'depth'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth_averaged</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.tendency"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.tendency" title="Link to this definition"></a></dt>
 <dd><p>Compute the temporal tendency term of the tracer variance budget.</p>
-<p>The tendency term is calculated as the time derivative of the tracer variance,
-optionally integrated over depth or volume. A depth-averaged output can be requested.</p>
+<p>The tendency term is calculated as the time derivative of the tracer variance:</p>
+<div class="math notranslate nohighlight">
+\[\frac{\partial (c')^2}{\partial t}\]</div>
+<p>where <span class="math notranslate nohighlight">\(c' = c - \bar{c}\)</span> is the tracer perturbation relative to the depth-averaged tracer.</p>
+<p>Optionally, this term can be integrated over depth or volume.
+A depth-averaged output can also be requested.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -796,9 +789,8 @@ return a depth-averaged quantity.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Tendency term <span class="math notranslate nohighlight">\(\frac{\partial (c')^2}{\partial t}\)</span> in the tracer
-variance budget. Units are <span class="math notranslate nohighlight">\(c^2\, s^{-1}\)</span>, where <span class="math notranslate nohighlight">\(c\)</span> is the
-tracer concentration.</p>
+<dd class="field-even"><p>Tendency term in the tracer variance budget. Units are
+<span class="math notranslate nohighlight">\(c^2\, s^{-1}\)</span>, where <span class="math notranslate nohighlight">\(c\)</span> is the tracer concentration.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>xarray.DataArray</p>
@@ -826,9 +818,9 @@ from its depth-averaged value.</p>
 <li><p>The variance is computed as:</p></li>
 </ul>
 <div class="math notranslate nohighlight">
-\[s'^2 = (s - \overline{s})^2\]</div>
-<p>where <span class="math notranslate nohighlight">\(s\)</span> is the tracer concentration and
-<span class="math notranslate nohighlight">\(\overline{s}\)</span> is the depth-averaged tracer.</p>
+\[c'^2 = (c - \overline{c})^2\]</div>
+<p>where <span class="math notranslate nohighlight">\(c\)</span> is the tracer concentration and
+<span class="math notranslate nohighlight">\(\overline{c}\)</span> is the depth-averaged tracer.</p>
 <ul class="simple">
 <li><p>The depth-average is taken over the vertical coordinate</p></li>
 </ul>
@@ -912,7 +904,10 @@ The resulting array is stored in the dataset under the variable
 <p>Vertical dissipation is calculated using the vertical eddy diffusivity
 and squared vertical gradients of the tracer:</p>
 <div class="math notranslate nohighlight">
-\[\text{D}_v = 2 K_{zz} \left(\frac{\partial c}{\partial z}\right)^2\]</div>
+\[\text{vertical dissipation} = 2 K_{zz} \left(\frac{\partial c}{\partial z}\right)^2\]</div>
+<p>where:
+- <span class="math notranslate nohighlight">\(c\)</span> is the tracer,;
+- <span class="math notranslate nohighlight">\(K_{zz}\)</span> is the vertical diffusivity.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

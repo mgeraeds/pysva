@@ -1374,10 +1374,10 @@
 
 <span class="sd">        .. math::</span>
 
-<span class="sd">            s&#39;^2 = (s - \\overline{s})^2</span>
+<span class="sd">            c&#39;^2 = (c - \\overline{c})^2</span>
 
-<span class="sd">        where :math:`s` is the tracer concentration and</span>
-<span class="sd">        :math:`\\overline{s}` is the depth-averaged tracer.</span>
+<span class="sd">        where :math:`c` is the tracer concentration and</span>
+<span class="sd">        :math:`\\overline{c}` is the depth-averaged tracer.</span>
 
 <span class="sd">        - The depth-average is taken over the vertical coordinate</span>
 <span class="sd">        (layer or interface dimension).</span>
@@ -1583,14 +1583,14 @@
 
 <span class="sd">        .. math::</span>
 
-<span class="sd">            S = -2 \, c&#39; \, \mathbf{u}&#39; \cdot \nabla \bar{c}</span>
+<span class="sd">            \\text{straining} = -2 \, c&#39; \, \mathbf{u}&#39; \cdot \\nabla_h \\bar{c}</span>
 
 <span class="sd">        where</span>
 
-<span class="sd">        - :math:`c&#39; = c - \bar{c}` is the tracer perturbation relative to the depth-averaged tracer,</span>
-<span class="sd">        - :math:`\mathbf{u}&#39; = \mathbf{u} - \bar{\mathbf{u}}` is the velocity perturbation relative to the depth-averaged velocity,</span>
-<span class="sd">        - :math:`\bar{c}` indicates a **depth-averaged** quantity,</span>
-<span class="sd">        - :math:`\nabla` denotes the horizontal gradient operator.</span>
+<span class="sd">        - :math:`c&#39; = c - \\bar{c}` is the tracer perturbation relative to the depth-averaged tracer;</span>
+<span class="sd">        - :math:`\mathbf{u}&#39; = \mathbf{u} - \\bar{\mathbf{u}}` is the velocity perturbation relative to the depth-averaged velocity;</span>
+<span class="sd">        - :math:`\\bar{c}` indicates a **depth-averaged** quantity;</span>
+<span class="sd">        - :math:`\\nabla_h` denotes the horizontal gradient operator.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1659,8 +1659,15 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compute the temporal tendency term of the tracer variance budget.</span>
 
-<span class="sd">        The tendency term is calculated as the time derivative of the tracer variance,</span>
-<span class="sd">        optionally integrated over depth or volume. A depth-averaged output can be requested.</span>
+<span class="sd">        The tendency term is calculated as the time derivative of the tracer variance:</span>
+
+<span class="sd">        .. math::</span>
+<span class="sd">            \\frac{\\partial (c&#39;)^2}{\\partial t}</span>
+
+<span class="sd">        where :math:`c&#39; = c - \\bar{c}` is the tracer perturbation relative to the depth-averaged tracer.</span>
+
+<span class="sd">        Optionally, this term can be integrated over depth or volume. </span>
+<span class="sd">        A depth-averaged output can also be requested.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1677,9 +1684,8 @@
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        xarray.DataArray</span>
-<span class="sd">            Tendency term :math:`\\frac{\\partial (c&#39;)^2}{\\partial t}` in the tracer</span>
-<span class="sd">            variance budget. Units are :math:`c^2\\, s^{-1}`, where :math:`c` is the</span>
-<span class="sd">            tracer concentration.</span>
+<span class="sd">            Tendency term in the tracer variance budget. Units are </span>
+<span class="sd">            :math:`c^2\\, s^{-1}`, where :math:`c` is the tracer concentration.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># &gt; Get tracer variance</span>
@@ -1721,11 +1727,17 @@
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.advection">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">advection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">integration</span><span class="o">=</span><span class="s1">&#39;depth&#39;</span><span class="p">,</span>  <span class="n">depth_averaged</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Compute the advection term in the tracer variance budget.</span>
+<span class="sd">        Compute the advection term in the tracer variance budget, computed as:</span>
 
-<span class="sd">        The horizontal advection is computed as the divergence of</span>
-<span class="sd">        :math:`\\mathbf{u} (c&#39;)^2`, where :math:`c&#39;` is the tracer perturbation</span>
-<span class="sd">        relative to the mean. Integration over depth or volume is optional.</span>
+<span class="sd">        .. math::</span>
+<span class="sd">            \\text{advection} = \\nabla_h \\cdot (\\mathbf{u} (c&#39;)^2) </span>
+<span class="sd">        </span>
+<span class="sd">        where:</span>
+<span class="sd">        - :math:`c&#39; = c - \\bar{c}` is the tracer perturbation relative to the depth-averaged tracer;</span>
+<span class="sd">        - :math:`\\nabla_h` indicates the horizontal divergence;</span>
+<span class="sd">        - :math:`\\mathbf{u}=(u,v)` represents the full velocity vector.</span>
+
+<span class="sd">        Integration over depth or volume is optional.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1738,29 +1750,9 @@
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        xarray.DataArray</span>
-<span class="sd">            Advection term :math:`-\\nabla_h \\cdot (\\mathbf{u} (c&#39;)^2)` in the</span>
+<span class="sd">            Advection term in the</span>
 <span class="sd">            tracer variance budget. Units are :math:`c^2\\, s^{-1}`.</span>
-<span class="sd">        &quot;&quot;&quot;</span><span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">        Compute the advection term in the tracer variance budget.</span>
-
-<span class="s2">        The horizontal advection is computed as the divergence of</span>
-<span class="s2">        :math:`</span><span class="se">\\</span><span class="s2">mathbf</span><span class="si">{u}</span><span class="s2"> (c&#39;)^2`, where :math:`c&#39;` is the tracer perturbation</span>
-<span class="s2">        relative to the mean. Integration over depth or volume is optional.</span>
-
-<span class="s2">        Parameters</span>
-<span class="s2">        ----------</span>
-<span class="s2">        integration : {&quot;depth&quot;, &quot;volume&quot;, &quot;none&quot;}, optional</span>
-<span class="s2">            Integration method applied to the computed advection field.</span>
-<span class="s2">            Default is &quot;depth&quot;.</span>
-<span class="s2">        depth_averaged : bool, optional</span>
-<span class="s2">            If True, return depth-averaged advection.</span>
-
-<span class="s2">        Returns</span>
-<span class="s2">        -------</span>
-<span class="s2">        xarray.DataArray</span>
-<span class="s2">            Advection term :math:`-</span><span class="se">\\</span><span class="s2">nabla_h </span><span class="se">\\</span><span class="s2">cdot (</span><span class="se">\\</span><span class="s2">mathbf</span><span class="si">{u}</span><span class="s2"> (c&#39;)^2)` in the</span>
-<span class="s2">            tracer variance budget. Units are :math:`c^2</span><span class="se">\\</span><span class="s2">, s^{-1}`.</span>
-<span class="s2">        &quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># &gt; First calculate (S&#39;)^2 * u and (S&#39;)^2 * v</span>
         <span class="n">u_sv2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">velx</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracer_variance</span>
@@ -1808,8 +1800,12 @@
 <span class="sd">        squared horizontal gradients of the tracer:</span>
 <span class="sd">        </span>
 <span class="sd">        .. math::</span>
-<span class="sd">            \\text{D}_h = 2 D_h \\left[\\left(\\frac{\\partial c}{\\partial x}\\right)^2</span>
+<span class="sd">            \\text{horizontal dissipation} = 2 D_h \\left[\\left(\\frac{\\partial c}{\\partial x}\\right)^2</span>
 <span class="sd">            + \\left(\\frac{\\partial c}{\\partial y}\\right)^2\\right]</span>
+<span class="sd">        </span>
+<span class="sd">        where:</span>
+<span class="sd">        - :math:`c` is the tracer;</span>
+<span class="sd">        - :math:`D_h` is the horizontal diffusivity.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1879,7 +1875,11 @@
 <span class="sd">        and squared vertical gradients of the tracer:</span>
 
 <span class="sd">        .. math::</span>
-<span class="sd">            \\text{D}_v = 2 K_{zz} \\left(\\frac{\\partial c}{\\partial z}\\right)^2</span>
+<span class="sd">            \\text{vertical dissipation} = 2 K_{zz} \\left(\\frac{\\partial c}{\\partial z}\\right)^2</span>
+<span class="sd">        </span>
+<span class="sd">        where:</span>
+<span class="sd">        - :math:`c` is the tracer,;</span>
+<span class="sd">        - :math:`K_{zz}` is the vertical diffusivity.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1895,7 +1895,7 @@
 <span class="sd">            Vertical dissipation term in the tracer variance budget.</span>
 <span class="sd">            Units are :math:`c^2\\, s^{-1}`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        
+
         <span class="c1"># &gt; Get the vertical turbulent diffusivity</span>
         <span class="n">kzz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kzz</span>
         
