@@ -166,13 +166,24 @@ class constructorSVA:
         self.tracer_variance = self.tracer_variance
 
     def _read(self, file_name, **kwargs):
-        """Read hydrodynamic dataset from file.
+        """
+        Load a hydrodynamic dataset from file.
 
-        Loads a partitioned netCDF dataset using dfm_tools.
+        This method reads a partitioned netCDF dataset using
+        :mod:`dfm_tools` and stores it as the internal dataset.
 
-        Args:
-            file_name (str): Path to the netCDF file.
-            **kwargs: Additional arguments passed to dfmt.open_partitioned_dataset().
+        Parameters
+        ----------
+        file_name : str
+            Path to the netCDF file.
+        **kwargs : dict, optional
+            Additional keyword arguments passed to
+            :func:`dfm_tools.open_partitioned_dataset`.
+
+        Notes
+        -----
+        - The dataset is expected to follow D-Flow FM conventions.
+        - Partitioned datasets are automatically combined.
         """
         # self.ds = xr.open_dataset(file_name, use_cftime=True, **kwargs)
         self.ds = dfmt.open_partitioned_dataset(file_name, **kwargs)
