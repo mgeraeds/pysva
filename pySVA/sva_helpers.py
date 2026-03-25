@@ -147,21 +147,42 @@ def build_edge_node_connectivity(constructorSVA):
     return edge_node_connectivity
 
 def build_face_edge_connectivity(constructorSVA):
-    """Build face-edge connectivity array from unstructured grid.
-
-    Extracts and formats the face-edge connectivity information from
-    an xugrid dataset, creating a properly dimensioned DataArray with
-    CF-compliant attributes.
-
-    Args:
-        constructorSVA (constructorSVA): Object containing UgridDataset.
-
-    Returns:
-        xarray.DataArray: face_edge connectivity with dimensions (n_faces, 2).
-
-    Raises:
-        IOError: If dataset is not a UgridDataset.
     """
+    Construct face–edge connectivity array from a UGRID dataset.
+
+    This function extracts the face–edge connectivity from the underlying
+    grid and returns it as a properly dimensioned
+    :class:`xarray.DataArray` with CF-compliant metadata.
+
+    Parameters
+    ----------
+    constructorSVA : object
+        Object containing the UGRID dataset (``.ds`` attribute).
+
+    Returns
+    -------
+    xr.DataArray
+        Face–edge connectivity with dimensions
+        ``(n_faces, nMax_face_edges)``.
+
+    Raises
+    ------
+    IOError
+        If the dataset is not a ``xu.UgridDataset``.
+
+    Notes
+    -----
+    - The connectivity defines which edges bound each face.
+    - The second dimension corresponds to the maximum number of edges
+      per face (padded with ``_FillValue`` where necessary).
+    - Attributes follow CF/UGRID conventions:
+
+      * ``cf_role = "face_edge_connectivity"``
+      * ``start_index = 0``
+
+    - Face coordinates are attached as auxiliary coordinates.
+    """
+     
     # First check if the provided dataset is a xu.core.wrap.UgridDataset
     uds = constructorSVA.ds
 
