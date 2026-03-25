@@ -1506,21 +1506,31 @@ class constructorSVA:
     
     def tendency(self, integration='depth', depth_averaged=False):
         """
-        Compute the temporal tendency of tracer variance in the tracer variance budget.
+        Compute the temporal tendency term of the tracer variance budget.
+
+        The tendency term is calculated as the time derivative of the tracer variance,
+        optionally integrated over depth or volume. A depth-averaged output can be requested.
 
         Parameters
         ----------
         integration : {"depth", "volume", "none"}, optional
-            Integration method for the tracer variance prior to
-            differentiation.
+            Integration method for the tracer variance prior to differentiation.
+            - "depth": integrate over the vertical coordinate
+            - "volume": integrate over cell volumes
+            - "none": no integration applied
+            Default is "depth".
         depth_averaged : bool, optional
-            If ``True``, return depth-averaged tendency.
+            If True, divide the integrated tendency by the local water depth to
+            return a depth-averaged quantity.
 
         Returns
         -------
         xarray.DataArray
-            Tendency term in the tracer variance budget.
+            Tendency term :math:`\\frac{\\partial (c')^2}{\\partial t}` in the tracer
+            variance budget. Units are :math:`c^2\\, s^{-1}`, where :math:`c` is the
+            tracer concentration.
         """
+        
         # > Get tracer variance
         tracer_variance = self.tracer_variance
 
