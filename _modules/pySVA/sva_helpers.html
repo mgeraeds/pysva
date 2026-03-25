@@ -109,22 +109,52 @@
 <div class="viewcode-block" id="build_inverse_distance_weights">
 <a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.build_inverse_distance_weights">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">build_inverse_distance_weights</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate inverse distance weights using xarray.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute distance-based interpolation weights between coordinate sets.</span>
 
-<span class="sd">    Computes weights for interpolation based on inverse distances</span>
-<span class="sd">    between coordinate sets a and b. Used for mapping data between</span>
-<span class="sd">    different grid locations (e.g., faces to edges).</span>
+<span class="sd">    This function constructs weights for mapping data between two sets of</span>
+<span class="sd">    coordinates using pairwise distances. Typically used for interpolation</span>
+<span class="sd">    between grid elements (e.g., faces → edges or nodes → edges).</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        a (xarray.DataArray): Reference coordinates (N, 2) with x and y components.</span>
-<span class="sd">        b (xarray.DataArray): Target coordinates per reference point (N, M, 2).</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    a : xr.DataArray</span>
+<span class="sd">        Reference coordinates with dimensions ``(N, nCartesian_coords)``.</span>
+<span class="sd">    b : xr.DataArray</span>
+<span class="sd">        Target coordinates associated with each reference point, with</span>
+<span class="sd">        dimensions ``(N, M, nCartesian_coords)``.</span>
 
-<span class="sd">    Returns:</span>
-<span class="sd">        xarray.DataArray: Inverse distance weights (N, M) normalized to sum to 1.</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    xr.DataArray</span>
+<span class="sd">        Weights with dimensions ``(N, M)``, normalized such that the weights</span>
+<span class="sd">        sum to 1 along the second dimension for each reference point.</span>
 
-<span class="sd">    Notes:</span>
-<span class="sd">        Weights sum to 1.0 along the second dimension for each reference point.</span>
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - Distances are computed as:</span>
+
+<span class="sd">      .. math::</span>
+
+<span class="sd">          d_{ij} = \\| \\mathbf{a}_i - \\mathbf{b}_{ij} \\|</span>
+
+<span class="sd">    - Weights are currently defined as:</span>
+
+<span class="sd">      .. math::</span>
+
+<span class="sd">          w_{ij} = \\frac{d_{ij}}{\\sum_j d_{ij}}</span>
+
+<span class="sd">      Note that this corresponds to *distance weighting*, not true inverse</span>
+<span class="sd">      distance weighting. For inverse-distance weighting, use:</span>
+
+<span class="sd">      .. math::</span>
+
+<span class="sd">          w_{ij} = \\frac{1 / d_{ij}}{\\sum_j (1 / d_{ij})}</span>
+
+<span class="sd">    - Missing values (NaNs) are ignored in the normalization.</span>
+<span class="sd">    - Implemented using :func:`xarray.apply_ufunc` for vectorized operation.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">weight_func</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
         <span class="n">distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">a</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">b</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
         <span class="n">weights</span> <span class="o">=</span> <span class="n">distance</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">distance</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="c1"># remove this if you only want the distance </span>
@@ -140,20 +170,40 @@
 <div class="viewcode-block" id="build_edge_node_connectivity">
 <a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.build_edge_node_connectivity">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">build_edge_node_connectivity</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build edge-node connectivity array from unstructured grid.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Construct edge–node connectivity array from a UGRID dataset.</span>
 
-<span class="sd">    Extracts and formats the edge-node connectivity information from</span>
-<span class="sd">    an xugrid dataset, creating a properly dimensioned DataArray with</span>
-<span class="sd">    CF-compliant attributes.</span>
+<span class="sd">    This function extracts the edge–node connectivity from the underlying</span>
+<span class="sd">    grid and returns it as a properly dimensioned</span>
+<span class="sd">    :class:`xarray.DataArray` with CF-compliant metadata.</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        constructorSVA (constructorSVA): Object containing UgridDataset.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    constructorSVA : object</span>
+<span class="sd">        Object containing the UGRID dataset (``.ds`` attribute).</span>
 
-<span class="sd">    Returns:</span>
-<span class="sd">        xarray.DataArray: Edge-node connectivity with dimensions (n_edges, max_edge_nodes).</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    xr.DataArray</span>
+<span class="sd">        Edge–node connectivity with dimensions</span>
+<span class="sd">        ``(n_edges, nMax_edge_nodes)``.</span>
 
-<span class="sd">    Raises:</span>
-<span class="sd">        IOError: If dataset is not a UgridDataset.</span>
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    IOError</span>
+<span class="sd">        If the dataset is not a ``xu.UgridDataset``.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - The connectivity defines which nodes belong to each edge.</span>
+<span class="sd">    - Missing entries are filled with the grid ``_FillValue``.</span>
+<span class="sd">    - Attributes follow CF/UGRID conventions:</span>
+
+<span class="sd">      * ``cf_role = &quot;edge_node_connectivity&quot;``</span>
+<span class="sd">      * ``start_index = 0``</span>
+
+<span class="sd">    - Coordinates associated with edges (e.g., edge centroids) are attached</span>
+<span class="sd">      for convenience.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># First check if the provided dataset is a xu.core.wrap.UgridDataset</span>
@@ -186,21 +236,42 @@
 <div class="viewcode-block" id="build_face_edge_connectivity">
 <a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.build_face_edge_connectivity">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">build_face_edge_connectivity</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build face-edge connectivity array from unstructured grid.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Construct face–edge connectivity array from a UGRID dataset.</span>
 
-<span class="sd">    Extracts and formats the face-edge connectivity information from</span>
-<span class="sd">    an xugrid dataset, creating a properly dimensioned DataArray with</span>
-<span class="sd">    CF-compliant attributes.</span>
+<span class="sd">    This function extracts the face–edge connectivity from the underlying</span>
+<span class="sd">    grid and returns it as a properly dimensioned</span>
+<span class="sd">    :class:`xarray.DataArray` with CF-compliant metadata.</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        constructorSVA (constructorSVA): Object containing UgridDataset.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    constructorSVA : object</span>
+<span class="sd">        Object containing the UGRID dataset (``.ds`` attribute).</span>
 
-<span class="sd">    Returns:</span>
-<span class="sd">        xarray.DataArray: face_edge connectivity with dimensions (n_faces, 2).</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    xr.DataArray</span>
+<span class="sd">        Face–edge connectivity with dimensions</span>
+<span class="sd">        ``(n_faces, nMax_face_edges)``.</span>
 
-<span class="sd">    Raises:</span>
-<span class="sd">        IOError: If dataset is not a UgridDataset.</span>
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    IOError</span>
+<span class="sd">        If the dataset is not a ``xu.UgridDataset``.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - The connectivity defines which edges bound each face.</span>
+<span class="sd">    - The second dimension corresponds to the maximum number of edges</span>
+<span class="sd">      per face (padded with ``_FillValue`` where necessary).</span>
+<span class="sd">    - Attributes follow CF/UGRID conventions:</span>
+
+<span class="sd">      * ``cf_role = &quot;face_edge_connectivity&quot;``</span>
+<span class="sd">      * ``start_index = 0``</span>
+
+<span class="sd">    - Face coordinates are attached as auxiliary coordinates.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+     
     <span class="c1"># First check if the provided dataset is a xu.core.wrap.UgridDataset</span>
     <span class="n">uds</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">ds</span>
 
@@ -233,6 +304,68 @@
 <div class="viewcode-block" id="get_all_coordinates">
 <a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.get_all_coordinates">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_all_coordinates</span><span class="p">(</span><span class="n">uds</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract face, edge, and node coordinates from a UGRID dataset.</span>
+
+<span class="sd">    This function constructs standardized coordinate arrays for faces,</span>
+<span class="sd">    edges, and nodes, each expressed in Cartesian coordinates and returned</span>
+<span class="sd">    as :class:`xarray.DataArray` objects with consistent metadata.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    uds : xu.UgridDataset or xu.UgridDataArray</span>
+<span class="sd">        Input dataset or data array containing an unstructured grid</span>
+<span class="sd">        following UGRID conventions.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple of xr.DataArray</span>
+<span class="sd">        Tuple containing:</span>
+
+<span class="sd">        - face_coords : xr.DataArray</span>
+<span class="sd">            Face centroid coordinates with dimensions</span>
+<span class="sd">            ``(n_faces, nCartesian_coords)``.</span>
+<span class="sd">        - edge_coords : xr.DataArray</span>
+<span class="sd">            Edge midpoint coordinates with dimensions</span>
+<span class="sd">            ``(n_edges, nCartesian_coords)``.</span>
+<span class="sd">        - node_coords : xr.DataArray</span>
+<span class="sd">            Node coordinates with dimensions</span>
+<span class="sd">            ``(n_nodes, nCartesian_coords)``.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    IOError</span>
+<span class="sd">        If the input is not a ``xu.UgridDataset`` or ``xu.UgridDataArray``.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - Coordinate names are inferred from the UGRID attribute</span>
+<span class="sd">      ``mesh2d.node_coordinates``.</span>
+<span class="sd">    - Coordinates are returned in projected Cartesian space (typically meters).</span>
+<span class="sd">    - Metadata follows CF conventions, including:</span>
+
+<span class="sd">      * ``standard_name = &quot;projection_x_coordinate, projection_y_coordinate&quot;``</span>
+<span class="sd">      * ``units = &quot;m&quot;``</span>
+
+<span class="sd">    - For ``xu.UgridDataset``:</span>
+<span class="sd">      </span>
+<span class="sd">      * Face coordinates are reconstructed manually from dataset variables.</span>
+<span class="sd">      * Edge and node coordinates are taken from the grid object.</span>
+
+<span class="sd">    - For ``xu.UgridDataArray``:</span>
+<span class="sd">      </span>
+<span class="sd">      * All coordinates are obtained directly from the grid object.</span>
+
+<span class="sd">    - The Cartesian dimension is defined as:</span>
+<span class="sd">      </span>
+<span class="sd">      ``{gridname}_nCartesian_coords``</span>
+
+<span class="sd">    - These coordinate arrays are commonly used for:</span>
+
+<span class="sd">      * geometric calculations (distances, normals)</span>
+<span class="sd">      * interpolation between grid elements</span>
+<span class="sd">      * finite-volume operators</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">uds</span><span class="p">,</span> <span class="n">xu</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">wrap</span><span class="o">.</span><span class="n">UgridDataset</span><span class="p">):</span>
         <span class="c1"># &gt; Get coordinate names</span>
@@ -295,7 +428,45 @@
 <div class="viewcode-block" id="calculate_unit_normal_vectors">
 <a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.calculate_unit_normal_vectors">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">calculate_unit_normal_vectors</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute unit normal vectors for all edges in the unstructured grid.</span>
+
+<span class="sd">    The normal vectors are constructed perpendicular to each edge using</span>
+<span class="sd">    node coordinates and normalized to unit length. The resulting vectors</span>
+<span class="sd">    are oriented consistently with the edge definition.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    constructorSVA : object</span>
+<span class="sd">        Object containing the UGRID dataset (``.ds`` attribute).</span>
+<span class="sd">    **kwargs : dict, optional</span>
+<span class="sd">        Optional keyword arguments.</span>
+
+<span class="sd">        edge_node_coords : xr.DataArray, optional</span>
+<span class="sd">            Precomputed coordinates of nodes belonging to each edge with</span>
+<span class="sd">            dimensions ``(n_edges, 2, nCartesian_coords)``. If not provided,</span>
+<span class="sd">            they are reconstructed from node connectivity.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    xr.DataArray or None</span>
+<span class="sd">        Unit normal vectors with dimensions ``(n_edges, nCartesian_coords)``.</span>
+<span class="sd">        Returns ``None`` if the input dataset is not a UGRID dataset.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - The normal vector is defined as:</span>
+
+<span class="sd">      .. math::</span>
+
+<span class="sd">          \\mathbf{n} = \\frac{(-\\Delta y, \\Delta x)}{\\|(-\\Delta y, \\Delta x)\\|}</span>
+
+<span class="sd">      where :math:`\\Delta x` and :math:`\\Delta y` are edge direction components.</span>
+<span class="sd">    - The result is stored in the dataset as ``{gridname}_unvs``.</span>
+<span class="sd">    - If already present, the existing variable is reused.</span>
+<span class="sd">    - Missing connectivity entries (fill values) are masked before computation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="c1"># First check if the provided dataset is a xu.core.wrap.UgridDataset</span>
     <span class="n">uds</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">ds</span>
 
@@ -362,14 +533,60 @@
 <div class="viewcode-block" id="reconstruct_vector_form_magnitude">
 <a class="viewcode-back" href="../../api.html#pySVA.sva_helpers.reconstruct_vector_form_magnitude">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">reconstruct_vector_form_magnitude</span><span class="p">(</span><span class="n">constructorSVA</span><span class="p">,</span> <span class="n">varname</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;Function to reconstruct the vector form of a magnitude variable on an unstructured grid that is defined on the edges</span>
-<span class="sd">    in the direction of the normal vector (like velocity magnitude)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Reconstruct a vector field from edge-normal magnitude values.</span>
 
-<span class="sd">    :param uds:</span>
-<span class="sd">    :param varname:</span>
-<span class="sd">    :param kwargs:</span>
-<span class="sd">    :return:</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">    This function converts a scalar magnitude defined along edge-normal</span>
+<span class="sd">    directions (e.g., velocity components stored as normal fluxes) into</span>
+<span class="sd">    full Cartesian vector components by multiplying with unit normal vectors.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    constructorSVA : object</span>
+<span class="sd">        Object containing the UGRID dataset (``.ds`` attribute).</span>
+<span class="sd">    varname : str</span>
+<span class="sd">        Name of the magnitude variable defined on edges (e.g., velocity</span>
+<span class="sd">        in normal direction).</span>
+<span class="sd">    **kwargs : dict, optional</span>
+<span class="sd">        Optional keyword arguments.</span>
+
+<span class="sd">        face_edges : xr.DataArray, optional</span>
+<span class="sd">            Face-edge connectivity array.</span>
+<span class="sd">        edge_faces : xr.DataArray, optional</span>
+<span class="sd">            Edge-face connectivity array.</span>
+<span class="sd">        unvs : xr.DataArray, optional</span>
+<span class="sd">            Precomputed unit normal vectors.</span>
+<span class="sd">        varname_unvs : str, optional</span>
+<span class="sd">            Name of the unit normal vector variable in the dataset.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    xr.DataArray or xu.UgridDataArray</span>
+<span class="sd">        Reconstructed vector field with dimensions including</span>
+<span class="sd">        ``nCartesian_coords``.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    IOError</span>
+<span class="sd">        If the input dataset is not a ``xu.UgridDataset``.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - The magnitude variable is assumed to represent values in the direction</span>
+<span class="sd">      of the edge-normal vector.</span>
+<span class="sd">    - The vector is reconstructed as:</span>
+
+<span class="sd">      .. math::</span>
+
+<span class="sd">          \\mathbf{u} = u_n \\, \\mathbf{n}</span>
+
+<span class="sd">      where :math:`u_n` is the scalar magnitude and :math:`\\mathbf{n}` is</span>
+<span class="sd">      the unit normal vector.</span>
+<span class="sd">    - Edge orientation is corrected using edge-face connectivity to ensure</span>
+<span class="sd">      consistent direction across faces.</span>
+<span class="sd">    - The result is stored in the dataset as ``{varname}c``.</span>
+<span class="sd">    - Designed primarily for velocity variables such as ``u0`` and ``u1``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># First check if the provided dataset is a xu.core.wrap.UgridDataset</span>
     <span class="n">uds</span> <span class="o">=</span> <span class="n">constructorSVA</span><span class="o">.</span><span class="n">ds</span>
@@ -1330,7 +1547,7 @@
 <span class="sd">    - Uses finite differences with Dask-compatible operations.</span>
 <span class="sd">    - Pads result to preserve original array shape.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    
+
     <span class="c1"># Deduce name of depth dimension</span>
     <span class="n">depth_dim</span> <span class="o">=</span> <span class="n">uda</span><span class="p">[</span><span class="n">coord_var</span><span class="p">]</span><span class="o">.</span><span class="n">dims</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
     
