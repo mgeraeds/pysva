@@ -16,20 +16,55 @@ from functools import cached_property
 from pySVA.sva_helpers import build_inverse_distance_weights, integrate_trapz, calculate_distance_pythagoras, differentiate_over_3d_coord
 
 class constructorSVA:
-    """Main class for Salinity Variance Analysis (SVA).
+    """
+    Core class for Salinity Variance Analysis (SVA) on unstructured grids.
 
-    Loads and processes hydrodynamic data from D-Flow FM simulations,
-    providing access to grid properties, velocities, tracers, and
-    computed quantities needed for variance budget analysis.
+    This class loads and processes hydrodynamic data from D-Flow FM
+    simulations and provides access to grid topology, geometric
+    properties, velocity fields, tracers, and derived quantities
+    required for variance budget analysis.
 
-    The class handles multiple input formats (netCDF files, xarray Datasets,
-    or xugrid UgridDatasets) and automatically extracts grid topology and
-    coordinate systems.
+    The class supports multiple input formats (netCDF files,
+    :class:`xarray.Dataset`, :class:`xugrid.UgridDataset`, or
+    :class:`xarray.DataArray`) and automatically extracts grid
+    structure and coordinate systems following UGRID conventions.
 
-    Attributes:
-        ds (xarray.Dataset): The loaded hydrodynamic dataset.
-        grid: The unstructured grid object.
-        Various dimension names (dimn_edges, dimn_faces, etc.) and coordinates.
+    Parameters
+    ----------
+    input_file : str or xr.Dataset or xu.UgridDataset or xr.DataArray
+        Input data source. Can be a file path or pre-loaded dataset.
+    data_description : dict
+        Mapping between logical variable names and dataset variables.
+
+        Required keys:
+        - ``velx``, ``vely``, ``velz``
+        - ``viscosity``
+        - ``tracer``
+        - ``depth``
+
+        Optional keys:
+        - ``horizontal_diffusivity``
+        - ``interfaces``
+        - ``bed_level``
+        - ``volume``
+        - ``flow_area``
+
+    Attributes
+    ----------
+    ds : xr.Dataset or xu.UgridDataset
+        Underlying hydrodynamic dataset.
+    grid : object
+        UGRID mesh object.
+    face_coords, edge_coords, node_coords : xr.DataArray
+        Cartesian coordinates of mesh elements.
+    dimn_* : str
+        Standardized dimension names for grid topology.
+
+    Notes
+    -----
+    - All geometric and topological quantities follow UGRID conventions.
+    - Coordinates are expressed in projected Cartesian space (typically meters).
+    - Many properties are computed lazily using :func:`functools.cached_property`.
     """
 
     def __init__(self, input_file, data_description, **kwargs):
@@ -131,13 +166,24 @@ class constructorSVA:
         self.tracer_variance = self.tracer_variance
 
     def _read(self, file_name, **kwargs):
-        """Read hydrodynamic dataset from file.
+        """
+        Load a hydrodynamic dataset from file.
 
-        Loads a partitioned netCDF dataset using dfm_tools.
+        This method reads a partitioned netCDF dataset using
+        :mod:`dfm_tools` and stores it as the internal dataset.
 
-        Args:
-            file_name (str): Path to the netCDF file.
-            **kwargs: Additional arguments passed to dfmt.open_partitioned_dataset().
+        Parameters
+        ----------
+        file_name : str
+            Path to the netCDF file.
+        **kwargs : dict, optional
+            Additional keyword arguments passed to
+            :func:`dfm_tools.open_partitioned_dataset`.
+
+        Notes
+        -----
+        - The dataset is expected to follow D-Flow FM conventions.
+        - Partitioned datasets are automatically combined.
         """
         # self.ds = xr.open_dataset(file_name, use_cftime=True, **kwargs)
         self.ds = dfmt.open_partitioned_dataset(file_name, **kwargs)
@@ -224,14 +270,25 @@ class constructorSVA:
    
     @cached_property
     def face_area(self):
-        """Calculate face area for each grid edge.
-
-        Computes the area of grid faces by multiplying cell thickness
-        (interpolated to edges) by edge length.
-
-        Returns:
-            xarray.DataArray: Face area with dimensions matching edges.
         """
+        Compute face-associated cross-sectional area on edges.
+
+        The face area is defined as the product of interpolated cell
+        thickness and edge length.
+
+        Returns
+        -------
+        xr.DataArray
+            Face area with dimensions matching edges
+            (typically ``n_edges`` and vertical layers if present).
+
+        Notes
+        -----
+        - Cell thickness is interpolated from faces to edges.
+        - Edge length is computed geometrically from node coordinates.
+        - The result is stored as ``{gridname}_face_area``.
+        """
+
         dimn_edges = self.dimn_edges
         
         # > Get general strings
@@ -257,13 +314,28 @@ class constructorSVA:
     
     @cached_property
     def water_depth(self):
-        """Calculate water depth at each grid face.
+        """
+        Compute water depth at each grid face.
 
-        Computes depth as the difference between maximum interface elevation
-        (water surface) and bed level.
+        Water depth is defined as the difference between the maximum
+        interface elevation (water surface) and the bed level.
 
-        Returns:
-            xarray.DataArray: Water depth (positive downward) at each face.
+        Returns
+        -------
+        xr.DataArray
+            Water depth with dimensions ``(n_faces, ...)``.
+
+        Notes
+        -----
+        - Positive downward convention is used.
+        - Computed as:
+
+        .. math::
+
+            H = \\eta - z_b
+
+        where :math:`\\eta` is the water surface elevation and
+        :math:`z_b` is the bed level.
         """
         
         # > Get general strings
@@ -284,16 +356,31 @@ class constructorSVA:
         
     @cached_property
     def bed_level(self):
-        """Calculate bed level at each grid face.
+        """
+        Compute bed level at each grid face.
 
-        Computes bed elevation as the minimum interface elevation,
-        averaged over time if available.
+        The bed level is derived from the minimum interface elevation,
+        optionally averaged over time.
 
-        Returns:
-            xarray.DataArray: Bed elevation (positive downward) at each face.
+        Returns
+        -------
+        xr.DataArray
+            Bed elevation with dimensions ``(n_faces, ...)``.
 
-        Raises:
-            ValueError: If interfaces coordinate is not provided in data_description.
+        Raises
+        ------
+        ValueError
+            If interface data is not available.
+
+        Notes
+        -----
+        - Computed as:
+
+        .. math::
+
+            z_b = \\min(\\text{interfaces})
+
+        - If time-dependent, the result is averaged over time.
         """
 
         # Get dimensions
@@ -310,13 +397,24 @@ class constructorSVA:
         
     @cached_property
     def edge_length(self):
-        """Calculate the length of each grid cell edge.
+        """
+        Compute geometric length of each edge.
 
-        Computes Euclidean distance between the two nodes of each edge
-        in the horizontal (x,y) coordinate system.
+        The edge length is calculated as the Euclidean distance between
+        the two nodes defining each edge in Cartesian space.
 
-        Returns:
-            xarray.DataArray: Edge length at each edge.
+        Returns
+        -------
+        xr.DataArray
+            Edge length with dimension ``(n_edges,)``.
+
+        Notes
+        -----
+        - Computed using the Pythagorean distance:
+
+        .. math::
+
+            L = \\sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2}
         """
         
         # > Get properties
@@ -328,13 +426,22 @@ class constructorSVA:
     @cached_property
     def face_edge_weights(self):
         """
-        Compute the face-edge-weights for each face, based on inverse distance weighting from each face to each edge associated with the face.
+        Compute interpolation weights from faces to edges.
 
-        This builds a face-to-edge weight matrix by mapping face coordinates to
-        their connected edges and computing inverse distance weights.
+        For each face, weights are computed for all connected edges
+        using distance-based weighting.
 
-        :returns: DataArray of shape (num_faces, num_edges_per_face) containing weights.
-        :rtype: xarray.DataArray
+        Returns
+        -------
+        xr.DataArray
+            Weights with dimensions ``(n_faces, nMax_face_edges)``.
+
+        Notes
+        -----
+        - Based on distances between face centroids and edge midpoints.
+        - Weights are normalized such that they sum to 1 per face.
+        - Typically used for interpolation from face-centered variables
+        to edge-centered quantities.
         """
         
         # > Get dimension names
@@ -358,14 +465,23 @@ class constructorSVA:
     @cached_property
     def edge_face_weights(self):
         """
-        Compute edge-face-weights for each edge, based on inverse distance weighting from each edge to each associated face.
+        Compute interpolation weights from edges to faces.
 
-        This builds an edge-to-face weight matrix by mapping edge coordinates to
-        their connected faces, computing inverse distance weights, and converting to a dask array.
+        For each edge, weights are computed for all connected faces
+        using distance-based weighting.
 
-        :returns: DataArray of shape (num_edges, num_faces_per_edge) containing weights.
-        :rtype: xarray.DataArray
+        Returns
+        -------
+        xr.DataArray
+            Weights with dimensions ``(n_edges, nMax_edge_faces)``.
+
+        Notes
+        -----
+        - Based on distances between edge midpoints and face centroids.
+        - Weights are normalized per edge.
+        - Returned as a Dask-backed array for scalability.
         """
+
         # > Get dimension names
         dimn_faces = self.dimn_faces
         fill_value = self.fill_value
@@ -392,12 +508,24 @@ class constructorSVA:
 
     def get_all_coordinates(self):
         """
-        Retrieve coordinates for all mesh elements: faces, edges, and nodes.
+        Retrieve Cartesian coordinates of all mesh elements.
 
-        :returns: Tuple of (face_coords, edge_coords, node_coords), where each is an
-                xarray.DataArray with dimensions and coordinates corresponding to the mesh element.
-        :rtype: tuple[xarray.DataArray, xarray.DataArray, xarray.DataArray]
+        Returns
+        -------
+        tuple of xr.DataArray
+            Tuple containing:
+
+            - face_coords : ``(n_faces, nCartesian_coords)``
+            - edge_coords : ``(n_edges, nCartesian_coords)``
+            - node_coords : ``(n_nodes, nCartesian_coords)``
+
+        Notes
+        -----
+        - Coordinates are derived from UGRID metadata.
+        - Returned arrays include CF-compliant attributes.
+        - Cartesian dimension is defined as ``{gridname}_nCartesian_coords``.
         """
+
         uds = self.ds
 
         # > Get coordinate names
@@ -433,9 +561,19 @@ class constructorSVA:
         Maps the node coordinates to the corresponding edge-node connectivity,
         returning a DataArray with NaNs where no node is connected (fill value).
 
-        :returns: DataArray of shape (num_edges, max_nodes_per_edge, 2) with node coordinates.
-        :rtype: xarray.DataArray
+        Returns
+        -------
+        xr.DataArray
+            Node coordinates per edge with dimensions
+            ``(n_edges, nMax_edge_nodes, nCartesian_coords)``.
+
+        Notes
+        -----
+        - Derived from edge–node connectivity.
+        - Missing nodes (fill values) are replaced with NaN.
+        - Used for geometric calculations such as edge length and normals.
         """
+
         # > Get dimension names
         fill_value = self.fill_value
         dimn_nodes = self.dimn_nodes
@@ -571,6 +709,7 @@ class constructorSVA:
 
         Missing entries are filled using the dataset's configured fill value.
         """
+
         # > Get fill value, grid name and dimensions
         fill_value = self.fill_value
         dimn_edges = self.dimn_edges
@@ -1051,6 +1190,7 @@ class constructorSVA:
             Distance vectors with dimensions
             ``(faces, max_face_edges, cartesian_dim)``.
         """
+
         # > Get dimensions, fill_value, and varname
         fill_value = self.fill_value
         dimn_edges = self.dimn_edges
@@ -1084,14 +1224,32 @@ class constructorSVA:
     @cached_property
     def tracer_variance(self):
         """
-        Compute the variance of the tracer field over depth.
+        Compute tracer variance.
+
+        The tracer variance is defined as the squared deviation of the tracer
+        from its depth-averaged value.
 
         Returns
         -------
-        xarray.DataArray
-            Squared tracer perturbation relative to the depth-mean tracer
-            concentration.
+        xr.DataArray
+            Tracer variance with the same dimensions as the input tracer field
+            (typically including vertical layers and horizontal grid dimensions).
+
+        Notes
+        -----
+        - The variance is computed as:
+
+        .. math::
+
+            s'^2 = (s - \\overline{s})^2
+
+        where :math:`s` is the tracer concentration and
+        :math:`\\overline{s}` is the depth-averaged tracer.
+
+        - The depth-average is taken over the vertical coordinate
+        (layer or interface dimension).
         """
+
         # > Get properties
         tracer = self.tracer
         # > Calculate mean
@@ -1114,6 +1272,7 @@ class constructorSVA:
         xarray.DataArray
             Depth-integrated tracer variance.
         """
+
         # > Get properties
         tracer_variance = self.tracer_variance
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
@@ -1126,11 +1285,35 @@ class constructorSVA:
         """
         Compute vertical thickness of grid cells.
 
+        The cell thickness is defined as the vertical distance between
+        consecutive interfaces in the water column.
+
         Returns
         -------
-        xarray.DataArray
-            Cell thickness for each vertical layer.
+        xr.DataArray
+            Cell thickness with dimensions including the vertical layer
+            coordinate (typically ``n_layers`` or equivalent) and the
+            horizontal grid dimension (e.g., faces or edges).
+
+        Notes
+        -----
+        - The thickness is computed as:
+
+        .. math::
+
+            \\Delta z_k = z_{k+1} - z_k
+
+        where :math:`z_k` and :math:`z_{k+1}` are consecutive interface
+        elevations.
+
+        - The result represents layer thickness in physical space
+        (typically meters).
+
+        - The sign convention follows the vertical coordinate system of
+        the input dataset (usually positive upward for interfaces,
+        resulting in positive layer thickness).
         """
+
         cell_thickness = self.ds.mesh2d_flowelem_zw.diff(dim=self.dimn_interface).rename({f'{self.dimn_interface}':self.dimn_layer}).rename(f'{self.gridname}_cell_thickness')
         cell_thickness = cell_thickness.reset_coords(drop=True)
 
@@ -1141,14 +1324,38 @@ class constructorSVA:
         """
         Compute horizontal area of each grid cell.
 
-        The area is derived from edge geometry using distance vectors
-        and outward unit normal vectors.
+        The horizontal cell area is derived from edge geometry using
+        edge lengths and outward unit normal vectors, consistent with
+        finite-volume formulations on unstructured grids.
 
         Returns
         -------
-        xarray.DataArray
-            Horizontal cell area defined on faces.
+        xr.DataArray
+            Horizontal cell area defined on faces with dimension
+            ``(n_faces,)`` or including additional dimensions if
+            time-dependent.
+
+        Notes
+        -----
+        - The area is computed by integrating contributions from all
+        edges surrounding a face.
+
+        - In discrete form, this corresponds to a polygonal area
+        reconstruction using edge vectors and normals:
+
+        .. math::
+
+            A = \\frac{1}{2} \\sum_e \\mathbf{r}_e \\cdot \\mathbf{n}_e
+
+        where :math:`\\mathbf{r}_e` is the edge vector and
+        :math:`\\mathbf{n}_e` is the outward unit normal.
+
+        - The formulation is consistent with finite-volume flux
+        integration and ensures geometric conservation.
+
+        - Assumes a planar (Cartesian) coordinate system.
         """
+
         # > Get the relevant dimensions
         dimn_edges = self.dimn_edges
         dimn_cart = self.dimn_cart
@@ -1182,6 +1389,7 @@ class constructorSVA:
         
         # > Get the flow area
         flow_area = self.flow_area
+
         # > Fill face_edge matrix with flow area data
         edge_length = self.edge_length
         
@@ -1223,18 +1431,36 @@ class constructorSVA:
         """
         Compute the straining term from the tracer variance budget.
 
+        The straining term is defined as
+
+        .. math::
+
+            S = -2 \, c' \, \mathbf{u}' \cdot \nabla \bar{c}
+
+        where
+
+        - :math:`c' = c - \bar{c}` is the tracer perturbation relative to the depth-averaged tracer,
+        - :math:`\mathbf{u}' = \mathbf{u} - \bar{\mathbf{u}}` is the velocity perturbation relative to the depth-averaged velocity,
+        - :math:`\bar{c}` indicates a **depth-averaged** quantity,
+        - :math:`\nabla` denotes the horizontal gradient operator.
+
         Parameters
         ----------
         integration : {"depth", "volume", "none"}, optional
-            Integration method applied to the resulting field.
+            If "depth", integrate the straining term over the vertical layers.
+            If "volume", integrate over the total volume (not yet implemented).
+            If "none", no integration is performed.
         depth_averaged : bool, optional
-            If ``True``, return the depth-averaged straining term.
+            If ``True``, return the term already averaged over depth layers.
+            Otherwise, return the full 3D field.
 
         Returns
         -------
         xarray.DataArray
-            Straining term from tracer variance budget.
+            Straining term from the tracer variance budget, with units consistent
+            with :math:`c^2\,s^{-1}` (tracer squared per second).
         """
+
         # > Get the tracer variance
         tracer_variance = self.tracer_variance
 
@@ -1280,21 +1506,31 @@ class constructorSVA:
     
     def tendency(self, integration='depth', depth_averaged=False):
         """
-        Compute the temporal tendency of tracer variance in the tracer variance budget.
+        Compute the temporal tendency term of the tracer variance budget.
+
+        The tendency term is calculated as the time derivative of the tracer variance,
+        optionally integrated over depth or volume. A depth-averaged output can be requested.
 
         Parameters
         ----------
         integration : {"depth", "volume", "none"}, optional
-            Integration method for the tracer variance prior to
-            differentiation.
+            Integration method for the tracer variance prior to differentiation.
+            - "depth": integrate over the vertical coordinate
+            - "volume": integrate over cell volumes
+            - "none": no integration applied
+            Default is "depth".
         depth_averaged : bool, optional
-            If ``True``, return depth-averaged tendency.
+            If True, divide the integrated tendency by the local water depth to
+            return a depth-averaged quantity.
 
         Returns
         -------
         xarray.DataArray
-            Tendency term in the tracer variance budget.
+            Tendency term :math:`\\frac{\\partial (c')^2}{\\partial t}` in the tracer
+            variance budget. Units are :math:`c^2\\, s^{-1}`, where :math:`c` is the
+            tracer concentration.
         """
+
         # > Get tracer variance
         tracer_variance = self.tracer_variance
 
@@ -1331,20 +1567,47 @@ class constructorSVA:
        
     def advection(self, integration='depth',  depth_averaged=False):
         """
-            Compute the advection term in the tracer variance budget.
+        Compute the advection term in the tracer variance budget.
 
-            Parameters
-            ----------
-            integration : {"depth", "volume", "none"}, optional
-                Integration method applied to the computed advection field.
-            depth_averaged : bool, optional
-                If ``True``, return the depth-averaged advection.
+        The horizontal advection is computed as the divergence of
+        :math:`\\mathbf{u} (c')^2`, where :math:`c'` is the tracer perturbation
+        relative to the mean. Integration over depth or volume is optional.
 
-            Returns
-            -------
-            xarray.DataArray
-                Advection term in the tracer variance budget.
-            """
+        Parameters
+        ----------
+        integration : {"depth", "volume", "none"}, optional
+            Integration method applied to the computed advection field.
+            Default is "depth".
+        depth_averaged : bool, optional
+            If True, return depth-averaged advection.
+
+        Returns
+        -------
+        xarray.DataArray
+            Advection term :math:`-\\nabla_h \\cdot (\\mathbf{u} (c')^2)` in the
+            tracer variance budget. Units are :math:`c^2\\, s^{-1}`.
+        """"""
+        Compute the advection term in the tracer variance budget.
+
+        The horizontal advection is computed as the divergence of
+        :math:`\\mathbf{u} (c')^2`, where :math:`c'` is the tracer perturbation
+        relative to the mean. Integration over depth or volume is optional.
+
+        Parameters
+        ----------
+        integration : {"depth", "volume", "none"}, optional
+            Integration method applied to the computed advection field.
+            Default is "depth".
+        depth_averaged : bool, optional
+            If True, return depth-averaged advection.
+
+        Returns
+        -------
+        xarray.DataArray
+            Advection term :math:`-\\nabla_h \\cdot (\\mathbf{u} (c')^2)` in the
+            tracer variance budget. Units are :math:`c^2\\, s^{-1}`.
+        """
+
         # > First calculate (S')^2 * u and (S')^2 * v
         u_sv2 = self.velx * self.tracer_variance
         v_sv2 = self.vely * self.tracer_variance
@@ -1382,21 +1645,31 @@ class constructorSVA:
     
     def horizontal_dissipation(self, integration='depth', depth_averaged=False):
         """
-        Compute horizontal dissipation in the tracer variance budget.
+        Compute the horizontal dissipation term in the tracer variance budget.
+
+        Horizontal dissipation is calculated using the horizontal diffusivity and
+        squared horizontal gradients of the tracer:
+        
+        .. math::
+            \\text{D}_h = 2 D_h \\left[\\left(\\frac{\\partial c}{\\partial x}\\right)^2
+            + \\left(\\frac{\\partial c}{\\partial y}\\right)^2\\right]
 
         Parameters
         ----------
         integration : {"depth", "volume", "none"}, optional
             Integration method applied to the dissipation field.
+            Default is "depth".
         depth_averaged : bool, optional
-            If ``True``, return the depth-averaged horizontal dissipation.
+            If True, return depth-averaged horizontal dissipation.
 
         Returns
         -------
         xarray.DataArray or None
-            Horizontal dissipation term in the tracer variance, or ``None`` if the calculation
-            cannot be performed.
+            Horizontal dissipation term in the tracer variance budget.
+            Units are :math:`c^2\\, s^{-1}`. Returns None if calculation cannot
+            be performed (e.g., horizontal diffusivity undefined).
         """
+        
         # > Get the dimensions
         dimn_cart = self.dimn_cart
         # > Get the horizontal diffusion
@@ -1440,20 +1713,29 @@ class constructorSVA:
         
     def vertical_dissipation(self, integration='depth', depth_averaged=False):
         """
-        Compute vertical dissipation in the tracer variance budget.
+        Compute the vertical dissipation term in the tracer variance budget.
+
+        Vertical dissipation is calculated using the vertical eddy diffusivity
+        and squared vertical gradients of the tracer:
+
+        .. math::
+            \\text{D}_v = 2 K_{zz} \\left(\\frac{\\partial c}{\\partial z}\\right)^2
 
         Parameters
         ----------
         integration : {"depth", "volume", "none"}, optional
             Integration method applied to the dissipation field.
+            Default is "depth".
         depth_averaged : bool, optional
-            If ``True``, return the depth-averaged vertical dissipation.
+            If True, return depth-averaged vertical dissipation.
 
         Returns
         -------
         xarray.DataArray
             Vertical dissipation term in the tracer variance budget.
+            Units are :math:`c^2\\, s^{-1}`.
         """
+        
         # > Get the vertical turbulent diffusivity
         kzz = self.kzz
         

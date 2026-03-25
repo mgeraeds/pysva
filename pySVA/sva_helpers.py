@@ -26,22 +26,52 @@ def deprecated(reason, version, removal):
     return decorator
 
 def build_inverse_distance_weights(a, b):
-    """Calculate inverse distance weights using xarray.
-
-    Computes weights for interpolation based on inverse distances
-    between coordinate sets a and b. Used for mapping data between
-    different grid locations (e.g., faces to edges).
-
-    Args:
-        a (xarray.DataArray): Reference coordinates (N, 2) with x and y components.
-        b (xarray.DataArray): Target coordinates per reference point (N, M, 2).
-
-    Returns:
-        xarray.DataArray: Inverse distance weights (N, M) normalized to sum to 1.
-
-    Notes:
-        Weights sum to 1.0 along the second dimension for each reference point.
     """
+    Compute distance-based interpolation weights between coordinate sets.
+
+    This function constructs weights for mapping data between two sets of
+    coordinates using pairwise distances. Typically used for interpolation
+    between grid elements (e.g., faces → edges or nodes → edges).
+
+    Parameters
+    ----------
+    a : xr.DataArray
+        Reference coordinates with dimensions ``(N, nCartesian_coords)``.
+    b : xr.DataArray
+        Target coordinates associated with each reference point, with
+        dimensions ``(N, M, nCartesian_coords)``.
+
+    Returns
+    -------
+    xr.DataArray
+        Weights with dimensions ``(N, M)``, normalized such that the weights
+        sum to 1 along the second dimension for each reference point.
+
+    Notes
+    -----
+    - Distances are computed as:
+
+      .. math::
+
+          d_{ij} = \\| \\mathbf{a}_i - \\mathbf{b}_{ij} \\|
+
+    - Weights are currently defined as:
+
+      .. math::
+
+          w_{ij} = \\frac{d_{ij}}{\\sum_j d_{ij}}
+
+      Note that this corresponds to *distance weighting*, not true inverse
+      distance weighting. For inverse-distance weighting, use:
+
+      .. math::
+
+          w_{ij} = \\frac{1 / d_{ij}}{\\sum_j (1 / d_{ij})}
+
+    - Missing values (NaNs) are ignored in the normalization.
+    - Implemented using :func:`xarray.apply_ufunc` for vectorized operation.
+    """
+
     def weight_func(a, b):
         distance = np.linalg.norm(a[:, np.newaxis, :] - b, axis=-1)
         weights = distance / np.nansum(distance, axis=1)[:, np.newaxis] # remove this if you only want the distance 
@@ -54,20 +84,40 @@ def build_inverse_distance_weights(a, b):
 
 
 def build_edge_node_connectivity(constructorSVA):
-    """Build edge-node connectivity array from unstructured grid.
+    """
+    Construct edge–node connectivity array from a UGRID dataset.
 
-    Extracts and formats the edge-node connectivity information from
-    an xugrid dataset, creating a properly dimensioned DataArray with
-    CF-compliant attributes.
+    This function extracts the edge–node connectivity from the underlying
+    grid and returns it as a properly dimensioned
+    :class:`xarray.DataArray` with CF-compliant metadata.
 
-    Args:
-        constructorSVA (constructorSVA): Object containing UgridDataset.
+    Parameters
+    ----------
+    constructorSVA : object
+        Object containing the UGRID dataset (``.ds`` attribute).
 
-    Returns:
-        xarray.DataArray: Edge-node connectivity with dimensions (n_edges, max_edge_nodes).
+    Returns
+    -------
+    xr.DataArray
+        Edge–node connectivity with dimensions
+        ``(n_edges, nMax_edge_nodes)``.
 
-    Raises:
-        IOError: If dataset is not a UgridDataset.
+    Raises
+    ------
+    IOError
+        If the dataset is not a ``xu.UgridDataset``.
+
+    Notes
+    -----
+    - The connectivity defines which nodes belong to each edge.
+    - Missing entries are filled with the grid ``_FillValue``.
+    - Attributes follow CF/UGRID conventions:
+
+      * ``cf_role = "edge_node_connectivity"``
+      * ``start_index = 0``
+
+    - Coordinates associated with edges (e.g., edge centroids) are attached
+      for convenience.
     """
 
     # First check if the provided dataset is a xu.core.wrap.UgridDataset
@@ -97,21 +147,42 @@ def build_edge_node_connectivity(constructorSVA):
     return edge_node_connectivity
 
 def build_face_edge_connectivity(constructorSVA):
-    """Build face-edge connectivity array from unstructured grid.
-
-    Extracts and formats the face-edge connectivity information from
-    an xugrid dataset, creating a properly dimensioned DataArray with
-    CF-compliant attributes.
-
-    Args:
-        constructorSVA (constructorSVA): Object containing UgridDataset.
-
-    Returns:
-        xarray.DataArray: face_edge connectivity with dimensions (n_faces, 2).
-
-    Raises:
-        IOError: If dataset is not a UgridDataset.
     """
+    Construct face–edge connectivity array from a UGRID dataset.
+
+    This function extracts the face–edge connectivity from the underlying
+    grid and returns it as a properly dimensioned
+    :class:`xarray.DataArray` with CF-compliant metadata.
+
+    Parameters
+    ----------
+    constructorSVA : object
+        Object containing the UGRID dataset (``.ds`` attribute).
+
+    Returns
+    -------
+    xr.DataArray
+        Face–edge connectivity with dimensions
+        ``(n_faces, nMax_face_edges)``.
+
+    Raises
+    ------
+    IOError
+        If the dataset is not a ``xu.UgridDataset``.
+
+    Notes
+    -----
+    - The connectivity defines which edges bound each face.
+    - The second dimension corresponds to the maximum number of edges
+      per face (padded with ``_FillValue`` where necessary).
+    - Attributes follow CF/UGRID conventions:
+
+      * ``cf_role = "face_edge_connectivity"``
+      * ``start_index = 0``
+
+    - Face coordinates are attached as auxiliary coordinates.
+    """
+     
     # First check if the provided dataset is a xu.core.wrap.UgridDataset
     uds = constructorSVA.ds
 
@@ -141,6 +212,68 @@ def build_face_edge_connectivity(constructorSVA):
 
 
 def get_all_coordinates(uds):
+    """
+    Extract face, edge, and node coordinates from a UGRID dataset.
+
+    This function constructs standardized coordinate arrays for faces,
+    edges, and nodes, each expressed in Cartesian coordinates and returned
+    as :class:`xarray.DataArray` objects with consistent metadata.
+
+    Parameters
+    ----------
+    uds : xu.UgridDataset or xu.UgridDataArray
+        Input dataset or data array containing an unstructured grid
+        following UGRID conventions.
+
+    Returns
+    -------
+    tuple of xr.DataArray
+        Tuple containing:
+
+        - face_coords : xr.DataArray
+            Face centroid coordinates with dimensions
+            ``(n_faces, nCartesian_coords)``.
+        - edge_coords : xr.DataArray
+            Edge midpoint coordinates with dimensions
+            ``(n_edges, nCartesian_coords)``.
+        - node_coords : xr.DataArray
+            Node coordinates with dimensions
+            ``(n_nodes, nCartesian_coords)``.
+
+    Raises
+    ------
+    IOError
+        If the input is not a ``xu.UgridDataset`` or ``xu.UgridDataArray``.
+
+    Notes
+    -----
+    - Coordinate names are inferred from the UGRID attribute
+      ``mesh2d.node_coordinates``.
+    - Coordinates are returned in projected Cartesian space (typically meters).
+    - Metadata follows CF conventions, including:
+
+      * ``standard_name = "projection_x_coordinate, projection_y_coordinate"``
+      * ``units = "m"``
+
+    - For ``xu.UgridDataset``:
+      
+      * Face coordinates are reconstructed manually from dataset variables.
+      * Edge and node coordinates are taken from the grid object.
+
+    - For ``xu.UgridDataArray``:
+      
+      * All coordinates are obtained directly from the grid object.
+
+    - The Cartesian dimension is defined as:
+      
+      ``{gridname}_nCartesian_coords``
+
+    - These coordinate arrays are commonly used for:
+
+      * geometric calculations (distances, normals)
+      * interpolation between grid elements
+      * finite-volume operators
+    """
 
     if isinstance(uds, xu.core.wrap.UgridDataset):
         # > Get coordinate names
@@ -200,7 +333,45 @@ def get_all_coordinates(uds):
 
 
 def calculate_unit_normal_vectors(constructorSVA, **kwargs):
-    
+    """
+    Compute unit normal vectors for all edges in the unstructured grid.
+
+    The normal vectors are constructed perpendicular to each edge using
+    node coordinates and normalized to unit length. The resulting vectors
+    are oriented consistently with the edge definition.
+
+    Parameters
+    ----------
+    constructorSVA : object
+        Object containing the UGRID dataset (``.ds`` attribute).
+    **kwargs : dict, optional
+        Optional keyword arguments.
+
+        edge_node_coords : xr.DataArray, optional
+            Precomputed coordinates of nodes belonging to each edge with
+            dimensions ``(n_edges, 2, nCartesian_coords)``. If not provided,
+            they are reconstructed from node connectivity.
+
+    Returns
+    -------
+    xr.DataArray or None
+        Unit normal vectors with dimensions ``(n_edges, nCartesian_coords)``.
+        Returns ``None`` if the input dataset is not a UGRID dataset.
+
+    Notes
+    -----
+    - The normal vector is defined as:
+
+      .. math::
+
+          \\mathbf{n} = \\frac{(-\\Delta y, \\Delta x)}{\\|(-\\Delta y, \\Delta x)\\|}
+
+      where :math:`\\Delta x` and :math:`\\Delta y` are edge direction components.
+    - The result is stored in the dataset as ``{gridname}_unvs``.
+    - If already present, the existing variable is reused.
+    - Missing connectivity entries (fill values) are masked before computation.
+    """
+
     # First check if the provided dataset is a xu.core.wrap.UgridDataset
     uds = constructorSVA.ds
 
@@ -264,14 +435,60 @@ def calculate_unit_normal_vectors(constructorSVA, **kwargs):
     return unvs
 
 def reconstruct_vector_form_magnitude(constructorSVA, varname, **kwargs):
-    '''Function to reconstruct the vector form of a magnitude variable on an unstructured grid that is defined on the edges
-    in the direction of the normal vector (like velocity magnitude)
+    """
+    Reconstruct a vector field from edge-normal magnitude values.
 
-    :param uds:
-    :param varname:
-    :param kwargs:
-    :return:
-    '''
+    This function converts a scalar magnitude defined along edge-normal
+    directions (e.g., velocity components stored as normal fluxes) into
+    full Cartesian vector components by multiplying with unit normal vectors.
+
+    Parameters
+    ----------
+    constructorSVA : object
+        Object containing the UGRID dataset (``.ds`` attribute).
+    varname : str
+        Name of the magnitude variable defined on edges (e.g., velocity
+        in normal direction).
+    **kwargs : dict, optional
+        Optional keyword arguments.
+
+        face_edges : xr.DataArray, optional
+            Face-edge connectivity array.
+        edge_faces : xr.DataArray, optional
+            Edge-face connectivity array.
+        unvs : xr.DataArray, optional
+            Precomputed unit normal vectors.
+        varname_unvs : str, optional
+            Name of the unit normal vector variable in the dataset.
+
+    Returns
+    -------
+    xr.DataArray or xu.UgridDataArray
+        Reconstructed vector field with dimensions including
+        ``nCartesian_coords``.
+
+    Raises
+    ------
+    IOError
+        If the input dataset is not a ``xu.UgridDataset``.
+
+    Notes
+    -----
+    - The magnitude variable is assumed to represent values in the direction
+      of the edge-normal vector.
+    - The vector is reconstructed as:
+
+      .. math::
+
+          \\mathbf{u} = u_n \\, \\mathbf{n}
+
+      where :math:`u_n` is the scalar magnitude and :math:`\\mathbf{n}` is
+      the unit normal vector.
+    - Edge orientation is corrected using edge-face connectivity to ensure
+      consistent direction across faces.
+    - The result is stored in the dataset as ``{varname}c``.
+    - Designed primarily for velocity variables such as ``u0`` and ``u1``.
+    """
 
     # First check if the provided dataset is a xu.core.wrap.UgridDataset
     uds = constructorSVA.ds
@@ -1196,7 +1413,7 @@ def differentiate_over_3d_coord(uda: xr.DataArray, coord_var: str, axis: int = -
     - Uses finite differences with Dask-compatible operations.
     - Pads result to preserve original array shape.
     """
-    
+
     # Deduce name of depth dimension
     depth_dim = uda[coord_var].dims[axis]
     
