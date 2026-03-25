@@ -238,7 +238,7 @@ def calculate_unit_normal_vectors(constructorSVA, **kwargs):
     - If already present, the existing variable is reused.
     - Missing connectivity entries (fill values) are masked before computation.
     """
-    
+
     # First check if the provided dataset is a xu.core.wrap.UgridDataset
     uds = constructorSVA.ds
 
@@ -302,14 +302,60 @@ def calculate_unit_normal_vectors(constructorSVA, **kwargs):
     return unvs
 
 def reconstruct_vector_form_magnitude(constructorSVA, varname, **kwargs):
-    '''Function to reconstruct the vector form of a magnitude variable on an unstructured grid that is defined on the edges
-    in the direction of the normal vector (like velocity magnitude)
+    """
+    Reconstruct a vector field from edge-normal magnitude values.
 
-    :param uds:
-    :param varname:
-    :param kwargs:
-    :return:
-    '''
+    This function converts a scalar magnitude defined along edge-normal
+    directions (e.g., velocity components stored as normal fluxes) into
+    full Cartesian vector components by multiplying with unit normal vectors.
+
+    Parameters
+    ----------
+    constructorSVA : object
+        Object containing the UGRID dataset (``.ds`` attribute).
+    varname : str
+        Name of the magnitude variable defined on edges (e.g., velocity
+        in normal direction).
+    **kwargs : dict, optional
+        Optional keyword arguments.
+
+        face_edges : xr.DataArray, optional
+            Face-edge connectivity array.
+        edge_faces : xr.DataArray, optional
+            Edge-face connectivity array.
+        unvs : xr.DataArray, optional
+            Precomputed unit normal vectors.
+        varname_unvs : str, optional
+            Name of the unit normal vector variable in the dataset.
+
+    Returns
+    -------
+    xr.DataArray or xu.UgridDataArray
+        Reconstructed vector field with dimensions including
+        ``nCartesian_coords``.
+
+    Raises
+    ------
+    IOError
+        If the input dataset is not a ``xu.UgridDataset``.
+
+    Notes
+    -----
+    - The magnitude variable is assumed to represent values in the direction
+      of the edge-normal vector.
+    - The vector is reconstructed as:
+
+      .. math::
+
+          \\mathbf{u} = u_n \\, \\mathbf{n}
+
+      where :math:`u_n` is the scalar magnitude and :math:`\\mathbf{n}` is
+      the unit normal vector.
+    - Edge orientation is corrected using edge-face connectivity to ensure
+      consistent direction across faces.
+    - The result is stored in the dataset as ``{varname}c``.
+    - Designed primarily for velocity variables such as ``u0`` and ``u1``.
+    """
 
     # First check if the provided dataset is a xu.core.wrap.UgridDataset
     uds = constructorSVA.ds
