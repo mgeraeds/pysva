@@ -1530,7 +1530,7 @@ class constructorSVA:
             variance budget. Units are :math:`c^2\\, s^{-1}`, where :math:`c` is the
             tracer concentration.
         """
-        
+
         # > Get tracer variance
         tracer_variance = self.tracer_variance
 
@@ -1567,20 +1567,47 @@ class constructorSVA:
        
     def advection(self, integration='depth',  depth_averaged=False):
         """
-            Compute the advection term in the tracer variance budget.
+        Compute the advection term in the tracer variance budget.
 
-            Parameters
-            ----------
-            integration : {"depth", "volume", "none"}, optional
-                Integration method applied to the computed advection field.
-            depth_averaged : bool, optional
-                If ``True``, return the depth-averaged advection.
+        The horizontal advection is computed as the divergence of
+        :math:`\\mathbf{u} (c')^2`, where :math:`c'` is the tracer perturbation
+        relative to the mean. Integration over depth or volume is optional.
 
-            Returns
-            -------
-            xarray.DataArray
-                Advection term in the tracer variance budget.
-            """
+        Parameters
+        ----------
+        integration : {"depth", "volume", "none"}, optional
+            Integration method applied to the computed advection field.
+            Default is "depth".
+        depth_averaged : bool, optional
+            If True, return depth-averaged advection.
+
+        Returns
+        -------
+        xarray.DataArray
+            Advection term :math:`-\\nabla_h \\cdot (\\mathbf{u} (c')^2)` in the
+            tracer variance budget. Units are :math:`c^2\\, s^{-1}`.
+        """"""
+        Compute the advection term in the tracer variance budget.
+
+        The horizontal advection is computed as the divergence of
+        :math:`\\mathbf{u} (c')^2`, where :math:`c'` is the tracer perturbation
+        relative to the mean. Integration over depth or volume is optional.
+
+        Parameters
+        ----------
+        integration : {"depth", "volume", "none"}, optional
+            Integration method applied to the computed advection field.
+            Default is "depth".
+        depth_averaged : bool, optional
+            If True, return depth-averaged advection.
+
+        Returns
+        -------
+        xarray.DataArray
+            Advection term :math:`-\\nabla_h \\cdot (\\mathbf{u} (c')^2)` in the
+            tracer variance budget. Units are :math:`c^2\\, s^{-1}`.
+        """
+
         # > First calculate (S')^2 * u and (S')^2 * v
         u_sv2 = self.velx * self.tracer_variance
         v_sv2 = self.vely * self.tracer_variance
@@ -1618,21 +1645,31 @@ class constructorSVA:
     
     def horizontal_dissipation(self, integration='depth', depth_averaged=False):
         """
-        Compute horizontal dissipation in the tracer variance budget.
+        Compute the horizontal dissipation term in the tracer variance budget.
+
+        Horizontal dissipation is calculated using the horizontal diffusivity and
+        squared horizontal gradients of the tracer:
+        
+        .. math::
+            \\text{D}_h = 2 D_h \\left[\\left(\\frac{\\partial c}{\\partial x}\\right)^2
+            + \\left(\\frac{\\partial c}{\\partial y}\\right)^2\\right]
 
         Parameters
         ----------
         integration : {"depth", "volume", "none"}, optional
             Integration method applied to the dissipation field.
+            Default is "depth".
         depth_averaged : bool, optional
-            If ``True``, return the depth-averaged horizontal dissipation.
+            If True, return depth-averaged horizontal dissipation.
 
         Returns
         -------
         xarray.DataArray or None
-            Horizontal dissipation term in the tracer variance, or ``None`` if the calculation
-            cannot be performed.
+            Horizontal dissipation term in the tracer variance budget.
+            Units are :math:`c^2\\, s^{-1}`. Returns None if calculation cannot
+            be performed (e.g., horizontal diffusivity undefined).
         """
+        
         # > Get the dimensions
         dimn_cart = self.dimn_cart
         # > Get the horizontal diffusion
