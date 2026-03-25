@@ -27,7 +27,7 @@ def deprecated(reason, version, removal):
 
 def build_inverse_distance_weights(a, b):
     """
-    Compute distance-based interpolation weights between coordinate sets.
+    Compute generalized inverse distance weights between coordinate sets.
 
     This function constructs weights for mapping data between two sets of
     coordinates using pairwise distances. Typically used for interpolation
@@ -40,44 +40,39 @@ def build_inverse_distance_weights(a, b):
     b : xr.DataArray
         Target coordinates associated with each reference point, with
         dimensions ``(N, M, nCartesian_coords)``.
+    p : float, optional
+        Exponent controlling the decay with distance. Default is 2.
+        - p=1: linear decay (weaker locality)
+        - p=2: inverse-square decay (stronger locality, common choice)
 
     Returns
     -------
     xr.DataArray
-        Weights with dimensions ``(N, M)``, normalized such that the weights
-        sum to 1 along the second dimension for each reference point.
+        Normalized weights with dimensions ``(N, M)``, summing to 1 along
+        the second dimension for each reference point.
 
     Notes
     -----
-    - Distances are computed as:
+    - Pairwise distances are computed as:
 
       .. math::
 
           d_{ij} = \\| \\mathbf{a}_i - \\mathbf{b}_{ij} \\|
 
-    - Weights are currently defined as:
+    - Weights are defined as generalized inverse-distance:
 
       .. math::
 
-          w_{ij} = \\frac{d_{ij}}{\\sum_j d_{ij}}
+          w_{ij} = \\frac{1}{d_{ij}^p} \\Big/ \\sum_j \\frac{1}{d_{ij}^p}
 
-      Note that this corresponds to *distance weighting*, not true inverse
-      distance weighting. For inverse-distance weighting, use:
-
-      .. math::
-
-          w_{ij} = \\frac{1 / d_{ij}}{\\sum_j (1 / d_{ij})}
-
-    - Missing values (NaNs) are ignored in the normalization.
+    - Missing values (NaNs) in distances are ignored during normalization.
     - Implemented using :func:`xarray.apply_ufunc` for vectorized operation.
     """
 
     def weight_func(a, b, p=2):
-        
         distance = np.linalg.norm(a[:, np.newaxis, :] - b, axis=-1)
         weights = 1.0 / distance**p
         weights = weights / np.nansum(weights, axis=1)[:, np.newaxis]
-
         return weights
     
     weights = xr.apply_ufunc(weight_func, a, b,
