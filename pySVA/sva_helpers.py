@@ -71,7 +71,7 @@ def build_inverse_distance_weights(a, b):
     - Missing values (NaNs) are ignored in the normalization.
     - Implemented using :func:`xarray.apply_ufunc` for vectorized operation.
     """
-    
+
     def weight_func(a, b):
         distance = np.linalg.norm(a[:, np.newaxis, :] - b, axis=-1)
         weights = distance / np.nansum(distance, axis=1)[:, np.newaxis] # remove this if you only want the distance 
@@ -84,20 +84,40 @@ def build_inverse_distance_weights(a, b):
 
 
 def build_edge_node_connectivity(constructorSVA):
-    """Build edge-node connectivity array from unstructured grid.
+    """
+    Construct edge–node connectivity array from a UGRID dataset.
 
-    Extracts and formats the edge-node connectivity information from
-    an xugrid dataset, creating a properly dimensioned DataArray with
-    CF-compliant attributes.
+    This function extracts the edge–node connectivity from the underlying
+    grid and returns it as a properly dimensioned
+    :class:`xarray.DataArray` with CF-compliant metadata.
 
-    Args:
-        constructorSVA (constructorSVA): Object containing UgridDataset.
+    Parameters
+    ----------
+    constructorSVA : object
+        Object containing the UGRID dataset (``.ds`` attribute).
 
-    Returns:
-        xarray.DataArray: Edge-node connectivity with dimensions (n_edges, max_edge_nodes).
+    Returns
+    -------
+    xr.DataArray
+        Edge–node connectivity with dimensions
+        ``(n_edges, nMax_edge_nodes)``.
 
-    Raises:
-        IOError: If dataset is not a UgridDataset.
+    Raises
+    ------
+    IOError
+        If the dataset is not a ``xu.UgridDataset``.
+
+    Notes
+    -----
+    - The connectivity defines which nodes belong to each edge.
+    - Missing entries are filled with the grid ``_FillValue``.
+    - Attributes follow CF/UGRID conventions:
+
+      * ``cf_role = "edge_node_connectivity"``
+      * ``start_index = 0``
+
+    - Coordinates associated with edges (e.g., edge centroids) are attached
+      for convenience.
     """
 
     # First check if the provided dataset is a xu.core.wrap.UgridDataset
