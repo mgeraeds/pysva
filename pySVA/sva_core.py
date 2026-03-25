@@ -454,7 +454,42 @@ class constructorSVA:
     
     @cached_property
     def kzz(self, dicoww=5e-5, prandtl_schmidt=0.7):
-        
+        """
+        Compute the vertical turbulent eddy diffusivity.
+
+        The vertical diffusivity :math:`K_{zz}` is calculated as the sum of
+        molecular diffusivity, background diffusivity, and a tracer-dependent
+        laminar contribution.
+
+        .. math::
+
+            K_{zz} = \\frac{\\nu}{Pr} + D_{0} + k_l
+
+        where :math:`\\nu` is the kinematic viscosity, :math:`Pr` is the
+        Prandtl/Schmidt number, :math:`D_{0}` is a constant background
+        diffusivity, and :math:`k_l` is a tracer-dependent laminar component.
+
+        Parameters
+        ----------
+        dicoww : float, optional
+            Background vertical diffusivity (:math:`m^2 s^{-1}`).
+            Default is ``5e-5``.
+        prandtl_schmidt : float, optional
+            Prandtl/Schmidt number used to convert viscosity to diffusivity.
+            Default is ``0.7``.
+
+        Returns
+        -------
+        xarray.DataArray
+            Vertical turbulent eddy diffusivity defined on grid edges.
+
+        Notes
+        -----
+        The computed diffusivity is added to the dataset as
+        ``{gridname}_dicwws`` and contains CF-style metadata describing the
+        grid location and units.
+        """
+
         # > Get properties
         tracer = self.tracer.name
         gridname = self.gridname
@@ -480,12 +515,29 @@ class constructorSVA:
                             'grid_mapping': 'projected_coordinate_system'}).rename(f'{gridname}_dicwwu')
         
         # > Add calculated diffusivity to dataset
-        self.ds[f'{gridname}_dicwwu'] = (kzz.dims, kzz.data)
+        self.ds[f'{gridname}_dicwws'] = (kzz.dims, kzz.data)
 
         return kzz
     
     @cached_property
     def edge_faces(self):
+        """
+        Return the edge-to-face connectivity matrix.
+
+        This property exposes the UGRID edge-face connectivity stored in the
+        dataset as an :class:`xarray.DataArray`.
+
+        Returns
+        -------
+        xarray.DataArray
+            Connectivity array with dimensions ``(edges, max_edge_faces)``
+            mapping each edge to its adjacent faces.
+
+        Notes
+        -----
+        The array contains integer indices referencing faces in the grid.
+        Missing neighbors are indicated using the dataset's fill value.
+        """
 
         # > Get dimensions and fill value
         fill_value = self.fill_value
@@ -498,7 +550,27 @@ class constructorSVA:
 
     @cached_property
     def edge_nodes(self):
+        """
+        Return the edge-to-node connectivity matrix.
 
+        Constructs an :class:`xarray.DataArray` describing which nodes define
+        each edge of the unstructured grid.
+
+        Returns
+        -------
+        xarray.DataArray
+            Edge-node connectivity array with dimensions
+            ``(edges, max_edge_nodes)``.
+
+        Notes
+        -----
+        The returned array contains CF-UGRID compliant metadata including:
+
+        * ``cf_role = "edge_node_connectivity"``
+        * ``start_index = 0``
+
+        Missing entries are filled using the dataset's configured fill value.
+        """
         # > Get fill value, grid name and dimensions
         fill_value = self.fill_value
         dimn_edges = self.dimn_edges
@@ -519,6 +591,22 @@ class constructorSVA:
         
     @cached_property
     def face_edges(self):
+        """
+        Return the face-to-edge connectivity matrix.
+
+        Constructs an :class:`xarray.DataArray` describing which edges bound
+        each face of the unstructured grid.
+
+        Returns
+        -------
+        xarray.DataArray
+            Connectivity array with dimensions ``(faces, max_face_edges)``.
+
+        Notes
+        -----
+        The returned object follows CF-UGRID conventions with
+        ``cf_role = "face_edge_connectivity"``.
+        """
 
         # > Get fill value, grid name, and dimensions
         fill_value = self.fill_value
@@ -543,7 +631,27 @@ class constructorSVA:
         
     @cached_property
     def unvs(self):
-            
+        """
+        Compute unit normal vectors for all grid edges.
+
+        The normal vectors are defined perpendicular to each edge and
+        normalized to unit length. If the dataset uses geographic
+        coordinates (WGS84), coordinates are first projected to the
+        Dutch RD stereographic coordinate system before vector
+        calculation.
+
+        Returns
+        -------
+        xarray.DataArray
+            Unit normal vectors with dimensions ``(edges, cartesian_dim)``.
+
+        Notes
+        -----
+        The vectors are oriented outward relative to adjacent cells.
+        The resulting array is stored in the dataset under the variable
+        ``{gridname}_unvs``.
+        """
+
         from pyproj import Transformer
 
         # First check if the provided dataset is a xu.core.wrap.UgridDataset
@@ -596,69 +704,36 @@ class constructorSVA:
         uds[f'{varname_unvs}'] = (unvs.dims, unvs.data)
                 
         return unvs
-    
-#     def update_connectivities(self, boolean):
-        
-#         dimn_faces = self.dimn_faces
-#         dimn_edges = self.dimn_edges
-#         fill_value = self.fill_value
-#         gridname = self.grid_name
-        
-#         if dimn_faces in boolean.dims:
-            
-#             # > Get voordinate names
-#             coord_face_x, coord_face_y = self.ds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'face').split()
-#             coord_edge_x, coord_edge_y = self.ds.grid.to_dataset().mesh2d.attrs['node_coordinates'].replace('node', 'edge').split()  
-            
-#             # > Get dimensions
-#             dimn_maxfn = self.dimn_maxfn
-#             dimn_maxef = self.dimn_maxef
-            
-#             # > Start with chunking the boolean correctly
-#             chunks = {dimn_faces:-1}
-#             boolean = boolean.chunk(chunks)
-            
-#             # 1. The edge_faces parameter
-#             # > Get edge_faces
-#             edge_faces = self.edge_faces
-            
-#             # > Select the boolean on faces in the edge-face connectivity matrix
-#             edge_faces_stacked = edge_faces.stack(__tmp_dim__=(dimn_edges, dimn_maxef))
-#             boolean_ef_stacked = boolean.isel({dimn_faces: edge_faces_stacked})
-#             boolean_ef = boolean_ef_stacked.unstack("__tmp_dim__")
 
-#             # > Make into xr.DataArray with correct sizes, dimensions, and coordinates
-#             # > Make the new face_edges 
-#             edge_faces = xr.DataArray(edge_faces.where(boolean_ef, -999).values, dims=(dimn_edges, dimn_maxef))
-            
-#             # > Set the cached_property anew
-#             self.edge_faces = edge_faces
-            
-#             # Get the boolean for whether the edges are valid (dim: meshd_nEdges)
-#             nan_bool = (edge_faces == fill_value).all(dim=dimn_maxef)
-            
-#             # 2. The face_edges parameter
-#             # > Get face_edges
-#             face_edges = self.face_edges
-            
-#             # > Select the varname on faces in the edge-face connectivity matrix
-#             face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))
-#             boolean_fn_stacked = nan_bool.isel({dimn_edges: face_edges_stacked})
-#             boolean_fn = boolean_fn_stacked.unstack("__tmp_dim__")
-            
-#             face_edges = face_edges.where(boolean_fn, -999)
-            
-#             face_edges = xr.DataArray(face_edges, dims=[dimn_faces, dimn_maxfn],
-#                                             coords={f'{coord_face_x}': ([dimn_faces], self.ds[f'{coord_face_x}']),
-#                                                     f'{coord_face_y}': ([dimn_faces], self.ds[f'{coord_face_y}'])},
-#                                             attrs={'cf_role': 'face_edge_connectivity', 'start_index': 0,
-#                                                     '_FillValue': fill_value}, name=f'{gridname}_face_edges')
-            
-#             self.face_edges = face_edges
-            
-#             return            
                  
     def uda_to_edges(self, uda):
+        """
+        Interpolate a face-centered variable to grid edges.
+
+        The interpolation uses inverse-distance weights derived from the
+        adjacent faces connected to each edge.
+
+        Parameters
+        ----------
+        uda : xu.UgridDataArray
+            Face-centered variable defined on the grid.
+
+        Returns
+        -------
+        xu.UgridDataArray
+            Edge-centered variable obtained through weighted interpolation.
+
+        Raises
+        ------
+        ValueError
+            If the provided variable does not contain the face dimension.
+
+        Notes
+        -----
+        Boundary edges with only one valid neighboring face inherit the
+        value of that face.
+        """
+
         # > Define the to-be-interpolated tracer DataArray and grid
         varname = uda.name
         grid = self.ds.grid
@@ -734,7 +809,28 @@ class constructorSVA:
             raise ValueError(f'Variable {varname} does not contain dimension faces, so cannot be transformed from faces to edges.')
     
     def uda_to_faces(self, uda):
-              
+        """
+        Interpolate an edge-centered variable to grid faces.
+
+        The interpolation averages values from the edges that bound each
+        face using predefined edge weights.
+
+        Parameters
+        ----------
+        uda : xu.UgridDataArray
+            Edge-centered variable.
+
+        Returns
+        -------
+        xu.UgridDataArray
+            Face-centered variable.
+
+        Raises
+        ------
+        ValueError
+            If the provided variable does not contain the edge dimension.
+        """
+
         # > Define the to-be-interpolated tracer DataArray and grid
         varname = uda.name
         grid = self.ds.grid
@@ -799,6 +895,30 @@ class constructorSVA:
 
     
     def compute_gradient_on_face(self, uda, scalar=False, add_to_dataset=False, mode_depth=None):
+        """
+        Compute the horizontal gradient of a variable on grid faces.
+
+        The gradient is evaluated using Gauss' divergence theorem by summing
+        flux contributions across edges surrounding each face.
+
+        Parameters
+        ----------
+        uda : xu.UgridDataArray
+            Variable for which the gradient is computed.
+        scalar : bool, optional
+            If ``True``, treat the variable as scalar and use face areas
+            instead of flow areas. Default is ``False``.
+        add_to_dataset : bool, optional
+            If ``True``, store the resulting gradient in the dataset.
+        mode_depth : {"sum", "mean", None}, optional
+            Controls how vertical layers are treated when computing the
+            gradient.
+
+        Returns
+        -------
+        xarray.DataArray
+            Gradient vector with dimensions ``(faces, cartesian_dim)``.
+        """
 
         # > Obtain uds and grid from constructorSVA object
         uds = self.ds
@@ -919,7 +1039,18 @@ class constructorSVA:
 
     @cached_property
     def distance_vectors(self):
+        """
+        Compute vectors from face centroids to edge midpoints.
 
+        These vectors are used in gradient and geometric calculations
+        involving the unstructured mesh.
+
+        Returns
+        -------
+        xarray.DataArray
+            Distance vectors with dimensions
+            ``(faces, max_face_edges, cartesian_dim)``.
+        """
         # > Get dimensions, fill_value, and varname
         fill_value = self.fill_value
         dimn_edges = self.dimn_edges
@@ -952,6 +1083,15 @@ class constructorSVA:
     
     @cached_property
     def tracer_variance(self):
+        """
+        Compute the variance of the tracer field over depth.
+
+        Returns
+        -------
+        xarray.DataArray
+            Squared tracer perturbation relative to the depth-mean tracer
+            concentration.
+        """
         # > Get properties
         tracer = self.tracer
         # > Calculate mean
@@ -964,6 +1104,16 @@ class constructorSVA:
     
     @cached_property
     def depth_integrated_tracer_variance(self):
+        """
+        Compute the depth-integrated tracer variance.
+
+        The integration is performed using the trapezoidal rule.
+
+        Returns
+        -------
+        xarray.DataArray
+            Depth-integrated tracer variance.
+        """
         # > Get properties
         tracer_variance = self.tracer_variance
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
@@ -973,7 +1123,14 @@ class constructorSVA:
      
     @cached_property
     def cell_thickness(self):
+        """
+        Compute vertical thickness of grid cells.
 
+        Returns
+        -------
+        xarray.DataArray
+            Cell thickness for each vertical layer.
+        """
         cell_thickness = self.ds.mesh2d_flowelem_zw.diff(dim=self.dimn_interface).rename({f'{self.dimn_interface}':self.dimn_layer}).rename(f'{self.gridname}_cell_thickness')
         cell_thickness = cell_thickness.reset_coords(drop=True)
 
@@ -981,6 +1138,17 @@ class constructorSVA:
     
     @cached_property
     def cell_area(self):
+        """
+        Compute horizontal area of each grid cell.
+
+        The area is derived from edge geometry using distance vectors
+        and outward unit normal vectors.
+
+        Returns
+        -------
+        xarray.DataArray
+            Horizontal cell area defined on faces.
+        """
         # > Get the relevant dimensions
         dimn_edges = self.dimn_edges
         dimn_cart = self.dimn_cart
@@ -1032,6 +1200,14 @@ class constructorSVA:
     
     @cached_property
     def volume(self):
+        """
+        Compute the volume of each grid cell.
+
+        Returns
+        -------
+        xarray.DataArray
+            Cell volume calculated as cell_area times the cell_thickness. 
+        """
         # > Get strings
         gridname = self.gridname
         
@@ -1044,7 +1220,21 @@ class constructorSVA:
         return volume
     
     def straining(self, integration='depth', depth_averaged=False):
-        
+        """
+        Compute the straining term from the tracer variance budget.
+
+        Parameters
+        ----------
+        integration : {"depth", "volume", "none"}, optional
+            Integration method applied to the resulting field.
+        depth_averaged : bool, optional
+            If ``True``, return the depth-averaged straining term.
+
+        Returns
+        -------
+        xarray.DataArray
+            Straining term from tracer variance budget.
+        """
         # > Get the tracer variance
         tracer_variance = self.tracer_variance
 
@@ -1089,7 +1279,22 @@ class constructorSVA:
         return straining.rename(f"{integration}_integrated_{self.tracer.name}_straining")
     
     def tendency(self, integration='depth', depth_averaged=False):
-        
+        """
+        Compute the temporal tendency of tracer variance in the tracer variance budget.
+
+        Parameters
+        ----------
+        integration : {"depth", "volume", "none"}, optional
+            Integration method for the tracer variance prior to
+            differentiation.
+        depth_averaged : bool, optional
+            If ``True``, return depth-averaged tendency.
+
+        Returns
+        -------
+        xarray.DataArray
+            Tendency term in the tracer variance budget.
+        """
         # > Get tracer variance
         tracer_variance = self.tracer_variance
 
@@ -1125,7 +1330,21 @@ class constructorSVA:
         return tendency
        
     def advection(self, integration='depth',  depth_averaged=False):
+        """
+            Compute the advection term in the tracer variance budget.
 
+            Parameters
+            ----------
+            integration : {"depth", "volume", "none"}, optional
+                Integration method applied to the computed advection field.
+            depth_averaged : bool, optional
+                If ``True``, return the depth-averaged advection.
+
+            Returns
+            -------
+            xarray.DataArray
+                Advection term in the tracer variance budget.
+            """
         # > First calculate (S')^2 * u and (S')^2 * v
         u_sv2 = self.velx * self.tracer_variance
         v_sv2 = self.vely * self.tracer_variance
@@ -1134,10 +1353,6 @@ class constructorSVA:
         u_sv2 = u_sv2.drop_vars([n for n,v in u_sv2.coords.items() if f"{self.dimn_layer}" in v.dims])
         v_sv2 = v_sv2.drop_vars([n for n,v in v_sv2.coords.items() if f"{self.dimn_layer}" in v.dims])
         depth = self.depth.drop_vars([n for n,v in self.depth.coords.items() if f"{self.dimn_layer}" in v.dims])
-
-        # > Integrate terms in x and y direction
-        # u_sv2_int = integrate_trapz(u_sv2, depth, dim=self.dimn_layer).rename(f"{self.gridname}_{self.tracer.name}_adv_x")
-        # v_sv2_int = integrate_trapz(v_sv2, depth, dim=self.dimn_layer).rename(f"{self.gridname}_{self.tracer.name}_adv_y")
 
         # > Calculate gradient
         grad_usv2 = self.compute_gradient_on_face(u_sv2) 
@@ -1166,6 +1381,22 @@ class constructorSVA:
         return advection.rename(f"{integration}_integrated_{self.tracer.name}_advection")
     
     def horizontal_dissipation(self, integration='depth', depth_averaged=False):
+        """
+        Compute horizontal dissipation in the tracer variance budget.
+
+        Parameters
+        ----------
+        integration : {"depth", "volume", "none"}, optional
+            Integration method applied to the dissipation field.
+        depth_averaged : bool, optional
+            If ``True``, return the depth-averaged horizontal dissipation.
+
+        Returns
+        -------
+        xarray.DataArray or None
+            Horizontal dissipation term in the tracer variance, or ``None`` if the calculation
+            cannot be performed.
+        """
         # > Get the dimensions
         dimn_cart = self.dimn_cart
         # > Get the horizontal diffusion
@@ -1207,7 +1438,22 @@ class constructorSVA:
         except:
             return None
         
-    def dissipation(self, integration='depth', depth_averaged=False):
+    def vertical_dissipation(self, integration='depth', depth_averaged=False):
+        """
+        Compute vertical dissipation in the tracer variance budget.
+
+        Parameters
+        ----------
+        integration : {"depth", "volume", "none"}, optional
+            Integration method applied to the dissipation field.
+        depth_averaged : bool, optional
+            If ``True``, return the depth-averaged vertical dissipation.
+
+        Returns
+        -------
+        xarray.DataArray
+            Vertical dissipation term in the tracer variance budget.
+        """
         # > Get the vertical turbulent diffusivity
         kzz = self.kzz
         
@@ -1232,37 +1478,16 @@ class constructorSVA:
         # > Integrate the total term and multiply with -1 
         if integration.lower() == 'depth':
             # > Integrate dissipation over depth (trapezoidal rule)
-            dissipation = integrate_trapz(dsdz_sq, depth, self.dimn_layer)
+            vertical_dissipation = integrate_trapz(dsdz_sq, depth, self.dimn_layer)
         elif integration.lower() == 'volume':
             # > Multiply with volume per cell and sum over all cells
-            dissipation = ((dsdz_sq * self.volume).sum(dim=[f'{self.dimn_layer}', f'{self.dimn_faces}']))
+            vertical_dissipation = ((dsdz_sq * self.volume).sum(dim=[f'{self.dimn_layer}', f'{self.dimn_faces}']))
         elif integration.lower() == 'none':
-            dissipation = dsdz_sq
+            vertical_dissipation = dsdz_sq
         else:
             raise ValueError(f"Could not derive what to do with integration={integration} keyword.")
         
         if depth_averaged:
-            dissipation = dissipation * (1/self.water_depth)
+            vertical_dissipation = vertical_dissipation * (1/self.water_depth)
             
-        return dissipation.rename(f"{integration}_integrated_{self.tracer.name}_dissipation")
-               
-    
-    # def _setup(self, data):
-    #     """Iterates over keys in dictionary. Handles 4d-data, if one argument is left empty, dummy dimension will be created.
-    #     Args:
-    #         data (dict): Dictionary that describes geospatial dimensions of the dataset.
-    #     """
-    #     for dimension in data.keys():
-    #         if data[dimension] is None:
-    #             self.ds = self.ds.expand_dims(dimension)
-    #         else:
-    #             self.ds = self.ds.rename({data[dimension]: dimension})
-
-    #     self.ds = self.ds.transpose("time",
-    #                                 "depth",
-    #                                 "nfaces",
-    #                                 "nedges",
-    #                                 "nnodes",
-    #                                 ...)
-        
-        # removed the nfaces and nedges dimnesion, as they are derived by the xugrid package
+        return vertical_dissipation.rename(f"{integration}_integrated_{self.tracer.name}_dissipation")
