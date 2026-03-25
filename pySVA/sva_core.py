@@ -1324,13 +1324,36 @@ class constructorSVA:
         """
         Compute horizontal area of each grid cell.
 
-        The area is derived from edge geometry using distance vectors
-        and outward unit normal vectors.
+        The horizontal cell area is derived from edge geometry using
+        edge lengths and outward unit normal vectors, consistent with
+        finite-volume formulations on unstructured grids.
 
         Returns
         -------
-        xarray.DataArray
-            Horizontal cell area defined on faces.
+        xr.DataArray
+            Horizontal cell area defined on faces with dimension
+            ``(n_faces,)`` or including additional dimensions if
+            time-dependent.
+
+        Notes
+        -----
+        - The area is computed by integrating contributions from all
+        edges surrounding a face.
+
+        - In discrete form, this corresponds to a polygonal area
+        reconstruction using edge vectors and normals:
+
+        .. math::
+
+            A = \\frac{1}{2} \\sum_e \\mathbf{r}_e \\cdot \\mathbf{n}_e
+
+        where :math:`\\mathbf{r}_e` is the edge vector and
+        :math:`\\mathbf{n}_e` is the outward unit normal.
+
+        - The formulation is consistent with finite-volume flux
+        integration and ensures geometric conservation.
+
+        - Assumes a planar (Cartesian) coordinate system.
         """
 
         # > Get the relevant dimensions
@@ -1366,6 +1389,7 @@ class constructorSVA:
         
         # > Get the flow area
         flow_area = self.flow_area
+
         # > Fill face_edge matrix with flow area data
         edge_length = self.edge_length
         
@@ -1407,18 +1431,36 @@ class constructorSVA:
         """
         Compute the straining term from the tracer variance budget.
 
+        The straining term is defined as
+
+        .. math::
+
+            S = -2 \, c' \, \mathbf{u}' \cdot \nabla \bar{c}
+
+        where
+
+        - :math:`c' = c - \bar{c}` is the tracer perturbation relative to the depth-averaged tracer,
+        - :math:`\mathbf{u}' = \mathbf{u} - \bar{\mathbf{u}}` is the velocity perturbation relative to the depth-averaged velocity,
+        - :math:`\bar{c}` indicates a **depth-averaged** quantity,
+        - :math:`\nabla` denotes the horizontal gradient operator.
+
         Parameters
         ----------
         integration : {"depth", "volume", "none"}, optional
-            Integration method applied to the resulting field.
+            If "depth", integrate the straining term over the vertical layers.
+            If "volume", integrate over the total volume (not yet implemented).
+            If "none", no integration is performed.
         depth_averaged : bool, optional
-            If ``True``, return the depth-averaged straining term.
+            If ``True``, return the term already averaged over depth layers.
+            Otherwise, return the full 3D field.
 
         Returns
         -------
         xarray.DataArray
-            Straining term from tracer variance budget.
+            Straining term from the tracer variance budget, with units consistent
+            with :math:`c^2\,s^{-1}` (tracer squared per second).
         """
+
         # > Get the tracer variance
         tracer_variance = self.tracer_variance
 
