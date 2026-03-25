@@ -397,13 +397,24 @@ class constructorSVA:
         
     @cached_property
     def edge_length(self):
-        """Calculate the length of each grid cell edge.
+        """
+        Compute geometric length of each edge.
 
-        Computes Euclidean distance between the two nodes of each edge
-        in the horizontal (x,y) coordinate system.
+        The edge length is calculated as the Euclidean distance between
+        the two nodes defining each edge in Cartesian space.
 
-        Returns:
-            xarray.DataArray: Edge length at each edge.
+        Returns
+        -------
+        xr.DataArray
+            Edge length with dimension ``(n_edges,)``.
+
+        Notes
+        -----
+        - Computed using the Pythagorean distance:
+
+        .. math::
+
+            L = \\sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2}
         """
         
         # > Get properties
@@ -415,13 +426,22 @@ class constructorSVA:
     @cached_property
     def face_edge_weights(self):
         """
-        Compute the face-edge-weights for each face, based on inverse distance weighting from each face to each edge associated with the face.
+        Compute interpolation weights from faces to edges.
 
-        This builds a face-to-edge weight matrix by mapping face coordinates to
-        their connected edges and computing inverse distance weights.
+        For each face, weights are computed for all connected edges
+        using distance-based weighting.
 
-        :returns: DataArray of shape (num_faces, num_edges_per_face) containing weights.
-        :rtype: xarray.DataArray
+        Returns
+        -------
+        xr.DataArray
+            Weights with dimensions ``(n_faces, nMax_face_edges)``.
+
+        Notes
+        -----
+        - Based on distances between face centroids and edge midpoints.
+        - Weights are normalized such that they sum to 1 per face.
+        - Typically used for interpolation from face-centered variables
+        to edge-centered quantities.
         """
         
         # > Get dimension names
