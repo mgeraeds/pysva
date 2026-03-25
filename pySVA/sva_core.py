@@ -270,14 +270,25 @@ class constructorSVA:
    
     @cached_property
     def face_area(self):
-        """Calculate face area for each grid edge.
-
-        Computes the area of grid faces by multiplying cell thickness
-        (interpolated to edges) by edge length.
-
-        Returns:
-            xarray.DataArray: Face area with dimensions matching edges.
         """
+        Compute face-associated cross-sectional area on edges.
+
+        The face area is defined as the product of interpolated cell
+        thickness and edge length.
+
+        Returns
+        -------
+        xr.DataArray
+            Face area with dimensions matching edges
+            (typically ``n_edges`` and vertical layers if present).
+
+        Notes
+        -----
+        - Cell thickness is interpolated from faces to edges.
+        - Edge length is computed geometrically from node coordinates.
+        - The result is stored as ``{gridname}_face_area``.
+        """
+
         dimn_edges = self.dimn_edges
         
         # > Get general strings
@@ -303,13 +314,28 @@ class constructorSVA:
     
     @cached_property
     def water_depth(self):
-        """Calculate water depth at each grid face.
+        """
+        Compute water depth at each grid face.
 
-        Computes depth as the difference between maximum interface elevation
-        (water surface) and bed level.
+        Water depth is defined as the difference between the maximum
+        interface elevation (water surface) and the bed level.
 
-        Returns:
-            xarray.DataArray: Water depth (positive downward) at each face.
+        Returns
+        -------
+        xr.DataArray
+            Water depth with dimensions ``(n_faces, ...)``.
+
+        Notes
+        -----
+        - Positive downward convention is used.
+        - Computed as:
+
+        .. math::
+
+            H = \\eta - z_b
+
+        where :math:`\\eta` is the water surface elevation and
+        :math:`z_b` is the bed level.
         """
         
         # > Get general strings
