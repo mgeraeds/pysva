@@ -26,22 +26,52 @@ def deprecated(reason, version, removal):
     return decorator
 
 def build_inverse_distance_weights(a, b):
-    """Calculate inverse distance weights using xarray.
-
-    Computes weights for interpolation based on inverse distances
-    between coordinate sets a and b. Used for mapping data between
-    different grid locations (e.g., faces to edges).
-
-    Args:
-        a (xarray.DataArray): Reference coordinates (N, 2) with x and y components.
-        b (xarray.DataArray): Target coordinates per reference point (N, M, 2).
-
-    Returns:
-        xarray.DataArray: Inverse distance weights (N, M) normalized to sum to 1.
-
-    Notes:
-        Weights sum to 1.0 along the second dimension for each reference point.
     """
+    Compute distance-based interpolation weights between coordinate sets.
+
+    This function constructs weights for mapping data between two sets of
+    coordinates using pairwise distances. Typically used for interpolation
+    between grid elements (e.g., faces → edges or nodes → edges).
+
+    Parameters
+    ----------
+    a : xr.DataArray
+        Reference coordinates with dimensions ``(N, nCartesian_coords)``.
+    b : xr.DataArray
+        Target coordinates associated with each reference point, with
+        dimensions ``(N, M, nCartesian_coords)``.
+
+    Returns
+    -------
+    xr.DataArray
+        Weights with dimensions ``(N, M)``, normalized such that the weights
+        sum to 1 along the second dimension for each reference point.
+
+    Notes
+    -----
+    - Distances are computed as:
+
+      .. math::
+
+          d_{ij} = \\| \\mathbf{a}_i - \\mathbf{b}_{ij} \\|
+
+    - Weights are currently defined as:
+
+      .. math::
+
+          w_{ij} = \\frac{d_{ij}}{\\sum_j d_{ij}}
+
+      Note that this corresponds to *distance weighting*, not true inverse
+      distance weighting. For inverse-distance weighting, use:
+
+      .. math::
+
+          w_{ij} = \\frac{1 / d_{ij}}{\\sum_j (1 / d_{ij})}
+
+    - Missing values (NaNs) are ignored in the normalization.
+    - Implemented using :func:`xarray.apply_ufunc` for vectorized operation.
+    """
+    
     def weight_func(a, b):
         distance = np.linalg.norm(a[:, np.newaxis, :] - b, axis=-1)
         weights = distance / np.nansum(distance, axis=1)[:, np.newaxis] # remove this if you only want the distance 
@@ -141,6 +171,68 @@ def build_face_edge_connectivity(constructorSVA):
 
 
 def get_all_coordinates(uds):
+    """
+    Extract face, edge, and node coordinates from a UGRID dataset.
+
+    This function constructs standardized coordinate arrays for faces,
+    edges, and nodes, each expressed in Cartesian coordinates and returned
+    as :class:`xarray.DataArray` objects with consistent metadata.
+
+    Parameters
+    ----------
+    uds : xu.UgridDataset or xu.UgridDataArray
+        Input dataset or data array containing an unstructured grid
+        following UGRID conventions.
+
+    Returns
+    -------
+    tuple of xr.DataArray
+        Tuple containing:
+
+        - face_coords : xr.DataArray
+            Face centroid coordinates with dimensions
+            ``(n_faces, nCartesian_coords)``.
+        - edge_coords : xr.DataArray
+            Edge midpoint coordinates with dimensions
+            ``(n_edges, nCartesian_coords)``.
+        - node_coords : xr.DataArray
+            Node coordinates with dimensions
+            ``(n_nodes, nCartesian_coords)``.
+
+    Raises
+    ------
+    IOError
+        If the input is not a ``xu.UgridDataset`` or ``xu.UgridDataArray``.
+
+    Notes
+    -----
+    - Coordinate names are inferred from the UGRID attribute
+      ``mesh2d.node_coordinates``.
+    - Coordinates are returned in projected Cartesian space (typically meters).
+    - Metadata follows CF conventions, including:
+
+      * ``standard_name = "projection_x_coordinate, projection_y_coordinate"``
+      * ``units = "m"``
+
+    - For ``xu.UgridDataset``:
+      
+      * Face coordinates are reconstructed manually from dataset variables.
+      * Edge and node coordinates are taken from the grid object.
+
+    - For ``xu.UgridDataArray``:
+      
+      * All coordinates are obtained directly from the grid object.
+
+    - The Cartesian dimension is defined as:
+      
+      ``{gridname}_nCartesian_coords``
+
+    - These coordinate arrays are commonly used for:
+
+      * geometric calculations (distances, normals)
+      * interpolation between grid elements
+      * finite-volume operators
+    """
 
     if isinstance(uds, xu.core.wrap.UgridDataset):
         # > Get coordinate names
