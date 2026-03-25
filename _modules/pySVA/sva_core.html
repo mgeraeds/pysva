@@ -560,7 +560,42 @@
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.kzz">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">kzz</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dicoww</span><span class="o">=</span><span class="mf">5e-5</span><span class="p">,</span> <span class="n">prandtl_schmidt</span><span class="o">=</span><span class="mf">0.7</span><span class="p">):</span>
-        
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the vertical turbulent eddy diffusivity.</span>
+
+<span class="sd">        The vertical diffusivity :math:`K_{zz}` is calculated as the sum of</span>
+<span class="sd">        molecular diffusivity, background diffusivity, and a tracer-dependent</span>
+<span class="sd">        laminar contribution.</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            K_{zz} = \\frac{\\nu}{Pr} + D_{0} + k_l</span>
+
+<span class="sd">        where :math:`\\nu` is the kinematic viscosity, :math:`Pr` is the</span>
+<span class="sd">        Prandtl/Schmidt number, :math:`D_{0}` is a constant background</span>
+<span class="sd">        diffusivity, and :math:`k_l` is a tracer-dependent laminar component.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dicoww : float, optional</span>
+<span class="sd">            Background vertical diffusivity (:math:`m^2 s^{-1}`).</span>
+<span class="sd">            Default is ``5e-5``.</span>
+<span class="sd">        prandtl_schmidt : float, optional</span>
+<span class="sd">            Prandtl/Schmidt number used to convert viscosity to diffusivity.</span>
+<span class="sd">            Default is ``0.7``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xarray.DataArray</span>
+<span class="sd">            Vertical turbulent eddy diffusivity defined on grid edges.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The computed diffusivity is added to the dataset as</span>
+<span class="sd">        ``{gridname}_dicwws`` and contains CF-style metadata describing the</span>
+<span class="sd">        grid location and units.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="c1"># &gt; Get properties</span>
         <span class="n">tracer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracer</span><span class="o">.</span><span class="n">name</span>
         <span class="n">gridname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gridname</span>
@@ -586,7 +621,7 @@
                             <span class="s1">&#39;grid_mapping&#39;</span><span class="p">:</span> <span class="s1">&#39;projected_coordinate_system&#39;</span><span class="p">})</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_dicwwu&#39;</span><span class="p">)</span>
         
         <span class="c1"># &gt; Add calculated diffusivity to dataset</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">ds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_dicwwu&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">kzz</span><span class="o">.</span><span class="n">dims</span><span class="p">,</span> <span class="n">kzz</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ds</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_dicwws&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">kzz</span><span class="o">.</span><span class="n">dims</span><span class="p">,</span> <span class="n">kzz</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">kzz</span></div>
 
@@ -595,6 +630,23 @@
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.edge_faces">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">edge_faces</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the edge-to-face connectivity matrix.</span>
+
+<span class="sd">        This property exposes the UGRID edge-face connectivity stored in the</span>
+<span class="sd">        dataset as an :class:`xarray.DataArray`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xarray.DataArray</span>
+<span class="sd">            Connectivity array with dimensions ``(edges, max_edge_faces)``</span>
+<span class="sd">            mapping each edge to its adjacent faces.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The array contains integer indices referencing faces in the grid.</span>
+<span class="sd">        Missing neighbors are indicated using the dataset&#39;s fill value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># &gt; Get dimensions and fill value</span>
         <span class="n">fill_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fill_value</span>
@@ -610,7 +662,27 @@
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.edge_nodes">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">edge_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the edge-to-node connectivity matrix.</span>
 
+<span class="sd">        Constructs an :class:`xarray.DataArray` describing which nodes define</span>
+<span class="sd">        each edge of the unstructured grid.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xarray.DataArray</span>
+<span class="sd">            Edge-node connectivity array with dimensions</span>
+<span class="sd">            ``(edges, max_edge_nodes)``.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The returned array contains CF-UGRID compliant metadata including:</span>
+
+<span class="sd">        * ``cf_role = &quot;edge_node_connectivity&quot;``</span>
+<span class="sd">        * ``start_index = 0``</span>
+
+<span class="sd">        Missing entries are filled using the dataset&#39;s configured fill value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># &gt; Get fill value, grid name and dimensions</span>
         <span class="n">fill_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fill_value</span>
         <span class="n">dimn_edges</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimn_edges</span>
@@ -634,6 +706,22 @@
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.face_edges">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">face_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the face-to-edge connectivity matrix.</span>
+
+<span class="sd">        Constructs an :class:`xarray.DataArray` describing which edges bound</span>
+<span class="sd">        each face of the unstructured grid.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xarray.DataArray</span>
+<span class="sd">            Connectivity array with dimensions ``(faces, max_face_edges)``.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The returned object follows CF-UGRID conventions with</span>
+<span class="sd">        ``cf_role = &quot;face_edge_connectivity&quot;``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># &gt; Get fill value, grid name, and dimensions</span>
         <span class="n">fill_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fill_value</span>
@@ -661,7 +749,27 @@
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.unvs">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">unvs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-            
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute unit normal vectors for all grid edges.</span>
+
+<span class="sd">        The normal vectors are defined perpendicular to each edge and</span>
+<span class="sd">        normalized to unit length. If the dataset uses geographic</span>
+<span class="sd">        coordinates (WGS84), coordinates are first projected to the</span>
+<span class="sd">        Dutch RD stereographic coordinate system before vector</span>
+<span class="sd">        calculation.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xarray.DataArray</span>
+<span class="sd">            Unit normal vectors with dimensions ``(edges, cartesian_dim)``.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The vectors are oriented outward relative to adjacent cells.</span>
+<span class="sd">        The resulting array is stored in the dataset under the variable</span>
+<span class="sd">        ``{gridname}_unvs``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Transformer</span>
 
         <span class="c1"># First check if the provided dataset is a xu.core.wrap.UgridDataset</span>
@@ -715,71 +823,38 @@
                 
         <span class="k">return</span> <span class="n">unvs</span></div>
 
-    
-<span class="c1">#     def update_connectivities(self, boolean):</span>
-        
-<span class="c1">#         dimn_faces = self.dimn_faces</span>
-<span class="c1">#         dimn_edges = self.dimn_edges</span>
-<span class="c1">#         fill_value = self.fill_value</span>
-<span class="c1">#         gridname = self.grid_name</span>
-        
-<span class="c1">#         if dimn_faces in boolean.dims:</span>
-            
-<span class="c1">#             # &gt; Get voordinate names</span>
-<span class="c1">#             coord_face_x, coord_face_y = self.ds.grid.to_dataset().mesh2d.attrs[&#39;node_coordinates&#39;].replace(&#39;node&#39;, &#39;face&#39;).split()</span>
-<span class="c1">#             coord_edge_x, coord_edge_y = self.ds.grid.to_dataset().mesh2d.attrs[&#39;node_coordinates&#39;].replace(&#39;node&#39;, &#39;edge&#39;).split()  </span>
-            
-<span class="c1">#             # &gt; Get dimensions</span>
-<span class="c1">#             dimn_maxfn = self.dimn_maxfn</span>
-<span class="c1">#             dimn_maxef = self.dimn_maxef</span>
-            
-<span class="c1">#             # &gt; Start with chunking the boolean correctly</span>
-<span class="c1">#             chunks = {dimn_faces:-1}</span>
-<span class="c1">#             boolean = boolean.chunk(chunks)</span>
-            
-<span class="c1">#             # 1. The edge_faces parameter</span>
-<span class="c1">#             # &gt; Get edge_faces</span>
-<span class="c1">#             edge_faces = self.edge_faces</span>
-            
-<span class="c1">#             # &gt; Select the boolean on faces in the edge-face connectivity matrix</span>
-<span class="c1">#             edge_faces_stacked = edge_faces.stack(__tmp_dim__=(dimn_edges, dimn_maxef))</span>
-<span class="c1">#             boolean_ef_stacked = boolean.isel({dimn_faces: edge_faces_stacked})</span>
-<span class="c1">#             boolean_ef = boolean_ef_stacked.unstack(&quot;__tmp_dim__&quot;)</span>
 
-<span class="c1">#             # &gt; Make into xr.DataArray with correct sizes, dimensions, and coordinates</span>
-<span class="c1">#             # &gt; Make the new face_edges </span>
-<span class="c1">#             edge_faces = xr.DataArray(edge_faces.where(boolean_ef, -999).values, dims=(dimn_edges, dimn_maxef))</span>
-            
-<span class="c1">#             # &gt; Set the cached_property anew</span>
-<span class="c1">#             self.edge_faces = edge_faces</span>
-            
-<span class="c1">#             # Get the boolean for whether the edges are valid (dim: meshd_nEdges)</span>
-<span class="c1">#             nan_bool = (edge_faces == fill_value).all(dim=dimn_maxef)</span>
-            
-<span class="c1">#             # 2. The face_edges parameter</span>
-<span class="c1">#             # &gt; Get face_edges</span>
-<span class="c1">#             face_edges = self.face_edges</span>
-            
-<span class="c1">#             # &gt; Select the varname on faces in the edge-face connectivity matrix</span>
-<span class="c1">#             face_edges_stacked = face_edges.stack(__tmp_dim__=(dimn_faces, dimn_maxfn))</span>
-<span class="c1">#             boolean_fn_stacked = nan_bool.isel({dimn_edges: face_edges_stacked})</span>
-<span class="c1">#             boolean_fn = boolean_fn_stacked.unstack(&quot;__tmp_dim__&quot;)</span>
-            
-<span class="c1">#             face_edges = face_edges.where(boolean_fn, -999)</span>
-            
-<span class="c1">#             face_edges = xr.DataArray(face_edges, dims=[dimn_faces, dimn_maxfn],</span>
-<span class="c1">#                                             coords={f&#39;{coord_face_x}&#39;: ([dimn_faces], self.ds[f&#39;{coord_face_x}&#39;]),</span>
-<span class="c1">#                                                     f&#39;{coord_face_y}&#39;: ([dimn_faces], self.ds[f&#39;{coord_face_y}&#39;])},</span>
-<span class="c1">#                                             attrs={&#39;cf_role&#39;: &#39;face_edge_connectivity&#39;, &#39;start_index&#39;: 0,</span>
-<span class="c1">#                                                     &#39;_FillValue&#39;: fill_value}, name=f&#39;{gridname}_face_edges&#39;)</span>
-            
-<span class="c1">#             self.face_edges = face_edges</span>
-            
-<span class="c1">#             return            </span>
                  
 <div class="viewcode-block" id="constructorSVA.uda_to_edges">
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.uda_to_edges">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">uda_to_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uda</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Interpolate a face-centered variable to grid edges.</span>
+
+<span class="sd">        The interpolation uses inverse-distance weights derived from the</span>
+<span class="sd">        adjacent faces connected to each edge.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        uda : xu.UgridDataArray</span>
+<span class="sd">            Face-centered variable defined on the grid.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xu.UgridDataArray</span>
+<span class="sd">            Edge-centered variable obtained through weighted interpolation.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the provided variable does not contain the face dimension.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Boundary edges with only one valid neighboring face inherit the</span>
+<span class="sd">        value of that face.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="c1"># &gt; Define the to-be-interpolated tracer DataArray and grid</span>
         <span class="n">varname</span> <span class="o">=</span> <span class="n">uda</span><span class="o">.</span><span class="n">name</span>
         <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ds</span><span class="o">.</span><span class="n">grid</span>
@@ -858,7 +933,28 @@
 <div class="viewcode-block" id="constructorSVA.uda_to_faces">
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.uda_to_faces">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">uda_to_faces</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uda</span><span class="p">):</span>
-              
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Interpolate an edge-centered variable to grid faces.</span>
+
+<span class="sd">        The interpolation averages values from the edges that bound each</span>
+<span class="sd">        face using predefined edge weights.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        uda : xu.UgridDataArray</span>
+<span class="sd">            Edge-centered variable.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xu.UgridDataArray</span>
+<span class="sd">            Face-centered variable.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the provided variable does not contain the edge dimension.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="c1"># &gt; Define the to-be-interpolated tracer DataArray and grid</span>
         <span class="n">varname</span> <span class="o">=</span> <span class="n">uda</span><span class="o">.</span><span class="n">name</span>
         <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ds</span><span class="o">.</span><span class="n">grid</span>
@@ -926,6 +1022,30 @@
 <div class="viewcode-block" id="constructorSVA.compute_gradient_on_face">
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.compute_gradient_on_face">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">compute_gradient_on_face</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uda</span><span class="p">,</span> <span class="n">scalar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">add_to_dataset</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mode_depth</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the horizontal gradient of a variable on grid faces.</span>
+
+<span class="sd">        The gradient is evaluated using Gauss&#39; divergence theorem by summing</span>
+<span class="sd">        flux contributions across edges surrounding each face.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        uda : xu.UgridDataArray</span>
+<span class="sd">            Variable for which the gradient is computed.</span>
+<span class="sd">        scalar : bool, optional</span>
+<span class="sd">            If ``True``, treat the variable as scalar and use face areas</span>
+<span class="sd">            instead of flow areas. Default is ``False``.</span>
+<span class="sd">        add_to_dataset : bool, optional</span>
+<span class="sd">            If ``True``, store the resulting gradient in the dataset.</span>
+<span class="sd">        mode_depth : {&quot;sum&quot;, &quot;mean&quot;, None}, optional</span>
+<span class="sd">            Controls how vertical layers are treated when computing the</span>
+<span class="sd">            gradient.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xarray.DataArray</span>
+<span class="sd">            Gradient vector with dimensions ``(faces, cartesian_dim)``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># &gt; Obtain uds and grid from constructorSVA object</span>
         <span class="n">uds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ds</span>
@@ -1049,7 +1169,18 @@
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.distance_vectors">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">distance_vectors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute vectors from face centroids to edge midpoints.</span>
 
+<span class="sd">        These vectors are used in gradient and geometric calculations</span>
+<span class="sd">        involving the unstructured mesh.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xarray.DataArray</span>
+<span class="sd">            Distance vectors with dimensions</span>
+<span class="sd">            ``(faces, max_face_edges, cartesian_dim)``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># &gt; Get dimensions, fill_value, and varname</span>
         <span class="n">fill_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fill_value</span>
         <span class="n">dimn_edges</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimn_edges</span>
@@ -1085,6 +1216,15 @@
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.tracer_variance">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">tracer_variance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the variance of the tracer field over depth.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xarray.DataArray</span>
+<span class="sd">            Squared tracer perturbation relative to the depth-mean tracer</span>
+<span class="sd">            concentration.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># &gt; Get properties</span>
         <span class="n">tracer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracer</span>
         <span class="c1"># &gt; Calculate mean</span>
@@ -1100,6 +1240,16 @@
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.depth_integrated_tracer_variance">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">depth_integrated_tracer_variance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the depth-integrated tracer variance.</span>
+
+<span class="sd">        The integration is performed using the trapezoidal rule.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xarray.DataArray</span>
+<span class="sd">            Depth-integrated tracer variance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># &gt; Get properties</span>
         <span class="n">tracer_variance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracer_variance</span>
         <span class="n">depth</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">depth</span><span class="o">.</span><span class="n">drop_vars</span><span class="p">([</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">depth</span><span class="o">.</span><span class="n">coords</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dimn_layer</span><span class="si">}</span><span class="s2">&quot;</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">dims</span><span class="p">])</span>
@@ -1112,7 +1262,14 @@
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.cell_thickness">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">cell_thickness</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute vertical thickness of grid cells.</span>
 
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xarray.DataArray</span>
+<span class="sd">            Cell thickness for each vertical layer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">cell_thickness</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ds</span><span class="o">.</span><span class="n">mesh2d_flowelem_zw</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dimn_interface</span><span class="p">)</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dimn_interface</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">dimn_layer</span><span class="p">})</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">gridname</span><span class="si">}</span><span class="s1">_cell_thickness&#39;</span><span class="p">)</span>
         <span class="n">cell_thickness</span> <span class="o">=</span> <span class="n">cell_thickness</span><span class="o">.</span><span class="n">reset_coords</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
@@ -1123,6 +1280,17 @@
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.cell_area">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">cell_area</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute horizontal area of each grid cell.</span>
+
+<span class="sd">        The area is derived from edge geometry using distance vectors</span>
+<span class="sd">        and outward unit normal vectors.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xarray.DataArray</span>
+<span class="sd">            Horizontal cell area defined on faces.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># &gt; Get the relevant dimensions</span>
         <span class="n">dimn_edges</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimn_edges</span>
         <span class="n">dimn_cart</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimn_cart</span>
@@ -1177,6 +1345,14 @@
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.volume">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">volume</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the volume of each grid cell.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xarray.DataArray</span>
+<span class="sd">            Cell volume calculated as cell_area times the cell_thickness. </span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># &gt; Get strings</span>
         <span class="n">gridname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gridname</span>
         
@@ -1192,7 +1368,21 @@
 <div class="viewcode-block" id="constructorSVA.straining">
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.straining">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">straining</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">integration</span><span class="o">=</span><span class="s1">&#39;depth&#39;</span><span class="p">,</span> <span class="n">depth_averaged</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the straining term from the tracer variance budget.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        integration : {&quot;depth&quot;, &quot;volume&quot;, &quot;none&quot;}, optional</span>
+<span class="sd">            Integration method applied to the resulting field.</span>
+<span class="sd">        depth_averaged : bool, optional</span>
+<span class="sd">            If ``True``, return the depth-averaged straining term.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xarray.DataArray</span>
+<span class="sd">            Straining term from tracer variance budget.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># &gt; Get the tracer variance</span>
         <span class="n">tracer_variance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracer_variance</span>
 
@@ -1240,7 +1430,22 @@
 <div class="viewcode-block" id="constructorSVA.tendency">
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.tendency">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">tendency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">integration</span><span class="o">=</span><span class="s1">&#39;depth&#39;</span><span class="p">,</span> <span class="n">depth_averaged</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the temporal tendency of tracer variance in the tracer variance budget.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        integration : {&quot;depth&quot;, &quot;volume&quot;, &quot;none&quot;}, optional</span>
+<span class="sd">            Integration method for the tracer variance prior to</span>
+<span class="sd">            differentiation.</span>
+<span class="sd">        depth_averaged : bool, optional</span>
+<span class="sd">            If ``True``, return depth-averaged tendency.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xarray.DataArray</span>
+<span class="sd">            Tendency term in the tracer variance budget.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># &gt; Get tracer variance</span>
         <span class="n">tracer_variance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracer_variance</span>
 
@@ -1279,7 +1484,21 @@
 <div class="viewcode-block" id="constructorSVA.advection">
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.advection">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">advection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">integration</span><span class="o">=</span><span class="s1">&#39;depth&#39;</span><span class="p">,</span>  <span class="n">depth_averaged</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Compute the advection term in the tracer variance budget.</span>
 
+<span class="sd">            Parameters</span>
+<span class="sd">            ----------</span>
+<span class="sd">            integration : {&quot;depth&quot;, &quot;volume&quot;, &quot;none&quot;}, optional</span>
+<span class="sd">                Integration method applied to the computed advection field.</span>
+<span class="sd">            depth_averaged : bool, optional</span>
+<span class="sd">                If ``True``, return the depth-averaged advection.</span>
+
+<span class="sd">            Returns</span>
+<span class="sd">            -------</span>
+<span class="sd">            xarray.DataArray</span>
+<span class="sd">                Advection term in the tracer variance budget.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
         <span class="c1"># &gt; First calculate (S&#39;)^2 * u and (S&#39;)^2 * v</span>
         <span class="n">u_sv2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">velx</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracer_variance</span>
         <span class="n">v_sv2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vely</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracer_variance</span>
@@ -1288,10 +1507,6 @@
         <span class="n">u_sv2</span> <span class="o">=</span> <span class="n">u_sv2</span><span class="o">.</span><span class="n">drop_vars</span><span class="p">([</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">u_sv2</span><span class="o">.</span><span class="n">coords</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dimn_layer</span><span class="si">}</span><span class="s2">&quot;</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">dims</span><span class="p">])</span>
         <span class="n">v_sv2</span> <span class="o">=</span> <span class="n">v_sv2</span><span class="o">.</span><span class="n">drop_vars</span><span class="p">([</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">v_sv2</span><span class="o">.</span><span class="n">coords</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dimn_layer</span><span class="si">}</span><span class="s2">&quot;</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">dims</span><span class="p">])</span>
         <span class="n">depth</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">depth</span><span class="o">.</span><span class="n">drop_vars</span><span class="p">([</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">depth</span><span class="o">.</span><span class="n">coords</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dimn_layer</span><span class="si">}</span><span class="s2">&quot;</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">dims</span><span class="p">])</span>
-
-        <span class="c1"># &gt; Integrate terms in x and y direction</span>
-        <span class="c1"># u_sv2_int = integrate_trapz(u_sv2, depth, dim=self.dimn_layer).rename(f&quot;{self.gridname}_{self.tracer.name}_adv_x&quot;)</span>
-        <span class="c1"># v_sv2_int = integrate_trapz(v_sv2, depth, dim=self.dimn_layer).rename(f&quot;{self.gridname}_{self.tracer.name}_adv_y&quot;)</span>
 
         <span class="c1"># &gt; Calculate gradient</span>
         <span class="n">grad_usv2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_gradient_on_face</span><span class="p">(</span><span class="n">u_sv2</span><span class="p">)</span> 
@@ -1323,6 +1538,22 @@
 <div class="viewcode-block" id="constructorSVA.horizontal_dissipation">
 <a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.horizontal_dissipation">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">horizontal_dissipation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">integration</span><span class="o">=</span><span class="s1">&#39;depth&#39;</span><span class="p">,</span> <span class="n">depth_averaged</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute horizontal dissipation in the tracer variance budget.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        integration : {&quot;depth&quot;, &quot;volume&quot;, &quot;none&quot;}, optional</span>
+<span class="sd">            Integration method applied to the dissipation field.</span>
+<span class="sd">        depth_averaged : bool, optional</span>
+<span class="sd">            If ``True``, return the depth-averaged horizontal dissipation.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xarray.DataArray or None</span>
+<span class="sd">            Horizontal dissipation term in the tracer variance, or ``None`` if the calculation</span>
+<span class="sd">            cannot be performed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># &gt; Get the dimensions</span>
         <span class="n">dimn_cart</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimn_cart</span>
         <span class="c1"># &gt; Get the horizontal diffusion</span>
@@ -1365,9 +1596,24 @@
             <span class="k">return</span> <span class="kc">None</span></div>
 
         
-<div class="viewcode-block" id="constructorSVA.dissipation">
-<a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.dissipation">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">dissipation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">integration</span><span class="o">=</span><span class="s1">&#39;depth&#39;</span><span class="p">,</span> <span class="n">depth_averaged</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="constructorSVA.vertical_dissipation">
+<a class="viewcode-back" href="../../api.html#pySVA.sva_core.constructorSVA.vertical_dissipation">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">vertical_dissipation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">integration</span><span class="o">=</span><span class="s1">&#39;depth&#39;</span><span class="p">,</span> <span class="n">depth_averaged</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute vertical dissipation in the tracer variance budget.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        integration : {&quot;depth&quot;, &quot;volume&quot;, &quot;none&quot;}, optional</span>
+<span class="sd">            Integration method applied to the dissipation field.</span>
+<span class="sd">        depth_averaged : bool, optional</span>
+<span class="sd">            If ``True``, return the depth-averaged vertical dissipation.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xarray.DataArray</span>
+<span class="sd">            Vertical dissipation term in the tracer variance budget.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># &gt; Get the vertical turbulent diffusivity</span>
         <span class="n">kzz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kzz</span>
         
@@ -1392,42 +1638,21 @@
         <span class="c1"># &gt; Integrate the total term and multiply with -1 </span>
         <span class="k">if</span> <span class="n">integration</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;depth&#39;</span><span class="p">:</span>
             <span class="c1"># &gt; Integrate dissipation over depth (trapezoidal rule)</span>
-            <span class="n">dissipation</span> <span class="o">=</span> <span class="n">integrate_trapz</span><span class="p">(</span><span class="n">dsdz_sq</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimn_layer</span><span class="p">)</span>
+            <span class="n">vertical_dissipation</span> <span class="o">=</span> <span class="n">integrate_trapz</span><span class="p">(</span><span class="n">dsdz_sq</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimn_layer</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">integration</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;volume&#39;</span><span class="p">:</span>
             <span class="c1"># &gt; Multiply with volume per cell and sum over all cells</span>
-            <span class="n">dissipation</span> <span class="o">=</span> <span class="p">((</span><span class="n">dsdz_sq</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dimn_layer</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dimn_faces</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]))</span>
+            <span class="n">vertical_dissipation</span> <span class="o">=</span> <span class="p">((</span><span class="n">dsdz_sq</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dimn_layer</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dimn_faces</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]))</span>
         <span class="k">elif</span> <span class="n">integration</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;none&#39;</span><span class="p">:</span>
-            <span class="n">dissipation</span> <span class="o">=</span> <span class="n">dsdz_sq</span>
+            <span class="n">vertical_dissipation</span> <span class="o">=</span> <span class="n">dsdz_sq</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not derive what to do with integration=</span><span class="si">{</span><span class="n">integration</span><span class="si">}</span><span class="s2"> keyword.&quot;</span><span class="p">)</span>
         
         <span class="k">if</span> <span class="n">depth_averaged</span><span class="p">:</span>
-            <span class="n">dissipation</span> <span class="o">=</span> <span class="n">dissipation</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">water_depth</span><span class="p">)</span>
+            <span class="n">vertical_dissipation</span> <span class="o">=</span> <span class="n">vertical_dissipation</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">water_depth</span><span class="p">)</span>
             
-        <span class="k">return</span> <span class="n">dissipation</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">integration</span><span class="si">}</span><span class="s2">_integrated_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tracer</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_dissipation&quot;</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">vertical_dissipation</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">integration</span><span class="si">}</span><span class="s2">_integrated_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tracer</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_dissipation&quot;</span><span class="p">)</span></div>
 </div>
 
-               
-    
-    <span class="c1"># def _setup(self, data):</span>
-    <span class="c1">#     &quot;&quot;&quot;Iterates over keys in dictionary. Handles 4d-data, if one argument is left empty, dummy dimension will be created.</span>
-    <span class="c1">#     Args:</span>
-    <span class="c1">#         data (dict): Dictionary that describes geospatial dimensions of the dataset.</span>
-    <span class="c1">#     &quot;&quot;&quot;</span>
-    <span class="c1">#     for dimension in data.keys():</span>
-    <span class="c1">#         if data[dimension] is None:</span>
-    <span class="c1">#             self.ds = self.ds.expand_dims(dimension)</span>
-    <span class="c1">#         else:</span>
-    <span class="c1">#             self.ds = self.ds.rename({data[dimension]: dimension})</span>
-
-    <span class="c1">#     self.ds = self.ds.transpose(&quot;time&quot;,</span>
-    <span class="c1">#                                 &quot;depth&quot;,</span>
-    <span class="c1">#                                 &quot;nfaces&quot;,</span>
-    <span class="c1">#                                 &quot;nedges&quot;,</span>
-    <span class="c1">#                                 &quot;nnodes&quot;,</span>
-    <span class="c1">#                                 ...)</span>
-        
-        <span class="c1"># removed the nfaces and nedges dimnesion, as they are derived by the xugrid package</span>
 </pre></div>
 
            </div>

@@ -16,6 +16,7 @@
       <script src="_static/documentation_options.js?v=d45e8c67"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -56,7 +57,6 @@
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.cell_thickness"><code class="docutils literal notranslate"><span class="pre">constructorSVA.cell_thickness</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.compute_gradient_on_face"><code class="docutils literal notranslate"><span class="pre">constructorSVA.compute_gradient_on_face()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.depth_integrated_tracer_variance"><code class="docutils literal notranslate"><span class="pre">constructorSVA.depth_integrated_tracer_variance</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.dissipation"><code class="docutils literal notranslate"><span class="pre">constructorSVA.dissipation()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.distance_vectors"><code class="docutils literal notranslate"><span class="pre">constructorSVA.distance_vectors</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.edge_face_weights"><code class="docutils literal notranslate"><span class="pre">constructorSVA.edge_face_weights</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.edge_faces"><code class="docutils literal notranslate"><span class="pre">constructorSVA.edge_faces</span></code></a></li>
@@ -75,14 +75,11 @@
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.uda_to_edges"><code class="docutils literal notranslate"><span class="pre">constructorSVA.uda_to_edges()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.uda_to_faces"><code class="docutils literal notranslate"><span class="pre">constructorSVA.uda_to_faces()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.unvs"><code class="docutils literal notranslate"><span class="pre">constructorSVA.unvs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.vertical_dissipation"><code class="docutils literal notranslate"><span class="pre">constructorSVA.vertical_dissipation()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.volume"><code class="docutils literal notranslate"><span class="pre">constructorSVA.volume</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.water_depth"><code class="docutils literal notranslate"><span class="pre">constructorSVA.water_depth</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_calc.compute_advection"><code class="docutils literal notranslate"><span class="pre">compute_advection()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_calc.compute_dissipation"><code class="docutils literal notranslate"><span class="pre">compute_dissipation()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_calc.compute_straining"><code class="docutils literal notranslate"><span class="pre">compute_straining()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_calc.compute_tracer_variance"><code class="docutils literal notranslate"><span class="pre">compute_tracer_variance()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.build_edge_face_weights"><code class="docutils literal notranslate"><span class="pre">build_edge_face_weights()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.build_edge_node_connectivity"><code class="docutils literal notranslate"><span class="pre">build_edge_node_connectivity()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.build_face_edge_connectivity"><code class="docutils literal notranslate"><span class="pre">build_face_edge_connectivity()</span></code></a></li>
@@ -91,10 +88,10 @@
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.calculate_distance_pythagoras"><code class="docutils literal notranslate"><span class="pre">calculate_distance_pythagoras()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.calculate_distance_vectors"><code class="docutils literal notranslate"><span class="pre">calculate_distance_vectors()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.calculate_unit_normal_vectors"><code class="docutils literal notranslate"><span class="pre">calculate_unit_normal_vectors()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.compute_derivatives_on_face"><code class="docutils literal notranslate"><span class="pre">compute_derivatives_on_face()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.compute_divergence_on_face"><code class="docutils literal notranslate"><span class="pre">compute_divergence_on_face()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.compute_gradient_on_face"><code class="docutils literal notranslate"><span class="pre">compute_gradient_on_face()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.compute_kzz"><code class="docutils literal notranslate"><span class="pre">compute_kzz()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.deprecated"><code class="docutils literal notranslate"><span class="pre">deprecated()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.depth_int2volume_int"><code class="docutils literal notranslate"><span class="pre">depth_int2volume_int()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.differentiate_over_3d_coord"><code class="docutils literal notranslate"><span class="pre">differentiate_over_3d_coord()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.get_all_coordinates"><code class="docutils literal notranslate"><span class="pre">get_all_coordinates()</span></code></a></li>
@@ -117,7 +114,6 @@
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.cell_thickness"><code class="docutils literal notranslate"><span class="pre">constructorSVA.cell_thickness</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.compute_gradient_on_face"><code class="docutils literal notranslate"><span class="pre">constructorSVA.compute_gradient_on_face()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.depth_integrated_tracer_variance"><code class="docutils literal notranslate"><span class="pre">constructorSVA.depth_integrated_tracer_variance</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.dissipation"><code class="docutils literal notranslate"><span class="pre">constructorSVA.dissipation()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.distance_vectors"><code class="docutils literal notranslate"><span class="pre">constructorSVA.distance_vectors</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.edge_face_weights"><code class="docutils literal notranslate"><span class="pre">constructorSVA.edge_face_weights</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.edge_faces"><code class="docutils literal notranslate"><span class="pre">constructorSVA.edge_faces</span></code></a></li>
@@ -136,14 +132,11 @@
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.uda_to_edges"><code class="docutils literal notranslate"><span class="pre">constructorSVA.uda_to_edges()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.uda_to_faces"><code class="docutils literal notranslate"><span class="pre">constructorSVA.uda_to_faces()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.unvs"><code class="docutils literal notranslate"><span class="pre">constructorSVA.unvs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.vertical_dissipation"><code class="docutils literal notranslate"><span class="pre">constructorSVA.vertical_dissipation()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.volume"><code class="docutils literal notranslate"><span class="pre">constructorSVA.volume</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pySVA.sva_core.constructorSVA.water_depth"><code class="docutils literal notranslate"><span class="pre">constructorSVA.water_depth</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_calc.compute_advection"><code class="docutils literal notranslate"><span class="pre">compute_advection()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_calc.compute_dissipation"><code class="docutils literal notranslate"><span class="pre">compute_dissipation()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_calc.compute_straining"><code class="docutils literal notranslate"><span class="pre">compute_straining()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_calc.compute_tracer_variance"><code class="docutils literal notranslate"><span class="pre">compute_tracer_variance()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.build_edge_face_weights"><code class="docutils literal notranslate"><span class="pre">build_edge_face_weights()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.build_edge_node_connectivity"><code class="docutils literal notranslate"><span class="pre">build_edge_node_connectivity()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.build_face_edge_connectivity"><code class="docutils literal notranslate"><span class="pre">build_face_edge_connectivity()</span></code></a></li>
@@ -152,10 +145,10 @@
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.calculate_distance_pythagoras"><code class="docutils literal notranslate"><span class="pre">calculate_distance_pythagoras()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.calculate_distance_vectors"><code class="docutils literal notranslate"><span class="pre">calculate_distance_vectors()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.calculate_unit_normal_vectors"><code class="docutils literal notranslate"><span class="pre">calculate_unit_normal_vectors()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.compute_derivatives_on_face"><code class="docutils literal notranslate"><span class="pre">compute_derivatives_on_face()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.compute_divergence_on_face"><code class="docutils literal notranslate"><span class="pre">compute_divergence_on_face()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.compute_gradient_on_face"><code class="docutils literal notranslate"><span class="pre">compute_gradient_on_face()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.compute_kzz"><code class="docutils literal notranslate"><span class="pre">compute_kzz()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.deprecated"><code class="docutils literal notranslate"><span class="pre">deprecated()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.depth_int2volume_int"><code class="docutils literal notranslate"><span class="pre">depth_int2volume_int()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.differentiate_over_3d_coord"><code class="docutils literal notranslate"><span class="pre">differentiate_over_3d_coord()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pySVA.sva_helpers.get_all_coordinates"><code class="docutils literal notranslate"><span class="pre">get_all_coordinates()</span></code></a></li>
@@ -241,7 +234,22 @@ coordinate systems.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.advection">
 <span class="sig-name descname"><span class="pre">advection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">integration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'depth'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth_averaged</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.advection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.advection" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Compute the advection term in the tracer variance budget.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>integration</strong> (<em>{&quot;depth&quot;</em><em>, </em><em>&quot;volume&quot;</em><em>, </em><em>&quot;none&quot;}</em><em>, </em><em>optional</em>) – Integration method applied to the computed advection field.</p></li>
+<li><p><strong>depth_averaged</strong> (<em>bool</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, return the depth-averaged advection.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Advection term in the tracer variance budget.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xarray.DataArray</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.bed_level">
@@ -265,32 +273,90 @@ averaged over time if available.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.cell_area">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">cell_area</span></span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.cell_area"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.cell_area" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Compute horizontal area of each grid cell.</p>
+<p>The area is derived from edge geometry using distance vectors
+and outward unit normal vectors.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Horizontal cell area defined on faces.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>xarray.DataArray</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.cell_thickness">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">cell_thickness</span></span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.cell_thickness"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.cell_thickness" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Compute vertical thickness of grid cells.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Cell thickness for each vertical layer.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>xarray.DataArray</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.compute_gradient_on_face">
 <span class="sig-name descname"><span class="pre">compute_gradient_on_face</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">uda</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scalar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_to_dataset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode_depth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.compute_gradient_on_face"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.compute_gradient_on_face" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Compute the horizontal gradient of a variable on grid faces.</p>
+<p>The gradient is evaluated using Gauss’ divergence theorem by summing
+flux contributions across edges surrounding each face.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>uda</strong> (<em>xu.UgridDataArray</em>) – Variable for which the gradient is computed.</p></li>
+<li><p><strong>scalar</strong> (<em>bool</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, treat the variable as scalar and use face areas
+instead of flow areas. Default is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>add_to_dataset</strong> (<em>bool</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, store the resulting gradient in the dataset.</p></li>
+<li><p><strong>mode_depth</strong> (<em>{&quot;sum&quot;</em><em>, </em><em>&quot;mean&quot;</em><em>, </em><em>None}</em><em>, </em><em>optional</em>) – Controls how vertical layers are treated when computing the
+gradient.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Gradient vector with dimensions <code class="docutils literal notranslate"><span class="pre">(faces,</span> <span class="pre">cartesian_dim)</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xarray.DataArray</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.depth_integrated_tracer_variance">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">depth_integrated_tracer_variance</span></span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.depth_integrated_tracer_variance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.depth_integrated_tracer_variance" title="Link to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.dissipation">
-<span class="sig-name descname"><span class="pre">dissipation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">integration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'depth'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth_averaged</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.dissipation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.dissipation" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Compute the depth-integrated tracer variance.</p>
+<p>The integration is performed using the trapezoidal rule.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Depth-integrated tracer variance.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>xarray.DataArray</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.distance_vectors">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">distance_vectors</span></span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.distance_vectors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.distance_vectors" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Compute vectors from face centroids to edge midpoints.</p>
+<p>These vectors are used in gradient and geometric calculations
+involving the unstructured mesh.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Distance vectors with dimensions
+<code class="docutils literal notranslate"><span class="pre">(faces,</span> <span class="pre">max_face_edges,</span> <span class="pre">cartesian_dim)</span></code>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>xarray.DataArray</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.edge_face_weights">
@@ -311,7 +377,22 @@ their connected faces, computing inverse distance weights, and converting to a d
 <dl class="py property">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.edge_faces">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">edge_faces</span></span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.edge_faces"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.edge_faces" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Return the edge-to-face connectivity matrix.</p>
+<p>This property exposes the UGRID edge-face connectivity stored in the
+dataset as an <code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Connectivity array with dimensions <code class="docutils literal notranslate"><span class="pre">(edges,</span> <span class="pre">max_edge_faces)</span></code>
+mapping each edge to its adjacent faces.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>xarray.DataArray</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The array contains integer indices referencing faces in the grid.
+Missing neighbors are indicated using the dataset’s fill value.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.edge_length">
@@ -348,7 +429,26 @@ returning a DataArray with NaNs where no node is connected (fill value).</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.edge_nodes">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">edge_nodes</span></span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.edge_nodes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.edge_nodes" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Return the edge-to-node connectivity matrix.</p>
+<p>Constructs an <code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code> describing which nodes define
+each edge of the unstructured grid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Edge-node connectivity array with dimensions
+<code class="docutils literal notranslate"><span class="pre">(edges,</span> <span class="pre">max_edge_nodes)</span></code>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>xarray.DataArray</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The returned array contains CF-UGRID compliant metadata including:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">cf_role</span> <span class="pre">=</span> <span class="pre">&quot;edge_node_connectivity&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">start_index</span> <span class="pre">=</span> <span class="pre">0</span></code></p></li>
+</ul>
+<p>Missing entries are filled using the dataset’s configured fill value.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.face_area">
@@ -385,7 +485,21 @@ their connected edges and computing inverse distance weights.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.face_edges">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">face_edges</span></span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.face_edges"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.face_edges" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Return the face-to-edge connectivity matrix.</p>
+<p>Constructs an <code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code> describing which edges bound
+each face of the unstructured grid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Connectivity array with dimensions <code class="docutils literal notranslate"><span class="pre">(faces,</span> <span class="pre">max_face_edges)</span></code>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>xarray.DataArray</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The returned object follows CF-UGRID conventions with
+<code class="docutils literal notranslate"><span class="pre">cf_role</span> <span class="pre">=</span> <span class="pre">&quot;face_edge_connectivity&quot;</span></code>.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.get_all_coordinates">
@@ -405,47 +519,217 @@ xarray.DataArray with dimensions and coordinates corresponding to the mesh eleme
 <dl class="py method">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.horizontal_dissipation">
 <span class="sig-name descname"><span class="pre">horizontal_dissipation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">integration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'depth'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth_averaged</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.horizontal_dissipation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.horizontal_dissipation" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Compute horizontal dissipation in the tracer variance budget.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>integration</strong> (<em>{&quot;depth&quot;</em><em>, </em><em>&quot;volume&quot;</em><em>, </em><em>&quot;none&quot;}</em><em>, </em><em>optional</em>) – Integration method applied to the dissipation field.</p></li>
+<li><p><strong>depth_averaged</strong> (<em>bool</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, return the depth-averaged horizontal dissipation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Horizontal dissipation term in the tracer variance, or <code class="docutils literal notranslate"><span class="pre">None</span></code> if the calculation
+cannot be performed.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xarray.DataArray or None</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.kzz">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">kzz</span></span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.kzz"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.kzz" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Compute the vertical turbulent eddy diffusivity.</p>
+<p>The vertical diffusivity <span class="math notranslate nohighlight">\(K_{zz}\)</span> is calculated as the sum of
+molecular diffusivity, background diffusivity, and a tracer-dependent
+laminar contribution.</p>
+<div class="math notranslate nohighlight">
+\[K_{zz} = \frac{\nu}{Pr} + D_{0} + k_l\]</div>
+<p>where <span class="math notranslate nohighlight">\(\nu\)</span> is the kinematic viscosity, <span class="math notranslate nohighlight">\(Pr\)</span> is the
+Prandtl/Schmidt number, <span class="math notranslate nohighlight">\(D_{0}\)</span> is a constant background
+diffusivity, and <span class="math notranslate nohighlight">\(k_l\)</span> is a tracer-dependent laminar component.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dicoww</strong> (<em>float</em><em>, </em><em>optional</em>) – Background vertical diffusivity (<span class="math notranslate nohighlight">\(m^2 s^{-1}\)</span>).
+Default is <code class="docutils literal notranslate"><span class="pre">5e-5</span></code>.</p></li>
+<li><p><strong>prandtl_schmidt</strong> (<em>float</em><em>, </em><em>optional</em>) – Prandtl/Schmidt number used to convert viscosity to diffusivity.
+Default is <code class="docutils literal notranslate"><span class="pre">0.7</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Vertical turbulent eddy diffusivity defined on grid edges.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xarray.DataArray</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The computed diffusivity is added to the dataset as
+<code class="docutils literal notranslate"><span class="pre">{gridname}_dicwws</span></code> and contains CF-style metadata describing the
+grid location and units.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.straining">
 <span class="sig-name descname"><span class="pre">straining</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">integration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'depth'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth_averaged</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.straining"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.straining" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Compute the straining term from the tracer variance budget.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>integration</strong> (<em>{&quot;depth&quot;</em><em>, </em><em>&quot;volume&quot;</em><em>, </em><em>&quot;none&quot;}</em><em>, </em><em>optional</em>) – Integration method applied to the resulting field.</p></li>
+<li><p><strong>depth_averaged</strong> (<em>bool</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, return the depth-averaged straining term.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Straining term from tracer variance budget.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xarray.DataArray</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.tendency">
 <span class="sig-name descname"><span class="pre">tendency</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">integration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'depth'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth_averaged</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.tendency"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.tendency" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Compute the temporal tendency of tracer variance in the tracer variance budget.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>integration</strong> (<em>{&quot;depth&quot;</em><em>, </em><em>&quot;volume&quot;</em><em>, </em><em>&quot;none&quot;}</em><em>, </em><em>optional</em>) – Integration method for the tracer variance prior to
+differentiation.</p></li>
+<li><p><strong>depth_averaged</strong> (<em>bool</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, return depth-averaged tendency.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tendency term in the tracer variance budget.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xarray.DataArray</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.tracer_variance">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">tracer_variance</span></span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.tracer_variance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.tracer_variance" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Compute the variance of the tracer field over depth.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Squared tracer perturbation relative to the depth-mean tracer
+concentration.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>xarray.DataArray</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.uda_to_edges">
 <span class="sig-name descname"><span class="pre">uda_to_edges</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">uda</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.uda_to_edges"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.uda_to_edges" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Interpolate a face-centered variable to grid edges.</p>
+<p>The interpolation uses inverse-distance weights derived from the
+adjacent faces connected to each edge.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>uda</strong> (<em>xu.UgridDataArray</em>) – Face-centered variable defined on the grid.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Edge-centered variable obtained through weighted interpolation.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xu.UgridDataArray</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If the provided variable does not contain the face dimension.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Boundary edges with only one valid neighboring face inherit the
+value of that face.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.uda_to_faces">
 <span class="sig-name descname"><span class="pre">uda_to_faces</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">uda</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.uda_to_faces"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.uda_to_faces" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Interpolate an edge-centered variable to grid faces.</p>
+<p>The interpolation averages values from the edges that bound each
+face using predefined edge weights.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>uda</strong> (<em>xu.UgridDataArray</em>) – Edge-centered variable.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Face-centered variable.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xu.UgridDataArray</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If the provided variable does not contain the edge dimension.</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.unvs">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">unvs</span></span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.unvs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.unvs" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Compute unit normal vectors for all grid edges.</p>
+<p>The normal vectors are defined perpendicular to each edge and
+normalized to unit length. If the dataset uses geographic
+coordinates (WGS84), coordinates are first projected to the
+Dutch RD stereographic coordinate system before vector
+calculation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Unit normal vectors with dimensions <code class="docutils literal notranslate"><span class="pre">(edges,</span> <span class="pre">cartesian_dim)</span></code>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>xarray.DataArray</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The vectors are oriented outward relative to adjacent cells.
+The resulting array is stored in the dataset under the variable
+<code class="docutils literal notranslate"><span class="pre">{gridname}_unvs</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.vertical_dissipation">
+<span class="sig-name descname"><span class="pre">vertical_dissipation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">integration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'depth'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth_averaged</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.vertical_dissipation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.vertical_dissipation" title="Link to this definition"></a></dt>
+<dd><p>Compute vertical dissipation in the tracer variance budget.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>integration</strong> (<em>{&quot;depth&quot;</em><em>, </em><em>&quot;volume&quot;</em><em>, </em><em>&quot;none&quot;}</em><em>, </em><em>optional</em>) – Integration method applied to the dissipation field.</p></li>
+<li><p><strong>depth_averaged</strong> (<em>bool</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, return the depth-averaged vertical dissipation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Vertical dissipation term in the tracer variance budget.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xarray.DataArray</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.volume">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">volume</span></span><a class="reference internal" href="_modules/pySVA/sva_core.html#constructorSVA.volume"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_core.constructorSVA.volume" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Compute the volume of each grid cell.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Cell volume calculated as cell_area times the cell_thickness.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>xarray.DataArray</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="pySVA.sva_core.constructorSVA.water_depth">
@@ -465,114 +749,45 @@ xarray.DataArray with dimensions and coordinates corresponding to the mesh eleme
 
 </dd></dl>
 
-<p id="module-pySVA.sva_calc">Calculation module for pySVA containing functions for variance analysis.</p>
-<p>This module provides functions to compute tracer variance, advection, straining,
-and dissipation terms for salinity variance analysis.</p>
-<dl class="py function">
-<dt class="sig sig-object py" id="pySVA.sva_calc.compute_advection">
-<span class="sig-prename descclassname"><span class="pre">pySVA.sva_calc.</span></span><span class="sig-name descname"><span class="pre">compute_advection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constructorSVA</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gradient_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_calc.html#compute_advection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_calc.compute_advection" title="Link to this definition"></a></dt>
-<dd><p>Compute the advection term (∇·(uh·S’²)).</p>
-<p>Calculates the flux of variance due to mean flow advection.
-Integrates over depth and applies gradient operator to obtain
-the divergence of advective flux.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>constructorSVA</strong> (<a class="reference internal" href="#pySVA.sva_core.constructorSVA" title="pySVA.sva_core.constructorSVA"><em>constructorSVA</em></a>) – Object containing dataset, velocities, and tracer variance.</p></li>
-<li><p><strong>gradient_function</strong> (<em>callable</em><em>, </em><em>optional</em>) – Function to compute spatial gradients.
-Defaults to compute_gradient_on_face from sva_helpers.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Divergence of advective variance flux.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>xarray.DataArray</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If tracer, tracer variance, or horizontal velocities are not defined.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="pySVA.sva_calc.compute_dissipation">
-<span class="sig-prename descclassname"><span class="pre">pySVA.sva_calc.</span></span><span class="sig-name descname"><span class="pre">compute_dissipation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constructorSVA</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_calc.html#compute_dissipation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_calc.compute_dissipation" title="Link to this definition"></a></dt>
-<dd><p>Compute the diffusive dissipation term (2·κ_zz·(∂S/∂z)²).</p>
-<p>Calculates the rate of variance dissipation by vertical diffusion
-(turbulent mixing). Integrates over depth.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>constructorSVA</strong> (<a class="reference internal" href="#pySVA.sva_core.constructorSVA" title="pySVA.sva_core.constructorSVA"><em>constructorSVA</em></a>) – Object containing dataset, tracer, and vertical diffusivity (kzz).</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Depth-integrated dissipation term.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>xarray.DataArray</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If tracer, tracer variance, or vertical diffusivity (kzz) is not defined.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="pySVA.sva_calc.compute_straining">
-<span class="sig-prename descclassname"><span class="pre">pySVA.sva_calc.</span></span><span class="sig-name descname"><span class="pre">compute_straining</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constructorSVA</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gradient_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_calc.html#compute_straining"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_calc.compute_straining" title="Link to this definition"></a></dt>
-<dd><p>Compute the straining/mixing term (-2·w’·S’·∇S̄).</p>
-<p>Calculates the rate of variance production/destruction due to
-vertical mixing by internal waves and shear. Integrates over depth.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>constructorSVA</strong> (<a class="reference internal" href="#pySVA.sva_core.constructorSVA" title="pySVA.sva_core.constructorSVA"><em>constructorSVA</em></a>) – Object containing dataset, vertical velocity, and mean tracer gradient.</p></li>
-<li><p><strong>gradient_function</strong> (<em>callable</em><em>, </em><em>optional</em>) – Function to compute spatial gradients.
-Defaults to compute_gradient_on_face from sva_helpers.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Depth-integrated straining term.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>xarray.DataArray</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If tracer, tracer variance, or vertical velocity is not defined.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="pySVA.sva_calc.compute_tracer_variance">
-<span class="sig-prename descclassname"><span class="pre">pySVA.sva_calc.</span></span><span class="sig-name descname"><span class="pre">compute_tracer_variance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constructorSVA</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_calc.html#compute_tracer_variance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_calc.compute_tracer_variance" title="Link to this definition"></a></dt>
-<dd><p>Compute tracer variance (S’² = (S - S_mean)²).</p>
-<p>Calculates the vertical mean tracer, perturbation from mean,
-and squared perturbation (variance). Results are stored in the
-constructorSVA.ds dataset.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>constructorSVA</strong> (<a class="reference internal" href="#pySVA.sva_core.constructorSVA" title="pySVA.sva_core.constructorSVA"><em>constructorSVA</em></a>) – Object containing dataset and tracer variable.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Squared tracer perturbation (variance).</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>xarray.DataArray</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If no tracer variable is defined in constructorSVA.</p>
-</dd>
-</dl>
-</dd></dl>
-
 <p id="module-pySVA.sva_helpers">Helper functions for pySVA.</p>
 <p>This module contains utility functions for grid operations, coordinate calculations,
 and data transformations used in salinity variance analysis.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="pySVA.sva_helpers.build_edge_face_weights">
 <span class="sig-prename descclassname"><span class="pre">pySVA.sva_helpers.</span></span><span class="sig-name descname"><span class="pre">build_edge_face_weights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constructorSVA</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_helpers.html#build_edge_face_weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_helpers.build_edge_face_weights" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Compute inverse-distance interpolation weights from faces to edges.</p>
+<p>This function constructs weights for interpolating face-centered variables
+onto edges using inverse-distance weighting based on geometric distances
+between edge centers and neighboring face centroids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>constructorSVA</strong> (<em>object</em>) – Constructor object containing the UGRID dataset.</p></li>
+<li><p><strong>**kwargs</strong> (<em>dict</em><em>, </em><em>optional</em>) – <p>Optional keyword arguments.</p>
+<dl class="simple">
+<dt>coords<span class="classifier">tuple of xr.DataArray, optional</span></dt><dd><p>Tuple <code class="docutils literal notranslate"><span class="pre">(face_coords,</span> <span class="pre">edge_coords,</span> <span class="pre">node_coords)</span></code> containing
+precomputed coordinate arrays. If not provided, coordinates are
+derived from the dataset.</p>
+</dd>
+</dl>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Weights for edge-face interpolation with dimensions
+<code class="docutils literal notranslate"><span class="pre">(n_edges,</span> <span class="pre">nMax_edge_faces)</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xr.DataArray</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Uses edge-face connectivity to associate edges with neighboring faces.</p></li>
+<li><p>Weights are computed using inverse-distance weighting.</p></li>
+<li><p>Fill values in connectivity arrays are masked before computation.</p></li>
+</ul>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pySVA.sva_helpers.build_edge_node_connectivity">
@@ -600,7 +815,25 @@ CF-compliant attributes.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="pySVA.sva_helpers.build_face_edge_connectivity">
 <span class="sig-prename descclassname"><span class="pre">pySVA.sva_helpers.</span></span><span class="sig-name descname"><span class="pre">build_face_edge_connectivity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constructorSVA</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_helpers.html#build_face_edge_connectivity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_helpers.build_face_edge_connectivity" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Build face-edge connectivity array from unstructured grid.</p>
+<p>Extracts and formats the face-edge connectivity information from
+an xugrid dataset, creating a properly dimensioned DataArray with
+CF-compliant attributes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>constructorSVA</strong> (<a class="reference internal" href="#pySVA.sva_core.constructorSVA" title="pySVA.sva_core.constructorSVA"><em>constructorSVA</em></a>) – Object containing UgridDataset.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>face_edge connectivity with dimensions (n_faces, 2).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xarray.DataArray</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>IOError</strong> – If dataset is not a UgridDataset.</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pySVA.sva_helpers.build_inverse_distance_weights">
@@ -630,44 +863,88 @@ different grid locations (e.g., faces to edges).</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="pySVA.sva_helpers.calculate_distance_haversine">
 <span class="sig-prename descclassname"><span class="pre">pySVA.sva_helpers.</span></span><span class="sig-name descname"><span class="pre">calculate_distance_haversine</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat_or</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon_or</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_helpers.html#calculate_distance_haversine"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_helpers.calculate_distance_haversine" title="Link to this definition"></a></dt>
-<dd><p>Function to calculate the shortest distance between two sets of coordinates.
-The coordinates of Hoek van Holland have been previously filled in as a starting point
-for all distance calculations.</p>
-<p>Args:
-- lon_or: Reference Longitude
-- lat_or: Reference Latitude
-- lon: Longitude
-- lat: Latitude</p>
-<p>Returns:
-- distance: Distance [meters]</p>
+<dd><p>Compute geodesic distance between coordinates using the WGS84 ellipsoid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lat</strong> (<em>float</em><em> or </em><em>pandas.Series</em>) – Latitude(s) of target location(s) in degrees.</p></li>
+<li><p><strong>lon</strong> (<em>float</em><em> or </em><em>pandas.Series</em>) – Longitude(s) of target location(s) in degrees.</p></li>
+<li><p><strong>lat_or</strong> (<em>float</em>) – Reference latitude in degrees.</p></li>
+<li><p><strong>lon_or</strong> (<em>float</em>) – Reference longitude in degrees.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Geodesic distance(s) in meters.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or ndarray</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Uses <code class="docutils literal notranslate"><span class="pre">pyproj.Geod.inv</span></code> for accurate ellipsoidal distance computation.</p></li>
+<li><p>Supports both scalar inputs and pandas Series.</p></li>
+</ul>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pySVA.sva_helpers.calculate_distance_pythagoras">
 <span class="sig-prename descclassname"><span class="pre">pySVA.sva_helpers.</span></span><span class="sig-name descname"><span class="pre">calculate_distance_pythagoras</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_helpers.html#calculate_distance_pythagoras"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_helpers.calculate_distance_pythagoras" title="Link to this definition"></a></dt>
-<dd><p>Function to calculate the shortest distance between two sets of coordinates in a cartesian coordinate system.</p>
+<dd><p>Compute Euclidean distance in a Cartesian coordinate system.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>x1</strong> – starting coordinate (x-direction)</p></li>
-<li><p><strong>y1</strong> – starting coordinate (y-direction)</p></li>
-<li><p><strong>x2</strong> – ending coordinate (x-direction)</p></li>
-<li><p><strong>y2</strong> – ending coordinate (y-direction)</p></li>
+<li><p><strong>x1</strong> (<em>float</em><em> or </em><em>array-like</em>) – Coordinates of the starting point.</p></li>
+<li><p><strong>y1</strong> (<em>float</em><em> or </em><em>array-like</em>) – Coordinates of the starting point.</p></li>
+<li><p><strong>x2</strong> (<em>float</em><em> or </em><em>array-like</em>) – Coordinates of the ending point.</p></li>
+<li><p><strong>y2</strong> (<em>float</em><em> or </em><em>array-like</em>) – Coordinates of the ending point.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns distance<span class="colon">:</span></dt>
-<dd class="field-even"><p>Distance [meters]</p>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Euclidean distance(s) in meters.</p>
 </dd>
-<dt class="field-odd">Rtpye<span class="colon">:</span></dt>
-<dd class="field-odd"><p>np.float</p>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or ndarray</p>
 </dd>
 </dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Assumes planar (projected) coordinates.</p></li>
+<li><p>Equivalent to the L2 norm of the coordinate difference.</p></li>
+</ul>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pySVA.sva_helpers.calculate_distance_vectors">
 <span class="sig-prename descclassname"><span class="pre">pySVA.sva_helpers.</span></span><span class="sig-name descname"><span class="pre">calculate_distance_vectors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constructorSVA</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_helpers.html#calculate_distance_vectors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_helpers.calculate_distance_vectors" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Compute distance vectors from face centroids to edge centers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>constructorSVA</strong> (<em>object</em>) – Constructor object containing the UGRID dataset.</p></li>
+<li><p><strong>**kwargs</strong> (<em>dict</em><em>, </em><em>optional</em>) – <p>Optional keyword arguments.</p>
+<dl class="simple">
+<dt>face_edges<span class="classifier">xr.DataArray, optional</span></dt><dd><p>Precomputed face-edge connectivity.</p>
+</dd>
+</dl>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Distance vectors with dimensions
+<code class="docutils literal notranslate"><span class="pre">(n_faces,</span> <span class="pre">nMax_face_nodes,</span> <span class="pre">nCartesian_coords)</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xr.DataArray</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Distance vectors are defined as:
+edge coordinate minus face centroid coordinate.</p></li>
+<li><p>Used for orientation of normal vectors and flux computations.</p></li>
+</ul>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pySVA.sva_helpers.calculate_unit_normal_vectors">
@@ -675,71 +952,172 @@ for all distance calculations.</p>
 <dd></dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="pySVA.sva_helpers.compute_derivatives_on_face">
-<span class="sig-prename descclassname"><span class="pre">pySVA.sva_helpers.</span></span><span class="sig-name descname"><span class="pre">compute_derivatives_on_face</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constructorSVA</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uda</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_helpers.html#compute_derivatives_on_face"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_helpers.compute_derivatives_on_face" title="Link to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
 <dt class="sig sig-object py" id="pySVA.sva_helpers.compute_divergence_on_face">
 <span class="sig-prename descclassname"><span class="pre">pySVA.sva_helpers.</span></span><span class="sig-name descname"><span class="pre">compute_divergence_on_face</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constructorSVA</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uda</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_helpers.html#compute_divergence_on_face"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_helpers.compute_divergence_on_face" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Compute the divergence of a vector field on mesh faces.</p>
+<p>The divergence is calculated using a finite-volume formulation by summing
+fluxes across edges and normalizing by cell volume.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>constructorSVA</strong> (<em>object</em>) – Constructor object containing the UGRID dataset.</p></li>
+<li><p><strong>uda</strong> (<em>xr.DataArray</em><em> or </em><em>xu.UgridDataArray</em>) – Vector field defined on edges. Must be aligned with edge-normal directions.</p></li>
+<li><p><strong>**kwargs</strong> (<em>dict</em><em>, </em><em>optional</em>) – <p>Optional keyword arguments.</p>
+<dl class="simple">
+<dt>unvs<span class="classifier">xr.DataArray, optional</span></dt><dd><p>Precomputed unit normal vectors.</p>
+</dd>
+</dl>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Divergence field on faces.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xr.DataArray</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If the input variable is not defined on edges.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Accounts for edge orientation using connectivity-based sign correction.</p></li>
+<li><p>Result is stored in the dataset as <code class="docutils literal notranslate"><span class="pre">{varname}_divergence</span></code>.</p></li>
+</ul>
+<div class="deprecated">
+<p><span class="versionmodified deprecated">Deprecated since version 1.0.0: </span>This function will be removed in version 1.2.0.
+Use :meth: constructorSVA.compute_gradient_on_face` instead.</p>
+</div>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pySVA.sva_helpers.compute_gradient_on_face">
 <span class="sig-prename descclassname"><span class="pre">pySVA.sva_helpers.</span></span><span class="sig-name descname"><span class="pre">compute_gradient_on_face</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constructorSVA</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uda</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_helpers.html#compute_gradient_on_face"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_helpers.compute_gradient_on_face" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Compute the gradient of a scalar field on mesh faces.</p>
+<p>The gradient is computed using a finite-volume formulation by integrating
+fluxes across edges and normalizing by cell volume.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>constructorSVA</strong> (<em>object</em>) – Constructor object containing the UGRID dataset.</p></li>
+<li><p><strong>uda</strong> (<em>xr.DataArray</em><em> or </em><em>xu.UgridDataArray</em>) – Input scalar field defined on edges.</p></li>
+<li><p><strong>**kwargs</strong> (<em>dict</em><em>, </em><em>optional</em>) – <p>Optional keyword arguments.</p>
+<dl class="simple">
+<dt>unvs<span class="classifier">xr.DataArray, optional</span></dt><dd><p>Precomputed unit normal vectors on edges. If not provided,
+they are calculated internally.</p>
+</dd>
+</dl>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Gradient field on faces with an additional Cartesian dimension.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xr.DataArray</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – If the input variable is not defined on edges.</p></li>
+<li><p><strong>NameError</strong> – If required variables (flow area or volume) are missing.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Uses face-edge connectivity and unit normal vectors.</p></li>
+<li><p>Ensures outward-pointing normals via dot-product sign correction.</p></li>
+<li><p>Result is stored in the dataset as <code class="docutils literal notranslate"><span class="pre">{varname}_gradient</span></code>.</p></li>
+</ul>
+<div class="deprecated">
+<p><span class="versionmodified deprecated">Deprecated since version 1.0.0: </span>This function will be removed in version 1.2.0.
+Use :meth: constructorSVA.compute_gradient_on_face` instead.</p>
+</div>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pySVA.sva_helpers.compute_kzz">
 <span class="sig-prename descclassname"><span class="pre">pySVA.sva_helpers.</span></span><span class="sig-name descname"><span class="pre">compute_kzz</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">uds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dicoww</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5e-05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prandtl_schmidt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mesh2d_sa1'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_helpers.html#compute_kzz"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_helpers.compute_kzz" title="Link to this definition"></a></dt>
+<dd><p>Compute vertical turbulent diffusivity (kzz).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>uds</strong> (<em>xu.UgridDataset</em>) – Input dataset containing viscosity field.</p></li>
+<li><p><strong>dicoww</strong> (<em>float</em><em>, </em><em>optional</em>) – Background diffusivity [m² s⁻¹].</p></li>
+<li><p><strong>prandtl_schmidt</strong> (<em>float</em><em>, </em><em>optional</em>) – Turbulent Prandtl/Schmidt number.</p></li>
+<li><p><strong>tracer</strong> (<em>str</em><em>, </em><em>optional</em>) – Tracer name used to determine molecular diffusivity.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Dataset with added variable <code class="docutils literal notranslate"><span class="pre">mesh2d_dicwwu</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xu.UgridDataset</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Combines turbulent and molecular diffusivity contributions.</p></li>
+<li><p>Molecular diffusivity depends on tracer type (salinity or temperature).</p></li>
+<li><p>Settings based on the standard settings in D-FLOW FM.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pySVA.sva_helpers.deprecated">
+<span class="sig-prename descclassname"><span class="pre">pySVA.sva_helpers.</span></span><span class="sig-name descname"><span class="pre">deprecated</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reason</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">removal</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_helpers.html#deprecated"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_helpers.deprecated" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pySVA.sva_helpers.depth_int2volume_int">
 <span class="sig-prename descclassname"><span class="pre">pySVA.sva_helpers.</span></span><span class="sig-name descname"><span class="pre">depth_int2volume_int</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">uda</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">xarray.DataArray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_area</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">xarray.DataArray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dimn_faces</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">xarray.DataArray</span></span></span><a class="reference internal" href="_modules/pySVA/sva_helpers.html#depth_int2volume_int"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_helpers.depth_int2volume_int" title="Link to this definition"></a></dt>
-<dd><p>Convert a depth-integrated DataArray to a volume-integrated DataArray.</p>
-<section id="parameters">
-<h2>Parameters:<a class="headerlink" href="#parameters" title="Link to this heading"></a></h2>
-<dl class="simple">
-<dt>uda<span class="classifier">xr.DataArray</span></dt><dd><p>The input DataArray representing depth-integrated values.</p>
+<dd><p>Convert depth-integrated values to volume-integrated values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>uda</strong> (<em>xr.DataArray</em>) – Depth-integrated variable.</p></li>
+<li><p><strong>cell_area</strong> (<em>xr.DataArray</em>) – Horizontal cell area.</p></li>
+<li><p><strong>dimn_faces</strong> (<em>str</em>) – Face dimension name.</p></li>
+</ul>
 </dd>
-<dt>cell_area<span class="classifier">xr.DataArray</span></dt><dd><p>A 2D DataArray representing the cell area for each spatial grid point.</p>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Volume-integrated variable.</p>
 </dd>
-<dt>dimn_faces<span class="classifier">str</span></dt><dd><p>The name of the faces dimension to integrate over.</p>
-</dd>
-</dl>
-</section>
-<section id="returns">
-<h2>Returns:<a class="headerlink" href="#returns" title="Link to this heading"></a></h2>
-<dl class="simple">
-<dt>xr.DataArray</dt><dd><p>The volume-integrated DataArray.</p>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xr.DataArray</p>
 </dd>
 </dl>
-</section>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Performs horizontal integration after depth integration.</p></li>
+</ul>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pySVA.sva_helpers.differentiate_over_3d_coord">
 <span class="sig-prename descclassname"><span class="pre">pySVA.sva_helpers.</span></span><span class="sig-name descname"><span class="pre">differentiate_over_3d_coord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">uda</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">xarray.DataArray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coord_var</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">xarray.DataArray</span></span></span><a class="reference internal" href="_modules/pySVA/sva_helpers.html#differentiate_over_3d_coord"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_helpers.differentiate_over_3d_coord" title="Link to this definition"></a></dt>
-<dd><p>Differentiate a Dask-backed xarray DataArray over a 3D coordinate variable.</p>
-<section id="id1">
-<h2>Parameters:<a class="headerlink" href="#id1" title="Link to this heading"></a></h2>
-<dl class="simple">
-<dt>uda<span class="classifier">xr.DataArray</span></dt><dd><p>The input DataArray to differentiate.</p>
+<dd><p>Differentiate a DataArray along a 3D coordinate.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>uda</strong> (<em>xr.DataArray</em>) – Input variable.</p></li>
+<li><p><strong>coord_var</strong> (<em>str</em>) – Name of the coordinate variable.</p></li>
+<li><p><strong>axis</strong> (<em>int</em><em>, </em><em>optional</em>) – Axis corresponding to the coordinate dimension.</p></li>
+</ul>
 </dd>
-<dt>coord_var<span class="classifier">str</span></dt><dd><p>The name of the 3D coordinate variable.</p>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Differentiated variable.</p>
 </dd>
-<dt>axis<span class="classifier">int, optional</span></dt><dd><p>The axis number of the coordinate dimension to differentiate over. Defaults to -1.</p>
-</dd>
-</dl>
-</section>
-<section id="id2">
-<h2>Returns:<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
-<dl class="simple">
-<dt>xr.DataArray</dt><dd><p>Differentiated DataArray over the given coordinate.</p>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xr.DataArray</p>
 </dd>
 </dl>
-</section>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Uses finite differences with Dask-compatible operations.</p></li>
+<li><p>Pads result to preserve original array shape.</p></li>
+</ul>
 </dd></dl>
 
 <dl class="py function">
@@ -750,29 +1128,75 @@ for all distance calculations.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="pySVA.sva_helpers.integrate_trapz">
 <span class="sig-prename descclassname"><span class="pre">pySVA.sva_helpers.</span></span><span class="sig-name descname"><span class="pre">integrate_trapz</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">xarray.DataArray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">xarray.DataArray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">xarray.DataArray</span></span></span><a class="reference internal" href="_modules/pySVA/sva_helpers.html#integrate_trapz"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_helpers.integrate_trapz" title="Link to this definition"></a></dt>
-<dd><p>Perform trapezoidal integration along a specified dimension.</p>
+<dd><p>Integrate a DataArray using the trapezoidal rule.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>y</strong> (<em>xr.DataArray</em>) – The values to integrate.</p></li>
-<li><p><strong>x</strong> (<em>xr.DataArray</em>) – The coordinate values along which to integrate.</p></li>
-<li><p><strong>dim</strong> (<em>str</em><em>, </em><em>optional</em>) – The dimension along which to integrate. If None, the operation
-is applied along all dimensions.</p></li>
+<li><p><strong>y</strong> (<em>xr.DataArray</em>) – Values to integrate.</p></li>
+<li><p><strong>x</strong> (<em>xr.DataArray</em>) – Coordinate values along the integration dimension.</p></li>
+<li><p><strong>dim</strong> (<em>str</em><em>, </em><em>optional</em>) – Dimension along which to integrate.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The result of the trapezoidal integration.</p>
+<dd class="field-even"><p>Integrated result.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>xr.DataArray</p>
 </dd>
 </dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Assumes <code class="docutils literal notranslate"><span class="pre">x</span></code> is monotonically increasing.</p></li>
+<li><p>Drops coordinate variables to avoid alignment conflicts.</p></li>
+</ul>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pySVA.sva_helpers.reconstruct_vector_form">
 <span class="sig-prename descclassname"><span class="pre">pySVA.sva_helpers.</span></span><span class="sig-name descname"><span class="pre">reconstruct_vector_form</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constructorSVA</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vectors_list</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_helpers.html#reconstruct_vector_form"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_helpers.reconstruct_vector_form" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Reconstruct a vector field from its Cartesian components.</p>
+<p>This function concatenates scalar component fields (e.g., <code class="docutils literal notranslate"><span class="pre">u</span></code> and <code class="docutils literal notranslate"><span class="pre">v</span></code>)
+into a single vector-valued DataArray along the Cartesian dimension.
+The resulting vector is stored in the underlying dataset and the original
+component variables are removed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>constructorSVA</strong> (<em>object</em>) – Constructor object containing the underlying UGRID dataset (<code class="docutils literal notranslate"><span class="pre">.ds</span></code>).</p></li>
+<li><p><strong>vectors_list</strong> (<em>list</em><em> of </em><em>str</em><em> or </em><em>xr.DataArray</em><em> or </em><em>xu.UgridDataArray</em>) – <p>List of vector components. Can be:</p>
+<ul>
+<li><p>List of variable names (str) in the dataset</p></li>
+<li><p>List of <code class="docutils literal notranslate"><span class="pre">xarray.DataArray</span></code> objects</p></li>
+<li><p>List of <code class="docutils literal notranslate"><span class="pre">xu.UgridDataArray</span></code> objects</p></li>
+</ul>
+<p>All elements must be of the same type.</p>
+</p></li>
+<li><p><strong>**kwargs</strong> (<em>dict</em><em>, </em><em>optional</em>) – <p>Additional keyword arguments.</p>
+<dl class="simple">
+<dt>vector_name<span class="classifier">str, optional</span></dt><dd><p>Name of the reconstructed vector variable. Defaults to
+<code class="docutils literal notranslate"><span class="pre">{gridname}_uc</span></code>.</p>
+</dd>
+</dl>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reconstructed vector field with an added Cartesian dimension.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xr.DataArray or xu.UgridDataArray</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>UserWarning</strong> – If the type of <code class="docutils literal notranslate"><span class="pre">vectors_list</span></code> is not recognized.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>The resulting vector is stored in <code class="docutils literal notranslate"><span class="pre">constructorSVA.ds</span></code>.</p></li>
+<li><p>Original component variables are removed from the dataset.</p></li>
+<li><p>The Cartesian dimension is defined as <code class="docutils literal notranslate"><span class="pre">{gridname}_nCartesian_coords</span></code>.</p></li>
+</ul>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pySVA.sva_helpers.reconstruct_vector_form_magnitude">
@@ -796,7 +1220,34 @@ in the direction of the normal vector (like velocity magnitude)</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="pySVA.sva_helpers.uda_to_edges">
 <span class="sig-prename descclassname"><span class="pre">pySVA.sva_helpers.</span></span><span class="sig-name descname"><span class="pre">uda_to_edges</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constructorSVA</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uda</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pySVA/sva_helpers.html#uda_to_edges"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pySVA.sva_helpers.uda_to_edges" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Interpolate a face-centered variable to edges.</p>
+<p>Performs inverse-distance weighted interpolation using edge-face
+connectivity.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>constructorSVA</strong> (<em>object</em>) – Constructor object containing the UGRID dataset.</p></li>
+<li><p><strong>uda</strong> (<em>xu.UgridDataArray</em>) – Input variable defined on faces.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Interpolated variable on edges.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xu.UgridDataArray</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Uses weights from <a class="reference internal" href="#pySVA.sva_helpers.build_edge_face_weights" title="pySVA.sva_helpers.build_edge_face_weights"><code class="xref py py-func docutils literal notranslate"><span class="pre">build_edge_face_weights()</span></code></a>.</p></li>
+<li><p>Missing neighbors are handled via NaN masking.</p></li>
+<li><p>Result is assigned location attribute <code class="docutils literal notranslate"><span class="pre">'edge'</span></code>.</p></li>
+</ul>
+<div class="deprecated">
+<p><span class="versionmodified deprecated">Deprecated since version 1.0.0: </span>This function will be removed in version 1.2.0.
+Use :meth: constructorSVA.uda_to_edges()` instead.</p>
+</div>
+</dd></dl>
 
 </section>
 
