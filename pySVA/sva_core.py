@@ -481,7 +481,7 @@ class constructorSVA:
         - Weights are normalized per edge.
         - Returned as a Dask-backed array for scalability.
         """
-        
+
         # > Get dimension names
         dimn_faces = self.dimn_faces
         fill_value = self.fill_value
@@ -508,12 +508,24 @@ class constructorSVA:
 
     def get_all_coordinates(self):
         """
-        Retrieve coordinates for all mesh elements: faces, edges, and nodes.
+        Retrieve Cartesian coordinates of all mesh elements.
 
-        :returns: Tuple of (face_coords, edge_coords, node_coords), where each is an
-                xarray.DataArray with dimensions and coordinates corresponding to the mesh element.
-        :rtype: tuple[xarray.DataArray, xarray.DataArray, xarray.DataArray]
+        Returns
+        -------
+        tuple of xr.DataArray
+            Tuple containing:
+
+            - face_coords : ``(n_faces, nCartesian_coords)``
+            - edge_coords : ``(n_edges, nCartesian_coords)``
+            - node_coords : ``(n_nodes, nCartesian_coords)``
+
+        Notes
+        -----
+        - Coordinates are derived from UGRID metadata.
+        - Returned arrays include CF-compliant attributes.
+        - Cartesian dimension is defined as ``{gridname}_nCartesian_coords``.
         """
+
         uds = self.ds
 
         # > Get coordinate names
@@ -549,9 +561,19 @@ class constructorSVA:
         Maps the node coordinates to the corresponding edge-node connectivity,
         returning a DataArray with NaNs where no node is connected (fill value).
 
-        :returns: DataArray of shape (num_edges, max_nodes_per_edge, 2) with node coordinates.
-        :rtype: xarray.DataArray
+        Returns
+        -------
+        xr.DataArray
+            Node coordinates per edge with dimensions
+            ``(n_edges, nMax_edge_nodes, nCartesian_coords)``.
+
+        Notes
+        -----
+        - Derived from edge–node connectivity.
+        - Missing nodes (fill values) are replaced with NaN.
+        - Used for geometric calculations such as edge length and normals.
         """
+        
         # > Get dimension names
         fill_value = self.fill_value
         dimn_nodes = self.dimn_nodes
