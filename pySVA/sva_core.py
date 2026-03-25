@@ -16,20 +16,55 @@ from functools import cached_property
 from pySVA.sva_helpers import build_inverse_distance_weights, integrate_trapz, calculate_distance_pythagoras, differentiate_over_3d_coord
 
 class constructorSVA:
-    """Main class for Salinity Variance Analysis (SVA).
+    """
+    Core class for Salinity Variance Analysis (SVA) on unstructured grids.
 
-    Loads and processes hydrodynamic data from D-Flow FM simulations,
-    providing access to grid properties, velocities, tracers, and
-    computed quantities needed for variance budget analysis.
+    This class loads and processes hydrodynamic data from D-Flow FM
+    simulations and provides access to grid topology, geometric
+    properties, velocity fields, tracers, and derived quantities
+    required for variance budget analysis.
 
-    The class handles multiple input formats (netCDF files, xarray Datasets,
-    or xugrid UgridDatasets) and automatically extracts grid topology and
-    coordinate systems.
+    The class supports multiple input formats (netCDF files,
+    :class:`xarray.Dataset`, :class:`xugrid.UgridDataset`, or
+    :class:`xarray.DataArray`) and automatically extracts grid
+    structure and coordinate systems following UGRID conventions.
 
-    Attributes:
-        ds (xarray.Dataset): The loaded hydrodynamic dataset.
-        grid: The unstructured grid object.
-        Various dimension names (dimn_edges, dimn_faces, etc.) and coordinates.
+    Parameters
+    ----------
+    input_file : str or xr.Dataset or xu.UgridDataset or xr.DataArray
+        Input data source. Can be a file path or pre-loaded dataset.
+    data_description : dict
+        Mapping between logical variable names and dataset variables.
+
+        Required keys:
+        - ``velx``, ``vely``, ``velz``
+        - ``viscosity``
+        - ``tracer``
+        - ``depth``
+
+        Optional keys:
+        - ``horizontal_diffusivity``
+        - ``interfaces``
+        - ``bed_level``
+        - ``volume``
+        - ``flow_area``
+
+    Attributes
+    ----------
+    ds : xr.Dataset or xu.UgridDataset
+        Underlying hydrodynamic dataset.
+    grid : object
+        UGRID mesh object.
+    face_coords, edge_coords, node_coords : xr.DataArray
+        Cartesian coordinates of mesh elements.
+    dimn_* : str
+        Standardized dimension names for grid topology.
+
+    Notes
+    -----
+    - All geometric and topological quantities follow UGRID conventions.
+    - Coordinates are expressed in projected Cartesian space (typically meters).
+    - Many properties are computed lazily using :func:`functools.cached_property`.
     """
 
     def __init__(self, input_file, data_description, **kwargs):
