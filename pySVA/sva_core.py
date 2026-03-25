@@ -1241,10 +1241,10 @@ class constructorSVA:
 
         .. math::
 
-            s'^2 = (s - \\overline{s})^2
+            c'^2 = (c - \\overline{c})^2
 
-        where :math:`s` is the tracer concentration and
-        :math:`\\overline{s}` is the depth-averaged tracer.
+        where :math:`c` is the tracer concentration and
+        :math:`\\overline{c}` is the depth-averaged tracer.
 
         - The depth-average is taken over the vertical coordinate
         (layer or interface dimension).
@@ -1435,14 +1435,14 @@ class constructorSVA:
 
         .. math::
 
-            S = -2 \, c' \, \mathbf{u}' \cdot \nabla \bar{c}
+            \\text{straining} = -2 \, c' \, \mathbf{u}' \cdot \\nabla_h \\bar{c}
 
         where
 
-        - :math:`c' = c - \bar{c}` is the tracer perturbation relative to the depth-averaged tracer,
-        - :math:`\mathbf{u}' = \mathbf{u} - \bar{\mathbf{u}}` is the velocity perturbation relative to the depth-averaged velocity,
-        - :math:`\bar{c}` indicates a **depth-averaged** quantity,
-        - :math:`\nabla` denotes the horizontal gradient operator.
+        - :math:`c' = c - \\bar{c}` is the tracer perturbation relative to the depth-averaged tracer;
+        - :math:`\mathbf{u}' = \mathbf{u} - \\bar{\mathbf{u}}` is the velocity perturbation relative to the depth-averaged velocity;
+        - :math:`\\bar{c}` indicates a **depth-averaged** quantity;
+        - :math:`\\nabla_h` denotes the horizontal gradient operator.
 
         Parameters
         ----------
@@ -1508,8 +1508,15 @@ class constructorSVA:
         """
         Compute the temporal tendency term of the tracer variance budget.
 
-        The tendency term is calculated as the time derivative of the tracer variance,
-        optionally integrated over depth or volume. A depth-averaged output can be requested.
+        The tendency term is calculated as the time derivative of the tracer variance:
+
+        .. math::
+            \\frac{\\partial (c')^2}{\\partial t}
+
+        where :math:`c' = c - \\bar{c}` is the tracer perturbation relative to the depth-averaged tracer.
+
+        Optionally, this term can be integrated over depth or volume. 
+        A depth-averaged output can also be requested.
 
         Parameters
         ----------
@@ -1526,9 +1533,8 @@ class constructorSVA:
         Returns
         -------
         xarray.DataArray
-            Tendency term :math:`\\frac{\\partial (c')^2}{\\partial t}` in the tracer
-            variance budget. Units are :math:`c^2\\, s^{-1}`, where :math:`c` is the
-            tracer concentration.
+            Tendency term in the tracer variance budget. Units are 
+            :math:`c^2\\, s^{-1}`, where :math:`c` is the tracer concentration.
         """
 
         # > Get tracer variance
@@ -1567,31 +1573,17 @@ class constructorSVA:
        
     def advection(self, integration='depth',  depth_averaged=False):
         """
-        Compute the advection term in the tracer variance budget.
+        Compute the advection term in the tracer variance budget, computed as:
 
-        The horizontal advection is computed as the divergence of
-        :math:`\\mathbf{u} (c')^2`, where :math:`c'` is the tracer perturbation
-        relative to the mean. Integration over depth or volume is optional.
+        .. math::
+            \\text{advection} = \\nabla_h \\cdot (\\mathbf{u} (c')^2) 
+        
+        where:
+        - :math:`c' = c - \\bar{c}` is the tracer perturbation relative to the depth-averaged tracer;
+        - :math:`\\nabla_h` indicates the horizontal divergence;
+        - :math:`\\mathbf{u}=(u,v)` represents the full velocity vector.
 
-        Parameters
-        ----------
-        integration : {"depth", "volume", "none"}, optional
-            Integration method applied to the computed advection field.
-            Default is "depth".
-        depth_averaged : bool, optional
-            If True, return depth-averaged advection.
-
-        Returns
-        -------
-        xarray.DataArray
-            Advection term :math:`-\\nabla_h \\cdot (\\mathbf{u} (c')^2)` in the
-            tracer variance budget. Units are :math:`c^2\\, s^{-1}`.
-        """"""
-        Compute the advection term in the tracer variance budget.
-
-        The horizontal advection is computed as the divergence of
-        :math:`\\mathbf{u} (c')^2`, where :math:`c'` is the tracer perturbation
-        relative to the mean. Integration over depth or volume is optional.
+        Integration over depth or volume is optional.
 
         Parameters
         ----------
@@ -1604,7 +1596,7 @@ class constructorSVA:
         Returns
         -------
         xarray.DataArray
-            Advection term :math:`-\\nabla_h \\cdot (\\mathbf{u} (c')^2)` in the
+            Advection term in the
             tracer variance budget. Units are :math:`c^2\\, s^{-1}`.
         """
 
@@ -1651,8 +1643,12 @@ class constructorSVA:
         squared horizontal gradients of the tracer:
         
         .. math::
-            \\text{D}_h = 2 D_h \\left[\\left(\\frac{\\partial c}{\\partial x}\\right)^2
+            \\text{horizontal dissipation} = 2 D_h \\left[\\left(\\frac{\\partial c}{\\partial x}\\right)^2
             + \\left(\\frac{\\partial c}{\\partial y}\\right)^2\\right]
+        
+        where:
+        - :math:`c` is the tracer;
+        - :math:`D_h` is the horizontal diffusivity.
 
         Parameters
         ----------
@@ -1719,7 +1715,11 @@ class constructorSVA:
         and squared vertical gradients of the tracer:
 
         .. math::
-            \\text{D}_v = 2 K_{zz} \\left(\\frac{\\partial c}{\\partial z}\\right)^2
+            \\text{vertical dissipation} = 2 K_{zz} \\left(\\frac{\\partial c}{\\partial z}\\right)^2
+        
+        where:
+        - :math:`c` is the tracer,;
+        - :math:`K_{zz}` is the vertical diffusivity.
 
         Parameters
         ----------
@@ -1735,7 +1735,7 @@ class constructorSVA:
             Vertical dissipation term in the tracer variance budget.
             Units are :math:`c^2\\, s^{-1}`.
         """
-        
+
         # > Get the vertical turbulent diffusivity
         kzz = self.kzz
         
